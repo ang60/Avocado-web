@@ -2,154 +2,9 @@ import { useState } from 'react';
 import { MoreVertical, ArrowUpDown, Filter, Smartphone, Phone, MessageSquare, UserPlus, Eye, X } from 'lucide-react';
 import { CaseDetailModal, CaseDetailData } from './CaseDetailModal';
 import { useNavigate } from 'react-router';
+import type { CaseManagementCaseRow } from '../api/types';
 
-interface CaseData {
-  id: string;
-  severity: 'high' | 'medium' | 'low' | 'unknown';
-  farm: string;
-  block: string;
-  pestDisease: string;
-  pestDiseaseKiswahili: string;
-  dateSubmitted: string;
-  status: 'new' | 'under-review' | 'advisory-issued';
-  scoutName: string;
-  location: string;
-  affectedTrees: number;
-  symptoms: string[];
-  notes: string;
-  channel: 'smartphone' | 'ussd' | 'sms';
-}
-
-const mockCases: CaseData[] = [
-  {
-    id: 'CSE-1024',
-    severity: 'high',
-    farm: 'Kangema Avocado Growers',
-    block: 'Block A-12',
-    pestDisease: 'False Codling Moth',
-    pestDiseaseKiswahili: 'Nondo wa Parachichi',
-    dateSubmitted: 'Mar 14, 2026',
-    status: 'new',
-    scoutName: 'Jane Wambui',
-    location: 'Kangema, Murang\'a County',
-    affectedTrees: 45,
-    symptoms: ['Fruit damage', 'Larvae in fruit', 'Premature fruit drop'],
-    notes: 'Heavy infestation of false codling moth observed. Larvae found inside developing fruit. Population density appears to be increasing. Recommend immediate pheromone trap deployment and intervention.',
-    channel: 'smartphone',
-  },
-  {
-    id: 'CSE-1023',
-    severity: 'high',
-    farm: 'Gatanga Green Farms',
-    block: 'Block C-5',
-    pestDisease: 'Phytophthora Root Rot',
-    pestDiseaseKiswahili: 'Kuoza kwa Mizizi',
-    dateSubmitted: 'Mar 13, 2026',
-    status: 'under-review',
-    scoutName: 'Samuel Omondi',
-    location: 'Gatanga, Murang\'a County',
-    affectedTrees: 28,
-    symptoms: ['Wilting leaves', 'Root discoloration', 'Tree decline', 'Poor drainage'],
-    notes: 'Several trees showing classic symptoms of root rot. Soil appears waterlogged in affected area. Drainage issues need to be addressed urgently.',
-    channel: 'ussd',
-  },
-  {
-    id: 'CSE-1022',
-    severity: 'medium',
-    farm: 'Tigoni Avocado Estates',
-    block: 'Block B-8',
-    pestDisease: 'Avocado Thrips',
-    pestDiseaseKiswahili: 'Vidudu Wadogo wa Parachichi',
-    dateSubmitted: 'Mar 13, 2026',
-    status: 'under-review',
-    scoutName: 'Mary Akinyi',
-    location: 'Tigoni, Kiambu County',
-    affectedTrees: 62,
-    symptoms: ['Leaf scarring', 'Fruit damage', 'Stunted growth'],
-    notes: 'Thrips populations detected on young leaves and developing fruit. Early stage infestation but spreading. Weather conditions favorable for thrips development.',
-    channel: 'sms',
-  },
-  {
-    id: 'CSE-1021',
-    severity: 'low',
-    farm: 'Meru Sunrise Orchards',
-    block: 'Block D-3',
-    pestDisease: 'Persea Mite',
-    pestDiseaseKiswahili: 'Mende wa Parachichi',
-    dateSubmitted: 'Mar 12, 2026',
-    status: 'advisory-issued',
-    scoutName: 'Joseph Mutua',
-    location: 'Meru Town, Meru County',
-    affectedTrees: 12,
-    symptoms: ['Bronzing leaves', 'Webbing present', 'Minor defoliation'],
-    notes: 'Minor persea mite activity observed. Population levels below treatment threshold. Monitoring recommended.',
-    channel: 'smartphone',
-  },
-  {
-    id: 'CSE-1020',
-    severity: 'high',
-    farm: 'Kiambu Highland Farms',
-    block: 'Block A-7',
-    pestDisease: 'Anthracnose',
-    pestDiseaseKiswahili: 'Ugonjwa wa Majani',
-    dateSubmitted: 'Mar 12, 2026',
-    status: 'new',
-    scoutName: 'Grace Achieng',
-    location: 'Kiambu Town, Kiambu County',
-    affectedTrees: 38,
-    symptoms: ['Black spots on fruit', 'Fruit rot', 'Leaf lesions'],
-    notes: 'Significant anthracnose infection on mature fruit. High humidity levels contributing to disease spread. Fungicide treatment urgently needed.',
-    channel: 'ussd',
-  },
-  {
-    id: 'CSE-1019',
-    severity: 'medium',
-    farm: 'Nyeri Valley Growers',
-    block: 'Block E-2',
-    pestDisease: 'Avocado Lace Bug',
-    pestDiseaseKiswahili: 'Kung\'ang\'a wa Parachichi',
-    dateSubmitted: 'Mar 11, 2026',
-    status: 'under-review',
-    scoutName: 'David Kipchirchir',
-    location: 'Nyeri Town, Nyeri County',
-    affectedTrees: 55,
-    symptoms: ['Yellow stippling', 'Leaf discoloration', 'Black excrement'],
-    notes: 'Moderate lace bug infestation on mature trees. Damage primarily cosmetic at this stage but population monitoring needed.',
-    channel: 'sms',
-  },
-  {
-    id: 'CSE-1018',
-    severity: 'low',
-    farm: 'Limuru Green Estates',
-    block: 'Block B-15',
-    pestDisease: 'Scale Insects',
-    pestDiseaseKiswahili: 'Wadudu wa Maganda',
-    dateSubmitted: 'Mar 11, 2026',
-    status: 'advisory-issued',
-    scoutName: 'Faith Njeri',
-    location: 'Limuru, Kiambu County',
-    affectedTrees: 18,
-    symptoms: ['Sooty mold', 'Honeydew presence'],
-    notes: 'Light scale infestation detected. Natural predators present. Biological control appears effective.',
-    channel: 'smartphone',
-  },
-  {
-    id: 'CSE-1017',
-    severity: 'unknown',
-    farm: 'Kangema Avocado Growers',
-    block: 'Block C-9',
-    pestDisease: 'Unidentified Pest',
-    pestDiseaseKiswahili: 'Mdudu Usiotambuliwa',
-    dateSubmitted: 'Mar 10, 2026',
-    status: 'new',
-    scoutName: 'Peter Mwangi',
-    location: 'Kangema, Murang\'a County',
-    affectedTrees: 41,
-    symptoms: ['Leaf spots', 'Unknown damage pattern'],
-    notes: 'Unknown pest or disease detected. Requires expert agronomist review for proper diagnosis and treatment recommendation.',
-    channel: 'ussd',
-  },
-];
+type CaseData = CaseManagementCaseRow;
 
 type SortField = 'id' | 'severity' | 'farm' | 'pestDisease' | 'dateSubmitted' | 'status';
 type SortOrder = 'asc' | 'desc';
@@ -205,7 +60,7 @@ function StatusPill({ status }: { status: CaseData['status'] }) {
   );
 }
 
-export function CaseTableEnhanced() {
+export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] }) {
   const [sortField, setSortField] = useState<SortField>('dateSubmitted');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
@@ -223,7 +78,7 @@ export function CaseTableEnhanced() {
     }
   };
 
-  const filteredAndSortedCases = mockCases
+  const filteredAndSortedCases = cases
     .filter((c) => {
       if (filterSeverity !== 'all' && c.severity !== filterSeverity) return false;
       if (filterStatus !== 'all' && c.status !== filterStatus) return false;

@@ -1,5 +1,12 @@
 import { Layout } from '../components/Layout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import {
+  fetchComplianceFarmers,
+  generateComplianceReport,
+  type GeneratedReportPayload,
+} from '../api/placeholderApi';
+import { AppToast } from '../components/AppToast';
+import type { ComplianceFarmerRow } from '../api/types';
 import { useNavigate } from 'react-router';
 import { 
   Download, CheckCircle, AlertCircle, XCircle, 
@@ -17,6 +24,45 @@ type ReportType =
   | 'agronomist-efficiency';
 
 type ExportFormat = 'pdf' | 'excel' | 'json';
+
+function downloadComplianceExport(p: GeneratedReportPayload) {
+  const header = [
+    `AvoGuard — ${p.reportTitle}`,
+    `Generated: ${p.generatedAt}`,
+    `Date range: ${p.dateRange} | Region: ${p.region}`,
+    '',
+    ...p.summaryLines,
+    '',
+  ].join('\n');
+  let content: string;
+  let mime: string;
+  let ext: string;
+  if (p.format === 'json') {
+    content = JSON.stringify(p, null, 2);
+    mime = 'application/json';
+    ext = 'json';
+  } else if (p.format === 'excel') {
+    content = 'Farmer ID,Included\n' + p.farmerIds.map((id) => `${id},yes`).join('\n');
+    mime = 'text/csv;charset=utf-8';
+    ext = 'csv';
+  } else {
+    content =
+      header +
+      '---\n(PDF export would attach certified documents; this is a text summary for demo.)\n\n' +
+      p.farmerIds.map((id) => `- ${id}`).join('\n');
+    mime = 'text/plain;charset=utf-8';
+    ext = 'txt';
+  }
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `avoguard-${p.reportType}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 interface ReportCard {
   id: ReportType;
@@ -68,154 +114,6 @@ const reportCards: ReportCard[] = [
     description: 'Case triage times and resolution performance',
     icon: Zap,
     color: '#7C3AED',
-  },
-];
-
-// Compliance data for Phytosanitary report
-interface ComplianceFarmerData {
-  id: string;
-  name: string;
-  farmName: string;
-  location: string;
-  county: string;
-  scoutingHistory: [boolean, boolean, boolean, boolean];
-  riskLevel: 'high' | 'medium' | 'low';
-  submissionMode: 'app' | 'ussd';
-  reportStatus: 'incomplete' | 'pending-approval' | 'export-ready';
-  lastUpdate: string;
-  phoneNumber: string;
-}
-
-const complianceFarmers: ComplianceFarmerData[] = [
-  {
-    id: 'TRC-2024-001',
-    name: 'Peter Mwangi',
-    farmName: 'Kangema Avocado Growers',
-    location: 'Kangema',
-    county: 'Murang\'a',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'high',
-    submissionMode: 'app',
-    reportStatus: 'pending-approval',
-    lastUpdate: 'Mar 14, 2026',
-    phoneNumber: '+254 722 345 678',
-  },
-  {
-    id: 'TRC-2024-002',
-    name: 'Grace Wanjiku',
-    farmName: 'Gatanga Green Farms',
-    location: 'Gatanga',
-    county: 'Murang\'a',
-    scoutingHistory: [true, true, false, true],
-    riskLevel: 'medium',
-    submissionMode: 'ussd',
-    reportStatus: 'incomplete',
-    lastUpdate: 'Mar 13, 2026',
-    phoneNumber: '+254 733 456 789',
-  },
-  {
-    id: 'TRC-2024-003',
-    name: 'David Kipchirchir',
-    farmName: 'Tigoni Avocado Estates',
-    location: 'Tigoni',
-    county: 'Kiambu',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'low',
-    submissionMode: 'app',
-    reportStatus: 'export-ready',
-    lastUpdate: 'Mar 13, 2026',
-    phoneNumber: '+254 711 234 567',
-  },
-  {
-    id: 'TRC-2024-004',
-    name: 'Faith Njeri',
-    farmName: 'Meru Sunrise Orchards',
-    location: 'Meru Town',
-    county: 'Meru',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'low',
-    submissionMode: 'app',
-    reportStatus: 'export-ready',
-    lastUpdate: 'Mar 12, 2026',
-    phoneNumber: '+254 720 678 901',
-  },
-  {
-    id: 'TRC-2024-005',
-    name: 'John Kimani',
-    farmName: 'Kiambu Highland Farms',
-    location: 'Kiambu Town',
-    county: 'Kiambu',
-    scoutingHistory: [true, false, true, false],
-    riskLevel: 'medium',
-    submissionMode: 'ussd',
-    reportStatus: 'incomplete',
-    lastUpdate: 'Mar 12, 2026',
-    phoneNumber: '+254 712 567 890',
-  },
-  {
-    id: 'TRC-2024-006',
-    name: 'Mary Wambui',
-    farmName: 'Nyeri Valley Growers',
-    location: 'Nyeri Town',
-    county: 'Nyeri',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'low',
-    submissionMode: 'app',
-    reportStatus: 'export-ready',
-    lastUpdate: 'Mar 11, 2026',
-    phoneNumber: '+254 734 678 901',
-  },
-  {
-    id: 'TRC-2024-007',
-    name: 'Samuel Omondi',
-    farmName: 'Bungoma Green Valley',
-    location: 'Bungoma',
-    county: 'Bungoma',
-    scoutingHistory: [false, false, false, true],
-    riskLevel: 'high',
-    submissionMode: 'ussd',
-    reportStatus: 'incomplete',
-    lastUpdate: 'Mar 8, 2026',
-    phoneNumber: '+254 745 123 456',
-  },
-  {
-    id: 'TRC-2024-008',
-    name: 'Jane Wambui',
-    farmName: 'Limuru Avocado Hub',
-    location: 'Limuru',
-    county: 'Kiambu',
-    scoutingHistory: [true, true, true, false],
-    riskLevel: 'low',
-    submissionMode: 'app',
-    reportStatus: 'pending-approval',
-    lastUpdate: 'Mar 10, 2026',
-    phoneNumber: '+254 723 987 654',
-  },
-  {
-    id: 'TRC-2024-009',
-    name: 'Joseph Kariuki',
-    farmName: 'Thika Green Farms',
-    location: 'Thika',
-    county: 'Kiambu',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'medium',
-    submissionMode: 'app',
-    reportStatus: 'export-ready',
-    lastUpdate: 'Mar 14, 2026',
-    phoneNumber: '+254 715 234 567',
-  },
-  {
-    id: 'TRC-2024-010',
-    name: 'Lucy Wanjiru',
-    farmName: 'Embu Highland Estates',
-    location: 'Embu',
-    county: 'Embu',
-    scoutingHistory: [true, true, false, false],
-    riskLevel: 'high',
-    submissionMode: 'ussd',
-    reportStatus: 'incomplete',
-    lastUpdate: 'Mar 9, 2026',
-    phoneNumber: '+254 728 456 789',
   },
 ];
 
@@ -310,11 +208,37 @@ function ReportStatusPill({ status }: { status: 'incomplete' | 'pending-approval
 
 export function ComplianceHub() {
   const navigate = useNavigate();
+  const [complianceFarmers, setComplianceFarmers] = useState<ComplianceFarmerRow[]>([]);
+  const [complianceFarmersLoading, setComplianceFarmersLoading] = useState(true);
+  const [complianceFarmersError, setComplianceFarmersError] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
   const [selectedFarmers, setSelectedFarmers] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchComplianceFarmers()
+      .then((data) => {
+        if (!cancelled) {
+          setComplianceFarmers(data);
+          setComplianceFarmersError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setComplianceFarmersError('Could not load compliance farmers.');
+      })
+      .finally(() => {
+        if (!cancelled) setComplianceFarmersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [dateRange, setDateRange] = useState('last-30-days');
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [exportFormat, setExportFormat] = useState<ExportFormat>('pdf');
+  const [lastGeneratedReport, setLastGeneratedReport] = useState<GeneratedReportPayload | null>(null);
+  const [reportGenerating, setReportGenerating] = useState(false);
+  const [complianceToast, setComplianceToast] = useState<string | null>(null);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -333,22 +257,48 @@ export function ComplianceHub() {
   };
 
   const handleGenerateReport = () => {
-    console.log('Generating report:', {
-      type: selectedReport,
+    if (!selectedReport) return;
+    const card = reportCards.find((r) => r.id === selectedReport);
+    const ids =
+      selectedFarmers.length > 0 ? selectedFarmers : complianceFarmers.map((f) => f.id);
+    const inScope = complianceFarmers.filter((f) => ids.includes(f.id));
+    const exportReady = inScope.filter((f) => f.reportStatus === 'export-ready').length;
+    setReportGenerating(true);
+    generateComplianceReport({
+      reportType: selectedReport,
+      reportTitle: card?.title ?? selectedReport,
+      format: exportFormat,
       dateRange,
       region: selectedRegion,
-      format: exportFormat,
-      selectedFarmers,
-    });
-    alert(`Generating ${reportCards.find(r => r.id === selectedReport)?.title} report in ${exportFormat.toUpperCase()} format...`);
+      farmerIds: ids,
+      summaryLines: [
+        `Records in file: ${inScope.length}`,
+        `Export-ready rows: ${exportReady}`,
+        `Report type: ${selectedReport}`,
+      ],
+    })
+      .then((payload) => {
+        setLastGeneratedReport(payload);
+        downloadComplianceExport(payload);
+        setComplianceToast('Report generated — download started.');
+        window.setTimeout(() => setComplianceToast(null), 5000);
+      })
+      .catch(() => {
+        setComplianceToast('Report generation failed. Try again.');
+        window.setTimeout(() => setComplianceToast(null), 5000);
+      })
+      .finally(() => setReportGenerating(false));
   };
 
   const handleEmailReports = () => {
     if (selectedFarmers.length > 0) {
-      console.log('Emailing reports for:', selectedFarmers);
-      alert(`Sending compliance reports to exporter for ${selectedFarmers.length} farmer(s)...`);
+      setComplianceToast(
+        `Queued compliance package for ${selectedFarmers.length} farmer(s) — exporter will receive email shortly.`
+      );
+      window.setTimeout(() => setComplianceToast(null), 5000);
     } else {
-      alert('Please select farmers to email reports');
+      setComplianceToast('Select at least one farmer to email reports.');
+      window.setTimeout(() => setComplianceToast(null), 4000);
     }
   };
 
@@ -425,6 +375,13 @@ export function ComplianceHub() {
 
   return (
     <Layout>
+      {complianceToast && (
+        <AppToast
+          message={complianceToast}
+          variant={complianceToast.startsWith('Select') || complianceToast.includes('failed') ? 'info' : 'success'}
+          onDismiss={() => setComplianceToast(null)}
+        />
+      )}
       {/* Header with Back Button */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -449,6 +406,32 @@ export function ComplianceHub() {
           </p>
         </div>
       </div>
+
+      {lastGeneratedReport && lastGeneratedReport.reportType === selectedReport && (
+        <div
+          className="mb-6 p-4 rounded-lg border flex flex-wrap items-center justify-between gap-4"
+          style={{ backgroundColor: '#E8F5E9', borderColor: '#74C69D' }}
+        >
+          <div style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+            <strong>Latest export</strong> — {new Date(lastGeneratedReport.generatedAt).toLocaleString()} (
+            {lastGeneratedReport.format.toUpperCase()})
+          </div>
+          <button
+            type="button"
+            onClick={() => downloadComplianceExport(lastGeneratedReport)}
+            className="px-4 py-2 rounded-lg flex items-center gap-2"
+            style={{
+              backgroundColor: '#2D6A4F',
+              color: '#FFFFFF',
+              fontFamily: 'IBM Plex Sans, sans-serif',
+              fontWeight: 600,
+            }}
+          >
+            <Download className="w-4 h-4" />
+            Download again
+          </button>
+        </div>
+      )}
 
       {/* Filter Options Panel */}
       <div 
@@ -569,8 +552,10 @@ export function ComplianceHub() {
           {/* Generate Button */}
           <div className="flex items-end">
             <button
+              type="button"
               onClick={handleGenerateReport}
-              className="w-full px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center justify-center gap-2"
+              disabled={reportGenerating}
+              className="w-full px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60"
               style={{
                 backgroundColor: '#2D6A4F',
                 color: '#FFFFFF',
@@ -580,15 +565,26 @@ export function ComplianceHub() {
               }}
             >
               <Download className="w-4 h-4" />
-              Generate Report
+              {reportGenerating ? 'Generating…' : 'Generate Report'}
             </button>
           </div>
         </div>
       </div>
 
       {/* Report Content - Render based on selected report type */}
-      {selectedReport === 'phytosanitary' && (
-        <PhytosanitaryReport 
+      {complianceFarmersError && (
+        <div
+          className="mb-4 p-4 rounded-lg border"
+          style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#991B1B', fontFamily: 'IBM Plex Sans, sans-serif' }}
+        >
+          {complianceFarmersError}
+        </div>
+      )}
+      {selectedReport === 'phytosanitary' && complianceFarmersLoading && (
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading compliance data…</p>
+      )}
+      {selectedReport === 'phytosanitary' && !complianceFarmersLoading && (
+        <PhytosanitaryReport
           farmers={complianceFarmers}
           selectedFarmers={selectedFarmers}
           onSelectAll={handleSelectAll}
@@ -614,7 +610,7 @@ function PhytosanitaryReport({
   onSelectFarmer,
   onEmailReports 
 }: { 
-  farmers: ComplianceFarmerData[];
+  farmers: ComplianceFarmerRow[];
   selectedFarmers: string[];
   onSelectAll: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectFarmer: (id: string) => void;
@@ -623,7 +619,8 @@ function PhytosanitaryReport({
   const navigate = useNavigate();
   
   const exportReadyCount = farmers.filter(f => f.reportStatus === 'export-ready').length;
-  const exportReadyPercentage = Math.round((exportReadyCount / farmers.length) * 100);
+  const exportReadyPercentage =
+    farmers.length > 0 ? Math.round((exportReadyCount / farmers.length) * 100) : 0;
   const pendingLogsCount = farmers.filter(f => f.reportStatus === 'incomplete').length;
   const activeOutbreaksCount = farmers.filter(f => f.riskLevel === 'high').length;
 

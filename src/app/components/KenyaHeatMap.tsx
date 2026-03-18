@@ -1,7 +1,9 @@
-import { useState, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useLayoutEffect, useCallback, useEffect } from 'react';
 import { geoMercator, geoPath, geoContains } from 'd3-geo';
-import kenyaAdm2Geo from '../data/KEN_adm2.json';
 import { countyKeyFromName2 } from './kenyaMapShared';
+
+/** Loaded from `/geo/KEN_adm2.json` at runtime — not bundled (multi‑MB). */
+const GEO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}geo/KEN_adm2.json`;
 
 interface CountyData {
   name: string;
@@ -47,12 +49,39 @@ export function KenyaHeatMap() {
   const [size, setSize] = useState({ w: 640, h: 400 });
   const [hoveredCountyKey, setHoveredCountyKey] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState({ x: 0, y: 0 });
+  const [geoStatus, setGeoStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  const [geoCollection, setGeoCollection] = useState<GeoJSON.FeatureCollection<
+    GeoJSON.Polygon | GeoJSON.MultiPolygon,
+    Record<string, unknown>
+  > | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(GEO_URL)
+      .then((r) => {
+        if (!r.ok) throw new Error('bad status');
+        return r.json();
+      })
+      .then((data) => {
+        if (!cancelled && data?.features?.length) {
+          setGeoCollection(data);
+          setGeoStatus('ready');
+        } else if (!cancelled) setGeoStatus('error');
+      })
+      .catch(() => {
+        if (!cancelled) setGeoStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const { collection, featureRows } = useMemo(() => {
-    const collectionInner = kenyaAdm2Geo as GeoJSON.FeatureCollection<
-      GeoJSON.Polygon | GeoJSON.MultiPolygon,
-      Record<string, unknown>
-    >;
+    const collectionInner = (geoCollection ?? {
+      type: 'FeatureCollection' as const,
+      features: [],
+    }) as GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>>;
     const rows = (collectionInner.features || []).map((feature, i) => {
       const countyKey = countyKeyFromName2(feature.properties as Record<string, unknown>);
       return {
@@ -63,7 +92,7 @@ export function KenyaHeatMap() {
       };
     });
     return { collection: collectionInner, featureRows: rows };
-  }, []);
+  }, [geoCollection]);
 
   useLayoutEffect(() => {
     const el = wrapRef.current;
@@ -132,7 +161,7 @@ export function KenyaHeatMap() {
   }, [draw]);
 
   const mapProjection = useMemo(() => {
-    if (size.w < 1) return null;
+    if (size.w < 1 || !collection.features?.length) return null;
     return geoMercator().fitExtent(
       [
         [PADDING, PADDING],
@@ -179,9 +208,30 @@ export function KenyaHeatMap() {
     <div className="relative w-full min-w-0 max-w-full">
       <div
         ref={wrapRef}
-        className="w-full min-w-0 max-w-full overflow-hidden rounded border border-slate-300"
+        className="relative w-full min-w-0 max-w-full overflow-hidden rounded border border-slate-300"
         style={{ minHeight: '320px', backgroundColor: MAP_CANVAS_BG }}
       >
+        {geoStatus === 'loading' && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(226, 232, 240, 0.92)' }}
+          >
+            <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#64748b' }}>
+              Loading map…
+            </span>
+          </div>
+        )}
+        {geoStatus === 'error' && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center p-4"
+            style={{ backgroundColor: '#fef2f2' }}
+          >
+            <p className="text-sm text-center max-w-md" style={{ color: '#991b1b', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              Map data not found. Ensure <code className="text-xs bg-white px-1 rounded">public/geo/KEN_adm2.json</code> exists
+              (run <code className="text-xs bg-white px-1 rounded">pnpm run build:ken-adm2</code> after placing shapefiles).
+            </p>
+          </div>
+        )}
         <canvas
           ref={canvasRef}
           className="block w-full max-w-full cursor-crosshair touch-none"

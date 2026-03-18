@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { geoPath, geoTransform } from 'd3-geo';
-import kenyaLocationGeo from '../data/Location.json';
 import {
   countyKeyFromName2,
   extendBoundsFromGeometry,
 } from './kenyaMapShared';
+
+const LOCATION_GEO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}geo/Location.json`;
 
 const NO_FARMERS_COLOR = '#0f0f0f';
 const STROKE_COLOR = '#64748b';
@@ -41,6 +42,28 @@ export interface KenyaFarmerRegionalMapProps {
 export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegionalMapProps) {
   const [hovered, setHovered] = useState<{ county: string; count: number } | null>(null);
   const [tooltip, setTooltip] = useState({ x: 0, y: 0 });
+  const [geoFeatures, setGeoFeatures] = useState<GeoFeature[] | null>(null);
+  const [geoError, setGeoError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(LOCATION_GEO_URL)
+      .then((r) => {
+        if (!r.ok) throw new Error('fail');
+        return r.json();
+      })
+      .then((data) => {
+        const f = data?.features;
+        if (!cancelled && Array.isArray(f) && f.length) setGeoFeatures(f);
+        else if (!cancelled) setGeoError(true);
+      })
+      .catch(() => {
+        if (!cancelled) setGeoError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const maxCount = useMemo(
     () => Math.max(1, ...Object.values(farmerCountByCounty)),
@@ -48,8 +71,7 @@ export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegio
   );
 
   const paths = useMemo(() => {
-    const collection = kenyaLocationGeo as { type: string; features: GeoFeature[] };
-    const features = collection.features;
+    const features = geoFeatures;
     if (!features?.length) return [];
 
     const bounds = {
@@ -95,18 +117,34 @@ export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegio
         };
       })
       .filter((p): p is typeof p & { pathD: string } => p.pathD != null && p.pathD.length > 0);
-  }, [farmerCountByCounty, maxCount]);
+  }, [farmerCountByCounty, maxCount, geoFeatures]);
 
   return (
     <div className="relative w-full min-w-0 max-w-full mb-6">
       <div
-        className="w-full rounded-lg border border-slate-300 overflow-hidden"
+        className="relative w-full rounded-lg border border-slate-300 overflow-hidden"
         style={{ backgroundColor: MAP_BG }}
         onMouseMove={(e) => {
           if (hovered) setTooltip({ x: e.clientX, y: e.clientY });
         }}
         onMouseLeave={() => setHovered(null)}
       >
+        {!geoFeatures && !geoError && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center text-xs"
+            style={{ backgroundColor: 'rgba(226,232,240,0.9)', color: '#64748b', fontFamily: 'IBM Plex Sans, sans-serif' }}
+          >
+            Loading regional map…
+          </div>
+        )}
+        {geoError && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center p-2 text-center text-xs"
+            style={{ backgroundColor: '#fef2f2', color: '#991b1b', fontFamily: 'IBM Plex Sans, sans-serif' }}
+          >
+            Add public/geo/Location.json for this map.
+          </div>
+        )}
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="w-full h-auto block max-h-[200px]"

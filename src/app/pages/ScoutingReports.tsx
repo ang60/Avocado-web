@@ -1,218 +1,33 @@
 import { Layout } from '../components/Layout';
 import { Search, Smartphone, Phone, CheckCircle, AlertCircle, Image as ImageIcon, Plus, Eye, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-
-type SubmissionSource = 'app' | 'ussd';
-type SeverityLevel = 'high' | 'medium' | 'low';
-type ReviewStatus = 'new' | 'under-review' | 'reviewed';
-
-interface ScoutingFeedItem {
-  id: string;
-  farmName: string;
-  blockId: string;
-  farmerName: string;
-  severity: SeverityLevel;
-  source: SubmissionSource;
-  finding: string;
-  status: 'clean' | 'detected';
-  mediaPreview?: string; // Image URL for app submissions
-  ussdCode?: string; // USSD code for USSD submissions
-  timestamp: string;
-  reviewed: ReviewStatus;
-  county: string;
-  assignedTo?: string; // Agronomist assigned to
-}
-
-const scoutingFeed: ScoutingFeedItem[] = [
-  {
-    id: 'SF-2145',
-    farmName: 'Wanjiru Farm',
-    blockId: 'Block B',
-    farmerName: 'Grace Wanjiru',
-    severity: 'high',
-    source: 'app',
-    finding: 'False Codling Moth',
-    status: 'detected',
-    mediaPreview: 'https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?w=100&h=100&fit=crop',
-    timestamp: '14 Mar, 08:30',
-    reviewed: 'new',
-    county: 'Murang\'a',
-    assignedTo: 'Dr. James Kariuki',
-  },
-  {
-    id: 'SF-2144',
-    farmName: 'Kipchirchir Estates',
-    blockId: 'Block A-12',
-    farmerName: 'David Kipchirchir',
-    severity: 'low',
-    source: 'app',
-    finding: 'No Pests Found',
-    status: 'clean',
-    mediaPreview: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=100&h=100&fit=crop',
-    timestamp: '14 Mar, 08:15',
-    reviewed: 'reviewed',
-    county: 'Kiambu',
-  },
-  {
-    id: 'SF-2143',
-    farmName: 'Mwangi Holdings',
-    blockId: 'Block C',
-    farmerName: 'Peter Mwangi',
-    severity: 'high',
-    source: 'ussd',
-    finding: 'Root Rot Suspected',
-    status: 'detected',
-    ussdCode: '*104',
-    timestamp: '14 Mar, 07:45',
-    reviewed: 'new',
-    county: 'Murang\'a',
-    assignedTo: 'Dr. James Kariuki',
-  },
-  {
-    id: 'SF-2142',
-    farmName: 'Njeri Orchards',
-    blockId: 'Block D-05',
-    farmerName: 'Faith Njeri',
-    severity: 'low',
-    source: 'app',
-    finding: 'No Pests Found',
-    status: 'clean',
-    mediaPreview: 'https://images.unsplash.com/photo-1590411806458-57ad1f1e8c4e?w=100&h=100&fit=crop',
-    timestamp: '13 Mar, 16:20',
-    reviewed: 'reviewed',
-    county: 'Meru',
-  },
-  {
-    id: 'SF-2141',
-    farmName: 'Kimani Avocado Co.',
-    blockId: 'Block F-03',
-    farmerName: 'John Kimani',
-    severity: 'medium',
-    source: 'ussd',
-    finding: 'Thrips Detected',
-    status: 'detected',
-    ussdCode: '*105',
-    timestamp: '13 Mar, 14:10',
-    reviewed: 'under-review',
-    county: 'Kiambu',
-    assignedTo: 'Dr. Sarah Mwangi',
-  },
-  {
-    id: 'SF-2140',
-    farmName: 'Wambui Valley Farm',
-    blockId: 'Block E-02',
-    farmerName: 'Mary Wambui',
-    severity: 'low',
-    source: 'app',
-    finding: 'No Pests Found',
-    status: 'clean',
-    mediaPreview: 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=100&h=100&fit=crop',
-    timestamp: '13 Mar, 11:45',
-    reviewed: 'reviewed',
-    county: 'Nyeri',
-  },
-  {
-    id: 'SF-2139',
-    farmName: 'Omondi Green Valley',
-    blockId: 'Block G',
-    farmerName: 'Samuel Omondi',
-    severity: 'high',
-    source: 'ussd',
-    finding: 'Fruit Fly Infestation',
-    status: 'detected',
-    ussdCode: '*102',
-    timestamp: '13 Mar, 09:30',
-    reviewed: 'new',
-    county: 'Bungoma',
-  },
-  {
-    id: 'SF-2138',
-    farmName: 'Kariuki Farms',
-    blockId: 'Block H-08',
-    farmerName: 'Joseph Kariuki',
-    severity: 'medium',
-    source: 'app',
-    finding: 'Scale Insects',
-    status: 'detected',
-    mediaPreview: 'https://images.unsplash.com/photo-1587735243615-c03f25aaff15?w=100&h=100&fit=crop',
-    timestamp: '12 Mar, 15:50',
-    reviewed: 'new',
-    county: 'Kiambu',
-  },
-  {
-    id: 'SF-2137',
-    farmName: 'Wanjiru Estates',
-    blockId: 'Block K-01',
-    farmerName: 'Lucy Wanjiru',
-    severity: 'low',
-    source: 'app',
-    finding: 'No Pests Found',
-    status: 'clean',
-    mediaPreview: 'https://images.unsplash.com/photo-1587735243615-c03f25aaff15?w=100&h=100&fit=crop',
-    timestamp: '12 Mar, 13:20',
-    reviewed: 'reviewed',
-    county: 'Embu',
-  },
-  {
-    id: 'SF-2136',
-    farmName: 'Mutua Orchards',
-    blockId: 'Block J',
-    farmerName: 'Daniel Mutua',
-    severity: 'medium',
-    source: 'ussd',
-    finding: 'Leaf Miner Detected',
-    status: 'detected',
-    ussdCode: '*108',
-    timestamp: '12 Mar, 10:15',
-    reviewed: 'under-review',
-    county: 'Machakos',
-    assignedTo: 'Dr. John Maina',
-  },
-  {
-    id: 'SF-2135',
-    farmName: 'Kamau Farm',
-    blockId: 'Block C',
-    farmerName: 'James Kamau',
-    severity: 'high',
-    source: 'app',
-    finding: 'False Codling Moth Detected',
-    status: 'detected',
-    mediaPreview: 'https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?w=100&h=100&fit=crop',
-    timestamp: '12 Mar, 09:05',
-    reviewed: 'new',
-    county: 'Kiambu',
-    assignedTo: 'Dr. James Kariuki',
-  },
-  {
-    id: 'SF-2134',
-    farmName: 'Njoroge Orchards',
-    blockId: 'Block M-07',
-    farmerName: 'Anne Njoroge',
-    severity: 'medium',
-    source: 'ussd',
-    finding: 'Anthracnose Detected',
-    status: 'detected',
-    ussdCode: '*103',
-    timestamp: '11 Mar, 16:40',
-    reviewed: 'new',
-    county: 'Nyeri',
-  },
-];
+import type { ScoutingFeedItem } from '../api/types';
+import { fetchScoutingFeed, getPlaceholderCurrentAgronomist } from '../api/placeholderApi';
+import { AppToast } from '../components/AppToast';
 
 type FilterType = 'all' | 'needs-review' | 'my-assigned' | 'ussd';
 
 export function ScoutingReports() {
   const navigate = useNavigate();
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [reviewModalItem, setReviewModalItem] = useState<ScoutingFeedItem | null>(null);
   const [createCaseModalItem, setCreateCaseModalItem] = useState<ScoutingFeedItem | null>(null);
+  const [feed, setFeed] = useState<ScoutingFeedItem[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
 
-  // Current user (for "My Assigned" filter)
-  const currentUser = 'Dr. James Kariuki';
+  const currentUser = getPlaceholderCurrentAgronomist();
+
+  useEffect(() => {
+    fetchScoutingFeed()
+      .then(setFeed)
+      .catch(() => setFeed([]))
+      .finally(() => setFeedLoading(false));
+  }, []);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -231,23 +46,26 @@ export function ScoutingReports() {
   };
 
   const handleMarkAsReviewed = () => {
-    const needsReviewCount = scoutingFeed.filter(item => item.reviewed === 'new').length;
-    console.log('Marking items as reviewed');
-    alert(`Marked ${needsReviewCount} submission(s) as reviewed`);
+    if (selectedItems.length === 0) return;
+    const n = selectedItems.length;
+    setFeed((f) =>
+      f.map((item) =>
+        selectedItems.includes(item.id) ? { ...item, reviewed: 'reviewed' as const } : item
+      )
+    );
+    setSelectedItems([]);
+    setToastMessage(`${n} submission(s) marked as reviewed.`);
+    window.setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleCreateCase = (itemId: string) => {
-    console.log('Creating case for:', itemId);
-    alert(`Creating case for submission ${itemId}...`);
-  };
-
-  const handleReview = (itemId: string) => {
-    console.log('Reviewing:', itemId);
-    alert(`Opening review for submission ${itemId}...`);
+  const markSingleReviewed = (itemId: string) => {
+    setFeed((f) =>
+      f.map((item) => (item.id === itemId ? { ...item, reviewed: 'reviewed' as const } : item))
+    );
   };
 
   // Apply filters
-  const filteredFeed = scoutingFeed.filter((item) => {
+  const filteredFeed = feed.filter((item) => {
     // Filter by status/source/assignment
     if (activeFilter === 'needs-review' && item.reviewed !== 'new') return false;
     if (activeFilter === 'my-assigned' && item.assignedTo !== currentUser) return false;
@@ -266,13 +84,41 @@ export function ScoutingReports() {
     return true;
   });
 
-  const allCount = scoutingFeed.length;
-  const needsReviewCount = scoutingFeed.filter(item => item.reviewed === 'new').length;
-  const myAssignedCount = scoutingFeed.filter(item => item.assignedTo === currentUser).length;
-  const ussdCount = scoutingFeed.filter(item => item.source === 'ussd').length;
+  const allCount = feed.length;
+  const needsReviewCount = feed.filter((item) => item.reviewed === 'new').length;
+  const myAssignedCount = feed.filter((item) => item.assignedTo === currentUser).length;
+  const ussdCount = feed.filter((item) => item.source === 'ussd').length;
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    window.setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  if (feedLoading) {
+    return (
+      <Layout>
+        <div className="animate-pulse space-y-6">
+          <div className="h-12 bg-slate-200 rounded w-2/3 max-w-md" />
+          <div className="flex gap-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-10 bg-slate-200 rounded-lg w-28" />
+            ))}
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-24 bg-slate-200 rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
+      {toastMessage && (
+        <AppToast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+      )}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 
@@ -1001,8 +847,8 @@ export function ScoutingReports() {
                 </button>
                 <button
                   onClick={() => {
-                    console.log('Marking as reviewed:', reviewModalItem.id);
-                    alert(`Submission ${reviewModalItem.id} marked as reviewed`);
+                    markSingleReviewed(reviewModalItem.id);
+                    showToast(`Submission ${reviewModalItem.id} marked as reviewed.`);
                     setReviewModalItem(null);
                   }}
                   className="px-4 py-2 rounded-lg transition-colors hover:opacity-90"
@@ -1227,11 +1073,11 @@ export function ScoutingReports() {
               </button>
               <button
                 onClick={() => {
-                  const caseTitle = `${createCaseModalItem.finding} - ${createCaseModalItem.farmName}`;
-                  console.log('Creating case:', caseTitle);
-                  alert(`Case created: ${caseTitle}\n\nRedirecting to Case Management...`);
+                  const id = createCaseModalItem.id;
+                  markSingleReviewed(id);
                   setCreateCaseModalItem(null);
-                  navigate('/cases');
+                  showToast(`Case draft created from ${id}. Open Case Management to continue.`);
+                  navigate('/case-management');
                 }}
                 className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center gap-2"
                 style={{

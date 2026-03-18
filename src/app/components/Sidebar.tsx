@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, FolderOpen, Activity, Bell, BookOpen, Users, Settings, ClipboardCheck, Phone, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, FolderOpen, Activity, Bell, BookOpen, Users, Settings, ClipboardCheck, Phone, Menu, X, Shield, Building2, Package } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
 import avocadoLogo from '../../imports/avocado_logo.svg';
 import { useSidebar } from '../context/SidebarContext';
@@ -14,6 +14,9 @@ const navItems: NavItem[] = [
   { name: 'Scouting Reports', icon: FileText, path: '/scouting-reports' },
   { name: 'Case Management', icon: FolderOpen, path: '/case-management' },
   { name: 'Outbreak Monitoring', icon: Activity, path: '/outbreak-monitoring' },
+  { name: 'KEPHIS', icon: Shield, path: '/kephis-quarantine' },
+  { name: 'HCDA', icon: Building2, path: '/hcda-registry' },
+  { name: 'Exporter', icon: Package, path: '/exporter' },
   { name: 'Alerts', icon: Bell, path: '/alerts' },
   { name: 'Knowledge Base', icon: BookOpen, path: '/knowledge-base' },
   { name: 'Symptom Codebook', icon: Phone, path: '/symptom-codebook' },
@@ -50,6 +53,7 @@ export function Sidebar() {
           backgroundColor: '#1B4332',
           width: isCollapsed ? '0px' : '240px',
           overflow: 'hidden',
+          zIndex: 40,
         }}
       >
         {/* Logo */}
@@ -76,7 +80,9 @@ export function Sidebar() {
           <ul className="space-y-1 pb-4">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              const isActive =
+                location.pathname === item.path ||
+                (item.path !== '/' && location.pathname.startsWith(item.path));
               return (
                 <li key={item.name}>
                   <Link
@@ -105,7 +111,7 @@ export function Sidebar() {
         {/* Version */}
         <div className="px-6 py-4 border-t border-white/10 flex-shrink-0">
           <p className="text-xs text-white/50 whitespace-nowrap" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-            Version 2.1.4
+            v2.4.1
           </p>
         </div>
       </aside>

@@ -32,5 +32,10 @@ const geoms = parseShp(shp, prj);
 const props = parseDbf(dbf);
 const fc = combine([geoms, props]);
 
-fs.writeFileSync(outPath, JSON.stringify(fc), 'utf8');
+const json = JSON.stringify(fc);
+fs.writeFileSync(outPath, json, 'utf8');
 console.log(`Wrote ${fc.features.length} features → ${outPath}`);
+const pub = path.join(root, 'public/geo/KEN_adm2.json');
+fs.mkdirSync(path.dirname(pub), { recursive: true });
+fs.writeFileSync(pub, json, 'utf8');
+console.log(`Also → ${pub} (runtime asset, not bundled)`);

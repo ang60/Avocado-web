@@ -1,191 +1,38 @@
 import { Layout } from '../components/Layout';
 import { Bell, AlertTriangle, Info, CheckCircle, Clock, Map, FileText, Users, Settings, X, MapPin, TrendingUp, Eye, Radio, CheckCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-
-const alerts = [
-  {
-    id: 'ALT-1245',
-    type: 'biological',
-    severity: 'critical',
-    title: 'Critical Outbreak Alert: Avocado Thrips',
-    message: 'Outbreak spreading rapidly in Murang\'a County. Immediate action required for 12 affected farms within 5km cluster radius.',
-    timestamp: '2 hours ago',
-    read: false,
-    category: 'outbreak',
-    affectedFarmers: [
-      { id: 'FRM-234', name: 'Peter Kamau', initials: 'PK' },
-      { id: 'FRM-198', name: 'Grace Njeri', initials: 'GN' },
-      { id: 'FRM-156', name: 'John Mwangi', initials: 'JM' },
-      { id: 'FRM-167', name: 'Mary Wanjiru', initials: 'MW' },
-    ],
-    geoCluster: {
-      county: 'Murang\'a',
-      radius: '5km',
-      centerPoint: 'Kangema Trading Center',
-      affectedFarms: 12,
-    },
-    primaryAction: {
-      label: 'View Heatmap',
-      route: '/outbreak-monitoring',
-      icon: 'map',
-    },
-    secondaryAction: {
-      label: 'Review Cases',
-      route: '/case-management',
-    },
-  },
-  {
-    id: 'ALT-1244',
-    type: 'compliance',
-    severity: 'warning',
-    title: 'High Severity Case Threshold Exceeded',
-    message: 'Number of high severity cases has exceeded weekly threshold (7 cases). Review urgently needed.',
-    timestamp: '4 hours ago',
-    read: false,
-    category: 'threshold',
-    primaryAction: {
-      label: 'Generate Report',
-      route: '/compliance-hub',
-      icon: 'report',
-    },
-    secondaryAction: {
-      label: 'View Dashboard',
-      route: '/',
-    },
-  },
-  {
-    id: 'ALT-1243',
-    type: 'compliance',
-    severity: 'warning',
-    title: 'Pending Advisory Review',
-    message: '5 cases are pending advisory issuance for more than 48 hours. Action needed.',
-    timestamp: '6 hours ago',
-    read: false,
-    category: 'pending',
-    affectedFarmers: [
-      { id: 'FRM-089', name: 'David Kariuki', initials: 'DK' },
-      { id: 'FRM-123', name: 'Sarah Akinyi', initials: 'SA' },
-      { id: 'FRM-145', name: 'James Ochieng', initials: 'JO' },
-    ],
-    primaryAction: {
-      label: 'Go to Triage',
-      route: '/case-management',
-      icon: 'triage',
-    },
-    secondaryAction: {
-      label: 'Dismiss',
-      route: null,
-    },
-  },
-  {
-    id: 'ALT-1242',
-    type: 'biological',
-    severity: 'critical',
-    title: 'New Pest Detection: Spotted Wing Drosophila',
-    message: 'First detection in Meru County. Quarantine protocols initiated. 3 farms under monitoring.',
-    timestamp: '1 day ago',
-    read: true,
-    category: 'detection',
-    geoCluster: {
-      county: 'Meru',
-      radius: '3km',
-      centerPoint: 'Nkubu Township',
-      affectedFarms: 3,
-    },
-    primaryAction: {
-      label: 'View Heatmap',
-      route: '/outbreak-monitoring',
-      icon: 'map',
-    },
-    secondaryAction: {
-      label: 'View KB Article',
-      route: '/knowledge-base/KB-052',
-    },
-  },
-  {
-    id: 'ALT-1241',
-    type: 'system',
-    severity: 'info',
-    title: 'New Scouting Reports Available',
-    message: '24 new scouting reports submitted today. 3 require immediate review.',
-    timestamp: '1 day ago',
-    read: true,
-    category: 'report',
-    primaryAction: {
-      label: 'Review Reports',
-      route: '/scouting-reports',
-      icon: 'report',
-    },
-    secondaryAction: {
-      label: 'Mark as Read',
-      route: null,
-    },
-  },
-  {
-    id: 'ALT-1240',
-    type: 'system',
-    severity: 'success',
-    title: 'Case Resolution Milestone',
-    message: 'Congratulations! Your team has maintained 87% resolution rate for 4 consecutive weeks.',
-    timestamp: '2 days ago',
-    read: true,
-    category: 'milestone',
-    primaryAction: {
-      label: 'View Analytics',
-      route: '/',
-      icon: 'analytics',
-    },
-    secondaryAction: {
-      label: 'Dismiss',
-      route: null,
-    },
-  },
-  {
-    id: 'ALT-1239',
-    type: 'compliance',
-    severity: 'warning',
-    title: 'Overdue Scouting Inspections',
-    message: '8 farms have not submitted scouting reports in 14+ days. Compliance check required.',
-    timestamp: '2 days ago',
-    read: true,
-    category: 'overdue',
-    primaryAction: {
-      label: 'View Farmers',
-      route: '/farmers',
-      icon: 'users',
-    },
-    secondaryAction: {
-      label: 'Send Reminders',
-      route: null,
-    },
-  },
-  {
-    id: 'ALT-1238',
-    type: 'system',
-    severity: 'info',
-    title: 'System Maintenance Scheduled',
-    message: 'Scheduled maintenance on March 18, 2026 from 2:00 AM to 4:00 AM EAT.',
-    timestamp: '3 days ago',
-    read: true,
-    category: 'system',
-    primaryAction: {
-      label: 'View Details',
-      route: null,
-      icon: 'info',
-    },
-    secondaryAction: {
-      label: 'Dismiss',
-      route: null,
-    },
-  },
-];
+import { fetchAlerts } from '../api/placeholderApi';
+import type { PlaceholderAlert } from '../api/types';
 
 export function Alerts() {
   const navigate = useNavigate();
+  const [alerts, setAlerts] = useState<PlaceholderAlert[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(true);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [showConfigureRules, setShowConfigureRules] = useState(false);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAlerts()
+      .then((data) => {
+        if (!cancelled) {
+          setAlerts(data);
+          setAlertsError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAlertsError('Could not load alerts.');
+      })
+      .finally(() => {
+        if (!cancelled) setAlertsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const unreadCount = alerts.filter(a => !a.read && !dismissedAlerts.includes(a.id)).length;
   const criticalCount = alerts.filter(a => a.severity === 'critical' && !dismissedAlerts.includes(a.id)).length;
@@ -262,15 +109,19 @@ export function Alerts() {
   };
 
   const handleMarkAllRead = () => {
-    // In a real app, this would update the backend
-    console.log('Mark all as read');
+    setAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
+  };
+
+  const markAlertRead = (alertId: string) => {
+    setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, read: true } : a)));
   };
 
   const handleDismiss = (alertId: string) => {
     setDismissedAlerts([...dismissedAlerts, alertId]);
   };
 
-  const handlePrimaryAction = (action: any) => {
+  const handlePrimaryAction = (alert: PlaceholderAlert, action: { route: string | null }) => {
+    markAlertRead(alert.id);
     if (action.route) {
       navigate(action.route);
     }
@@ -285,8 +136,24 @@ export function Alerts() {
 
   const visibleAlerts = filteredAlerts;
 
+  if (alertsLoading) {
+    return (
+      <Layout>
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading alerts…</p>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
+      {alertsError && (
+        <div
+          className="mb-4 p-4 rounded-lg border"
+          style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#991B1B', fontFamily: 'IBM Plex Sans, sans-serif' }}
+        >
+          {alertsError}
+        </div>
+      )}
       {/* Header */}
       <header className="mb-8">
         <div className="flex items-start justify-between mb-4">
@@ -722,7 +589,7 @@ export function Alerts() {
                           
                           {/* Primary Action */}
                           <button
-                            onClick={() => handlePrimaryAction(alert.primaryAction)}
+                            onClick={() => handlePrimaryAction(alert, alert.primaryAction)}
                             className="px-4 py-2 rounded-lg transition-all hover:shadow-md flex items-center gap-2 text-sm"
                             style={{ 
                               backgroundColor: '#2D6A4F',

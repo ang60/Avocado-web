@@ -1,45 +1,55 @@
 import { Layout } from '../components/Layout';
 import { Users, Settings, Shield, Activity, Database, Bell, Edit, Trash2, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AddUserModal } from '../components/AddUserModal';
 import { AddRoleModal } from '../components/AddRoleModal';
 import { AddAlertRuleModal } from '../components/AddAlertRuleModal';
+import { fetchAdmin } from '../api/placeholderApi';
+import type {
+  AdminSystemStat,
+  AdminUserRow,
+  AdminRoleRow,
+  AdminAlertRuleRow,
+} from '../api/types';
 
-const systemStats = [
-  { label: 'Active Users', value: '42', icon: Users, color: '#2D6A4F' },
-  { label: 'System Uptime', value: '99.8%', icon: Activity, color: '#74C69D' },
-  { label: 'Database Size', value: '12.4 GB', icon: Database, color: '#2D6A4F' },
-  { label: 'API Calls Today', value: '18,542', icon: Settings, color: '#74C69D' },
-];
-
-const initialUsers = [
-  { id: '1', name: 'Jane Wambui', role: 'System Administrator', email: 'jane.wambui@avoguard.ke', phone: '+254 712 345 678', county: 'Murang\'a', status: 'active', lastLogin: '2 hours ago' },
-  { id: '2', name: 'Peter Mwangi', role: 'Field Scout', email: 'peter.mwangi@avoguard.ke', phone: '+254 723 456 789', county: 'Nyeri', status: 'active', lastLogin: '4 hours ago' },
-  { id: '3', name: 'Grace Achieng', role: 'Agronomist', email: 'grace.achieng@avoguard.ke', phone: '+254 734 567 890', county: 'Kiambu', status: 'active', lastLogin: '5 hours ago' },
-  { id: '4', name: 'Samuel Omondi', role: 'Field Scout', email: 'samuel.omondi@avoguard.ke', phone: '+254 745 678 901', county: 'Murang\'a', status: 'active', lastLogin: '1 day ago' },
-  { id: '5', name: 'Mary Akinyi', role: 'Regional Coordinator', email: 'mary.akinyi@avoguard.ke', phone: '+254 756 789 012', county: 'Meru', status: 'inactive', lastLogin: '3 days ago' },
-];
-
-const initialRoles = [
-  { id: '1', name: 'System Administrator', description: 'Full system access and configuration', users: 2, permissions: 15 },
-  { id: '2', name: 'Agronomist', description: 'Review cases and provide recommendations', users: 8, permissions: 10 },
-  { id: '3', name: 'Field Scout', description: 'Submit scouting reports and manage cases', users: 24, permissions: 7 },
-  { id: '4', name: 'Farm Manager', description: 'View reports and compliance data', users: 6, permissions: 5 },
-  { id: '5', name: 'Regional Coordinator', description: 'Coordinate regional activities and monitor compliance', users: 2, permissions: 12 },
-];
-
-const initialAlertRules = [
-  { id: '1', name: 'High Thrips Outbreak - Murang\'a', condition: 'Cases exceed threshold', threshold: '10', county: 'Murang\'a', pest: 'Avocado Thrips', action: 'Email & SMS', status: 'active', triggered: 3, lastTriggered: '2 days ago' },
-  { id: '2', name: 'New Pest Detection Alert', condition: 'New pest detected', threshold: '1', county: 'All Counties', pest: 'All Pests', action: 'Email', status: 'active', triggered: 1, lastTriggered: '1 week ago' },
-  { id: '3', name: 'Compliance Drop Alert', condition: 'Scouting compliance drops below', threshold: '90%', county: 'All Counties', pest: 'All Pests', action: 'Dashboard', status: 'active', triggered: 0, lastTriggered: 'Never' },
-  { id: '4', name: 'Geographic Cluster - Kiambu', condition: 'Geographic cluster detected', threshold: '5', county: 'Kiambu', pest: 'Phytophthora Root Rot', action: 'Email & SMS', status: 'inactive', triggered: 2, lastTriggered: '3 weeks ago' },
-];
+const STAT_ICONS = {
+  users: Users,
+  activity: Activity,
+  database: Database,
+  settings: Settings,
+} as const;
 
 export function Admin() {
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'alerts' | 'settings'>('users');
-  const [users, setUsers] = useState(initialUsers);
-  const [roles, setRoles] = useState(initialRoles);
-  const [alertRules, setAlertRules] = useState(initialAlertRules);
+  const [systemStats, setSystemStats] = useState<AdminSystemStat[]>([]);
+  const [users, setUsers] = useState<AdminUserRow[]>([]);
+  const [roles, setRoles] = useState<AdminRoleRow[]>([]);
+  const [alertRules, setAlertRules] = useState<AdminAlertRuleRow[]>([]);
+  const [adminLoading, setAdminLoading] = useState(true);
+  const [adminError, setAdminError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAdmin()
+      .then((payload) => {
+        if (!cancelled) {
+          setSystemStats(payload.systemStats);
+          setUsers(payload.users);
+          setRoles(payload.roles);
+          setAlertRules(payload.alertRules);
+          setAdminError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAdminError('Could not load admin data.');
+      })
+      .finally(() => {
+        if (!cancelled) setAdminLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
   const [isAddAlertRuleModalOpen, setIsAddAlertRuleModalOpen] = useState(false);
@@ -82,8 +92,24 @@ export function Admin() {
     ));
   };
 
+  if (adminLoading) {
+    return (
+      <Layout>
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading admin…</p>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
+      {adminError && (
+        <div
+          className="mb-4 p-4 rounded-lg border"
+          style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#991B1B', fontFamily: 'IBM Plex Sans, sans-serif' }}
+        >
+          {adminError}
+        </div>
+      )}
       <header className="mb-8">
         <h1 
           className="text-4xl mb-2" 
@@ -102,7 +128,7 @@ export function Admin() {
       {/* System Stats */}
       <div className="grid grid-cols-4 gap-6 mb-8">
         {systemStats.map((stat, index) => {
-          const Icon = stat.icon;
+          const Icon = STAT_ICONS[stat.icon];
           return (
             <div 
               key={index}

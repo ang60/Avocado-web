@@ -1,64 +1,44 @@
 import { Layout } from '../components/Layout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchFarmerDetail } from '../api/placeholderApi';
+import type { FarmerDetailPayload } from '../api/types';
 import { useParams, useNavigate } from 'react-router';
 import { 
   MapPin, Phone, Mail, Calendar, Smartphone, TrendingUp, 
   AlertCircle, CheckCircle, FileText, ArrowLeft, Download,
   Leaf, Users, Package, Clock, MessageSquare
 } from 'lucide-react';
+import { AppToast } from '../components/AppToast';
 
 export function FarmerDetail() {
   const { farmerId } = useParams();
   const navigate = useNavigate();
   const [showComplianceReport, setShowComplianceReport] = useState(false);
+  const [farmerData, setFarmerData] = useState<FarmerDetailPayload | null>(null);
+  const [farmerLoading, setFarmerLoading] = useState(true);
+  const [farmerError, setFarmerError] = useState<string | null>(null);
+  const [detailToast, setDetailToast] = useState<string | null>(null);
 
-  // Mock farmer data - in real app, fetch based on farmerId
-  const farmerData = {
-    id: 'FRM-1024',
-    name: 'Peter Mwangi',
-    farmName: 'Kangema Avocado Growers',
-    location: 'Kangema',
-    county: 'Murang\'a',
-    ward: 'Kangema',
-    subCounty: 'Kangema',
-    phone: '+254 722 345 678',
-    email: 'pmwangi@kangemaavocado.co.ke',
-    primaryChannel: 'smartphone',
-    registrationDate: 'Jan 15, 2024',
-    totalAcres: 245,
-    blocksManaged: 12,
-    treesCount: 3240,
-    exportEligibility: 'at-risk',
-    lastScoutingResult: {
-      status: 'high-risk',
-      finding: 'False Codling Moth',
-      date: 'Mar 14, 2026',
-      scoutName: 'Jane Wambui',
-    },
-    weeklyScoutingLogs: [
-      { week: 'Week 1 (Mar 1-7)', completed: true, date: 'Mar 5, 2026', scout: 'Jane Wambui' },
-      { week: 'Week 2 (Mar 8-14)', completed: true, date: 'Mar 12, 2026', scout: 'Jane Wambui' },
-      { week: 'Week 3 (Feb 22-28)', completed: true, date: 'Feb 26, 2026', scout: 'Jane Wambui' },
-      { week: 'Week 4 (Feb 15-21)', completed: true, date: 'Feb 19, 2026', scout: 'Samuel Omondi' },
-    ],
-    complianceScore: 100,
-    activeCases: [
-      { id: 'CSE-1024', issue: 'False Codling Moth', severity: 'high', status: 'new', date: 'Mar 14, 2026' },
-      { id: 'CSE-1018', issue: 'Avocado Thrips', severity: 'medium', status: 'under-review', date: 'Mar 10, 2026' },
-    ],
-    recentActivities: [
-      { type: 'scouting', description: 'Weekly scouting completed - High risk detected', date: 'Mar 14, 2026 14:32', user: 'Jane Wambui' },
-      { type: 'advisory', description: 'IPM advisory issued for False Codling Moth', date: 'Mar 14, 2026 16:45', user: 'Dr. James Kariuki' },
-      { type: 'scouting', description: 'Weekly scouting completed - No issues', date: 'Mar 12, 2026 11:20', user: 'Jane Wambui' },
-      { type: 'sms', description: 'SMS reminder sent: Complete weekly scouting', date: 'Mar 8, 2026 08:00', user: 'System' },
-    ],
-    blocks: [
-      { id: 'A-12', name: 'Block A-12', acres: 25, trees: 340, status: 'at-risk', lastInspection: 'Mar 14, 2026' },
-      { id: 'B-08', name: 'Block B-08', acres: 18, trees: 245, status: 'healthy', lastInspection: 'Mar 12, 2026' },
-      { id: 'C-05', name: 'Block C-05', acres: 22, trees: 298, status: 'healthy', lastInspection: 'Mar 12, 2026' },
-      { id: 'D-03', name: 'Block D-03', acres: 15, trees: 203, status: 'healthy', lastInspection: 'Mar 10, 2026' },
-    ],
-  };
+  useEffect(() => {
+    let cancelled = false;
+    setFarmerLoading(true);
+    fetchFarmerDetail(farmerId)
+      .then((data) => {
+        if (!cancelled) {
+          setFarmerData(data);
+          setFarmerError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFarmerError('Could not load farmer profile.');
+      })
+      .finally(() => {
+        if (!cancelled) setFarmerLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [farmerId]);
 
   const handleViewComplianceReport = () => {
     setShowComplianceReport(true);
@@ -66,8 +46,26 @@ export function FarmerDetail() {
     console.log('Generating compliance report for:', farmerId);
   };
 
+  if (farmerLoading || !farmerData) {
+    return (
+      <Layout>
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+          {farmerLoading ? 'Loading farmer…' : 'Farmer not found.'}
+        </p>
+        {farmerError && (
+          <p className="mt-2" style={{ color: '#991B1B', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            {farmerError}
+          </p>
+        )}
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
+      {detailToast && (
+        <AppToast message={detailToast} onDismiss={() => setDetailToast(null)} />
+      )}
       {/* Back Button */}
       <button
         onClick={() => navigate('/farmers')}
@@ -657,8 +655,25 @@ export function FarmerDetail() {
               </button>
               <button
                 onClick={() => {
-                  console.log('Downloading compliance report PDF');
-                  alert('Compliance report downloaded successfully!');
+                  if (!farmerData) return;
+                  const body = [
+                    `AvoGuard — Compliance summary`,
+                    `Farmer: ${farmerData.name} (${farmerData.id})`,
+                    `Farm: ${farmerData.farmName}`,
+                    `Compliance score: ${farmerData.complianceScore}`,
+                    `Export: ${farmerData.exportEligibility}`,
+                    `Generated: ${new Date().toISOString()}`,
+                  ].join('\n');
+                  const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `compliance-${farmerData.id}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  setShowComplianceReport(false);
+                  setDetailToast('Compliance report downloaded.');
+                  window.setTimeout(() => setDetailToast(null), 4000);
                 }}
                 className="flex-1 px-6 py-3 rounded-lg transition-colors hover:opacity-90 flex items-center justify-center gap-2"
                 style={{

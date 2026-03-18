@@ -1,133 +1,15 @@
 import { Layout } from '../components/Layout';
 import { ArrowLeft, Edit3, Phone, AlertTriangle, ExternalLink, Search, Download, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useState } from 'react';
-
-const ussdSymptomCodes = [
-  {
-    code: '101',
-    promptKiswahili: 'Vidudu vyeupe kwenye majani',
-    promptEnglish: 'White insects on leaves',
-    physicalSymptom: 'Mealybugs/Scale',
-    linkedArticle: 'KB-038',
-    articleTitle: 'Scale Management',
-    severity: 'medium',
-    menuPath: 'Main > 1: Wadudu > 1: Vidudu vyeupe',
-  },
-  {
-    code: '102',
-    promptKiswahili: 'Mabaka ya hudhurungi kwenye matunda',
-    promptEnglish: 'Brown spots on fruit',
-    physicalSymptom: 'Thrips/Fungus Damage',
-    linkedArticle: 'KB-045',
-    articleTitle: 'Avocado Thrips: Identification and Management',
-    severity: 'medium',
-    menuPath: 'Main > 1: Wadudu > 2: Mabaka ya hudhurungi',
-  },
-  {
-    code: '103',
-    promptKiswahili: 'Matunda kuanguka mapema',
-    promptEnglish: 'Premature fruit drop',
-    physicalSymptom: 'Fruit Fly/Environmental Stress',
-    linkedArticle: 'KB-032',
-    articleTitle: 'Fruit Fly Control',
-    severity: 'high',
-    menuPath: 'Main > 2: Matatizo ya Matunda > 1: Matunda kuanguka',
-  },
-  {
-    code: '104',
-    promptKiswahili: 'Majani kunyauka na kung\'ang\'ania',
-    promptEnglish: 'Wilting and yellowing leaves',
-    physicalSymptom: 'Root Rot/Water Stress',
-    linkedArticle: 'KB-044',
-    articleTitle: 'Phytophthora Root Rot Prevention and Control',
-    severity: 'high',
-    menuPath: 'Main > 3: Magonjwa > 1: Majani kunyauka',
-  },
-  {
-    code: '105',
-    promptKiswahili: 'Utando kama utando wa buibui',
-    promptEnglish: 'Webbing like spider webs',
-    physicalSymptom: 'Mite Infestation',
-    linkedArticle: 'KB-041',
-    articleTitle: 'Understanding Persea Mite Biology and Behavior',
-    severity: 'low',
-    menuPath: 'Main > 1: Wadudu > 3: Utando wa buibui',
-  },
-  {
-    code: '201',
-    promptKiswahili: 'Mizizi kubadili rangi kuwa nyeusi',
-    promptEnglish: 'Roots turning black',
-    physicalSymptom: 'Root Discoloration',
-    linkedArticle: 'KB-044',
-    articleTitle: 'Phytophthora Root Rot Prevention and Control',
-    severity: 'high',
-    menuPath: 'Main > 3: Magonjwa > 2: Mizizi nyeusi',
-  },
-  {
-    code: '202',
-    promptKiswahili: 'Jeraha kwenye shina',
-    promptEnglish: 'Cankers on trunk',
-    physicalSymptom: 'Trunk Cankers',
-    linkedArticle: 'KB-051',
-    articleTitle: 'Trunk Disease Management',
-    severity: 'high',
-    menuPath: 'Main > 3: Magonjwa > 3: Jeraha shina',
-  },
-  {
-    code: '203',
-    promptKiswahili: 'Madoa meusi kwenye matunda',
-    promptEnglish: 'Black spots on fruit',
-    physicalSymptom: 'Anthracnose',
-    linkedArticle: 'KB-040',
-    articleTitle: 'Anthracnose Disease Management',
-    severity: 'medium',
-    menuPath: 'Main > 2: Matatizo ya Matunda > 2: Madoa meusi',
-  },
-  {
-    code: '204',
-    promptKiswahili: 'Matunda kuiva haraka sana',
-    promptEnglish: 'Fruit ripening too fast',
-    physicalSymptom: 'Premature Ripening',
-    linkedArticle: 'KB-033',
-    articleTitle: 'Post-Harvest Disease Control',
-    severity: 'low',
-    menuPath: 'Main > 2: Matatizo ya Matunda > 3: Kuiva haraka',
-  },
-  {
-    code: '205',
-    promptKiswahili: 'Mti kudhoofika bila sababu',
-    promptEnglish: 'Tree decline without clear cause',
-    physicalSymptom: 'General Tree Decline',
-    linkedArticle: 'KB-044',
-    articleTitle: 'Phytophthora Root Rot Prevention and Control',
-    severity: 'high',
-    menuPath: 'Main > 3: Magonjwa > 4: Mti kudhoofika',
-  },
-  {
-    code: '301',
-    promptKiswahili: 'Majani yenye madoa ya njano',
-    promptEnglish: 'Leaves with yellow spots',
-    physicalSymptom: 'Nutrient Deficiency/Disease',
-    linkedArticle: 'KB-047',
-    articleTitle: 'Nutrient Deficiency Diagnosis',
-    severity: 'low',
-    menuPath: 'Main > 4: Utapiamlo > 1: Madoa ya njano',
-  },
-  {
-    code: '302',
-    promptKiswahili: 'Tundu kwenye matunda',
-    promptEnglish: 'Holes in fruit',
-    physicalSymptom: 'False Codling Moth',
-    linkedArticle: 'KB-035',
-    articleTitle: 'False Codling Moth Management',
-    severity: 'high',
-    menuPath: 'Main > 2: Matatizo ya Matunda > 4: Tundu matunda',
-  },
-];
+import { useState, useEffect } from 'react';
+import { fetchSymptomCodebook } from '../api/placeholderApi';
+import type { SymptomCodebookEntry } from '../api/types';
 
 export function SymptomCodebook() {
   const navigate = useNavigate();
+  const [ussdSymptomCodes, setUssdSymptomCodes] = useState<SymptomCodebookEntry[]>([]);
+  const [codesLoading, setCodesLoading] = useState(true);
+  const [codesError, setCodesError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showUSSDMenu, setShowUSSDMenu] = useState(false);
   const [selectedSeverity, setSelectedSeverity] = useState<string>('all');
@@ -143,11 +25,39 @@ export function SymptomCodebook() {
     menuPath: '',
   });
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchSymptomCodebook()
+      .then((data) => {
+        if (!cancelled) {
+          setUssdSymptomCodes(data);
+          setCodesError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCodesError('Could not load symptom codes.');
+      })
+      .finally(() => {
+        if (!cancelled) setCodesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleAddCode = () => {
-    console.log('New code added:', newCode);
-    // In a real app, this would send to the backend
+    const entry: SymptomCodebookEntry = {
+      code: newCode.code,
+      promptKiswahili: newCode.promptKiswahili,
+      promptEnglish: newCode.promptEnglish,
+      physicalSymptom: newCode.physicalSymptom,
+      linkedArticle: newCode.linkedArticle,
+      articleTitle: newCode.articleTitle,
+      severity: newCode.severity,
+      menuPath: newCode.menuPath,
+    };
+    setUssdSymptomCodes((prev) => [...prev, entry]);
     setShowAddCodeModal(false);
-    // Reset form
     setNewCode({
       code: '',
       promptKiswahili: '',
@@ -186,8 +96,24 @@ export function SymptomCodebook() {
     return matchesSearch && matchesSeverity;
   });
 
+  if (codesLoading) {
+    return (
+      <Layout>
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading symptom codebook…</p>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
+      {codesError && (
+        <div
+          className="mb-4 p-4 rounded-lg border"
+          style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#991B1B', fontFamily: 'IBM Plex Sans, sans-serif' }}
+        >
+          {codesError}
+        </div>
+      )}
       {/* Header */}
       <header className="mb-8">
         <div className="flex items-start justify-between mb-4">

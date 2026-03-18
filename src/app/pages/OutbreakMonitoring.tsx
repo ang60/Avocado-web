@@ -1,84 +1,65 @@
 import { Layout } from '../components/Layout';
 import { AlertTriangle, TrendingUp, MapPin, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-
-const outbreakTrends = [
-  { date: 'Mar 1', thrips: 12, rootRot: 5, mites: 8, anthracnose: 3 },
-  { date: 'Mar 3', thrips: 15, rootRot: 6, mites: 10, anthracnose: 4 },
-  { date: 'Mar 5', thrips: 18, rootRot: 7, mites: 12, anthracnose: 5 },
-  { date: 'Mar 7', thrips: 22, rootRot: 8, mites: 15, anthracnose: 6 },
-  { date: 'Mar 9', thrips: 19, rootRot: 9, mites: 14, anthracnose: 7 },
-  { date: 'Mar 11', thrips: 24, rootRot: 10, mites: 16, anthracnose: 8 },
-  { date: 'Mar 13', thrips: 28, rootRot: 11, mites: 18, anthracnose: 9 },
-  { date: 'Mar 15', thrips: 25, rootRot: 12, mites: 17, anthracnose: 10 },
-];
-
-const activeOutbreaks = [
-  {
-    id: 'OUT-089',
-    pest: 'Avocado Thrips',
-    severity: 'critical',
-    location: 'Murang\'a County',
-    farmsAffected: 12,
-    casesLinked: 45,
-    firstDetected: 'Feb 28, 2026',
-    trend: 'increasing',
-  },
-  {
-    id: 'OUT-088',
-    pest: 'Phytophthora Root Rot',
-    severity: 'high',
-    location: 'Kiambu County',
-    farmsAffected: 8,
-    casesLinked: 28,
-    firstDetected: 'Mar 2, 2026',
-    trend: 'stable',
-  },
-  {
-    id: 'OUT-087',
-    pest: 'Persea Mite',
-    severity: 'medium',
-    location: 'Meru County',
-    farmsAffected: 6,
-    casesLinked: 19,
-    firstDetected: 'Mar 5, 2026',
-    trend: 'decreasing',
-  },
-  {
-    id: 'OUT-086',
-    pest: 'Anthracnose',
-    severity: 'medium',
-    location: 'Nyeri County',
-    farmsAffected: 4,
-    casesLinked: 14,
-    firstDetected: 'Mar 8, 2026',
-    trend: 'increasing',
-  },
-];
-
-// Heat map data for Kenyan counties
-const countyHeatMapData = [
-  { county: 'Murang\'a', intensity: 85, cases: 45, color: '#DC2626' },
-  { county: 'Kiambu', intensity: 68, cases: 28, color: '#D97706' },
-  { county: 'Meru', intensity: 42, cases: 19, color: '#FBBF24' },
-  { county: 'Nyeri', intensity: 38, cases: 14, color: '#74C69D' },
-  { county: 'Bungoma', intensity: 25, cases: 8, color: '#9CA3AF' },
-  { county: 'Kakamega', intensity: 18, cases: 5, color: '#D1D5DB' },
-  { county: 'Trans Nzoia', intensity: 15, cases: 4, color: '#E5E7EB' },
-  { county: 'Embu', intensity: 12, cases: 3, color: '#F3F4F6' },
-];
+import { useState, useEffect } from 'react';
+import { fetchOutbreakMonitoring } from '../api/placeholderApi';
+import type { OutbreakMonitoringPayload } from '../api/types';
 
 export function OutbreakMonitoring() {
+  const [data, setData] = useState<OutbreakMonitoringPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchOutbreakMonitoring()
+      .then((d) => {
+        if (!cancelled) setData(d);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Could not load outbreak data.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="p-8 rounded-lg border text-center" style={{ borderColor: '#E0DDD6' }}>
+          <p style={{ color: '#b45309', fontFamily: 'IBM Plex Sans, sans-serif' }}>{error}</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loading || !data) {
+    return (
+      <Layout>
+        <div className="animate-pulse space-y-6">
+          <div className="h-10 bg-slate-200 rounded w-72" />
+          <div className="h-16 bg-slate-200 rounded-lg" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-28 bg-slate-200 rounded-lg" />
+            ))}
+          </div>
+          <div className="h-80 bg-slate-200 rounded-lg" />
+        </div>
+      </Layout>
+    );
+  }
+
+  const { alertTitle, alertMessage, stats, outbreakTrends, countyHeatMap, activeOutbreaks } = data;
+
   return (
     <Layout>
       <header className="mb-8">
-        <h1 
-          className="text-4xl mb-2" 
-          style={{ 
-            fontFamily: 'DM Serif Display, serif',
-            color: '#1B4332'
-          }}
-        >
+        <h1 className="text-4xl mb-2" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
           Outbreak Monitoring
         </h1>
         <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -86,22 +67,20 @@ export function OutbreakMonitoring() {
         </p>
       </header>
 
-      {/* Alert Banner */}
-      <div 
+      <div
         className="p-4 rounded-lg border mb-8 flex items-center gap-3"
         style={{ backgroundColor: '#FEE2E2', borderColor: '#DC2626', borderRadius: '8px' }}
       >
-        <AlertTriangle className="w-5 h-5" style={{ color: '#DC2626' }} />
+        <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#DC2626' }} />
         <div>
           <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#DC2626' }}>
-            <strong>Critical Outbreak Alert:</strong> Avocado Thrips outbreak in Murang\'a County showing rapid spread. 12 farms affected.
+            <strong>{alertTitle}:</strong> {alertMessage}
           </p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
-        <div 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 min-w-0">
+        <div
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
@@ -112,11 +91,11 @@ export function OutbreakMonitoring() {
             </span>
           </div>
           <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            23
+            {stats.activeOutbreaks}
           </p>
         </div>
 
-        <div 
+        <div
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
@@ -127,11 +106,11 @@ export function OutbreakMonitoring() {
             </span>
           </div>
           <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            4
+            {stats.critical}
           </p>
         </div>
 
-        <div 
+        <div
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
@@ -142,11 +121,11 @@ export function OutbreakMonitoring() {
             </span>
           </div>
           <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            8
+            {stats.regionsAffected}
           </p>
         </div>
 
-        <div 
+        <div
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
@@ -157,13 +136,12 @@ export function OutbreakMonitoring() {
             </span>
           </div>
           <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            18h
+            {stats.avgResponseTime}
           </p>
         </div>
       </div>
 
-      {/* Outbreak Trends Chart */}
-      <div 
+      <div
         className="p-6 rounded-lg border mb-8"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
@@ -185,8 +163,7 @@ export function OutbreakMonitoring() {
         </ResponsiveContainer>
       </div>
 
-      {/* County Heat Map */}
-      <div 
+      <div
         className="p-6 rounded-lg border mb-8"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
@@ -199,9 +176,8 @@ export function OutbreakMonitoring() {
           </p>
         </div>
 
-        {/* Heat Map Grid */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          {countyHeatMapData.map((county) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+          {countyHeatMap.map((county) => (
             <div
               key={county.county}
               className="p-6 rounded-lg border transition-all hover:shadow-md cursor-pointer"
@@ -212,19 +188,19 @@ export function OutbreakMonitoring() {
               }}
             >
               <div className="mb-3">
-                <h4 
-                  className="mb-1" 
-                  style={{ 
-                    fontFamily: 'IBM Plex Sans, sans-serif', 
+                <h4
+                  className="mb-1"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
                     color: county.intensity > 50 ? '#FFFFFF' : '#1B4332',
                   }}
                 >
                   {county.county}
                 </h4>
-                <p 
-                  className="text-xs" 
-                  style={{ 
-                    fontFamily: 'IBM Plex Sans, sans-serif', 
+                <p
+                  className="text-xs"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
                     color: county.intensity > 50 ? '#FFFFFF' : '#717182',
                   }}
                 >
@@ -233,19 +209,19 @@ export function OutbreakMonitoring() {
               </div>
               <div className="space-y-1">
                 <div className="flex items-baseline gap-2">
-                  <span 
-                    className="text-2xl" 
-                    style={{ 
-                      fontFamily: 'DM Serif Display, serif', 
+                  <span
+                    className="text-2xl"
+                    style={{
+                      fontFamily: 'DM Serif Display, serif',
                       color: county.intensity > 50 ? '#FFFFFF' : '#1B4332',
                     }}
                   >
                     {county.cases}
                   </span>
-                  <span 
-                    className="text-xs" 
-                    style={{ 
-                      fontFamily: 'IBM Plex Sans, sans-serif', 
+                  <span
+                    className="text-xs"
+                    style={{
+                      fontFamily: 'IBM Plex Sans, sans-serif',
                       color: county.intensity > 50 ? '#FFFFFF' : '#717182',
                     }}
                   >
@@ -253,22 +229,22 @@ export function OutbreakMonitoring() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div 
-                    className="flex-1 h-1.5 rounded-full overflow-hidden" 
+                  <div
+                    className="flex-1 h-1.5 rounded-full overflow-hidden"
                     style={{ backgroundColor: county.intensity > 50 ? '#FFFFFF40' : '#E0DDD6' }}
                   >
-                    <div 
-                      className="h-full rounded-full" 
-                      style={{ 
+                    <div
+                      className="h-full rounded-full"
+                      style={{
                         width: `${county.intensity}%`,
                         backgroundColor: county.intensity > 50 ? '#FFFFFF' : '#DC2626',
                       }}
                     />
                   </div>
-                  <span 
-                    className="text-xs" 
-                    style={{ 
-                      fontFamily: 'IBM Plex Sans, sans-serif', 
+                  <span
+                    className="text-xs"
+                    style={{
+                      fontFamily: 'IBM Plex Sans, sans-serif',
                       color: county.intensity > 50 ? '#FFFFFF' : '#717182',
                     }}
                   >
@@ -280,8 +256,7 @@ export function OutbreakMonitoring() {
           ))}
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-8 pt-6 border-t" style={{ borderColor: '#E0DDD6' }}>
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 pt-6 border-t" style={{ borderColor: '#E0DDD6' }}>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded" style={{ backgroundColor: '#DC2626' }} />
             <span className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -309,108 +284,92 @@ export function OutbreakMonitoring() {
         </div>
       </div>
 
-      {/* Active Outbreaks Table */}
-      <div 
+      <div
         className="rounded-lg border overflow-hidden"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
         <div className="px-6 py-4 border-b" style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}>
-          <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-            Active Outbreak Events
-          </h3>
+          <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>Active Outbreak Events</h3>
         </div>
-        <table className="w-full">
-          <thead>
-            <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
-              <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Outbreak ID
-              </th>
-              <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Pest/Disease
-              </th>
-              <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Severity
-              </th>
-              <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Location
-              </th>
-              <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Farms
-              </th>
-              <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Cases
-              </th>
-              <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                First Detected
-              </th>
-              <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Trend
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {activeOutbreaks.map((outbreak, index) => {
-              const severityConfig = {
-                critical: { bg: '#FEE2E2', text: '#DC2626' },
-                high: { bg: '#FEF3C7', text: '#D97706' },
-                medium: { bg: '#E0E7FF', text: '#4338CA' },
-              };
-              const severity = severityConfig[outbreak.severity as keyof typeof severityConfig];
-
-              const trendConfig = {
-                increasing: { icon: '↑', color: '#DC2626' },
-                stable: { icon: '→', color: '#D97706' },
-                decreasing: { icon: '↓', color: '#74C69D' },
-              };
-              const trend = trendConfig[outbreak.trend as keyof typeof trendConfig];
-
-              return (
-                <tr 
-                  key={outbreak.id}
-                  className="hover:bg-gray-50/50 transition-colors"
-                  style={{ borderBottom: index !== activeOutbreaks.length - 1 ? '1px solid #E0DDD6' : 'none' }}
-                >
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
-                    {outbreak.id}
-                  </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                    {outbreak.pest}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className="px-3 py-1 rounded-full text-xs"
-                      style={{
-                        backgroundColor: severity.bg,
-                        color: severity.text,
-                        fontFamily: 'IBM Plex Sans, sans-serif',
-                        borderRadius: '8px',
-                      }}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
+                {['Outbreak ID', 'Pest/Disease', 'Severity', 'Location', 'Farms', 'Cases', 'First Detected', 'Trend'].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      className="text-left px-6 py-4 text-xs uppercase tracking-wider whitespace-nowrap"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
                     >
-                      {outbreak.severity.charAt(0).toUpperCase() + outbreak.severity.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                    {outbreak.location}
-                  </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                    {outbreak.farmsAffected}
-                  </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                    {outbreak.casesLinked}
-                  </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                    {outbreak.firstDetected}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: trend.color }}>
-                      {trend.icon} {outbreak.trend.charAt(0).toUpperCase() + outbreak.trend.slice(1)}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                      {h}
+                    </th>
+                  )
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {activeOutbreaks.map((outbreak, index) => {
+                const severityConfig = {
+                  critical: { bg: '#FEE2E2', text: '#DC2626' },
+                  high: { bg: '#FEF3C7', text: '#D97706' },
+                  medium: { bg: '#E0E7FF', text: '#4338CA' },
+                };
+                const severity = severityConfig[outbreak.severity];
+                const trendConfig = {
+                  increasing: { icon: '↑', color: '#DC2626' },
+                  stable: { icon: '→', color: '#D97706' },
+                  decreasing: { icon: '↓', color: '#74C69D' },
+                };
+                const trend = trendConfig[outbreak.trend];
+                return (
+                  <tr
+                    key={outbreak.id}
+                    className="hover:bg-gray-50/50 transition-colors"
+                    style={{ borderBottom: index !== activeOutbreaks.length - 1 ? '1px solid #E0DDD6' : 'none' }}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
+                      {outbreak.id}
+                    </td>
+                    <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                      {outbreak.pest}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className="px-3 py-1 rounded-full text-xs"
+                        style={{
+                          backgroundColor: severity.bg,
+                          color: severity.text,
+                          fontFamily: 'IBM Plex Sans, sans-serif',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        {outbreak.severity.charAt(0).toUpperCase() + outbreak.severity.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                      {outbreak.location}
+                    </td>
+                    <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                      {outbreak.farmsAffected}
+                    </td>
+                    <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                      {outbreak.casesLinked}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                      {outbreak.firstDetected}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: trend.color }}>
+                        {trend.icon} {outbreak.trend.charAt(0).toUpperCase() + outbreak.trend.slice(1)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </Layout>
   );

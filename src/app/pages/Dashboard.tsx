@@ -4,142 +4,80 @@ import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Cartesia
 import { KenyaHeatMap } from '../components/KenyaHeatMap';
 import { TriageCaseModal } from '../components/TriageCaseModal';
 import { ScoutingRecordModal } from '../components/ScoutingRecordModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchDashboard } from '../api/placeholderApi';
+import type { DashboardPayload } from '../api/types';
 
-const weeklyTrends = [
-  { week: 'Week 1', cases: 12, resolved: 8 },
-  { week: 'Week 2', cases: 15, resolved: 11 },
-  { week: 'Week 3', cases: 18, resolved: 14 },
-  { week: 'Week 4', cases: 22, resolved: 16 },
-  { week: 'Week 5', cases: 19, resolved: 18 },
-  { week: 'Week 6', cases: 25, resolved: 20 },
-  { week: 'Week 7', cases: 28, resolved: 22 },
-  { week: 'Week 8', cases: 24, resolved: 21 },
-];
-
-const weeklyComplianceData = [
-  { week: 'Week 1', compliance: 92, target: 95 },
-  { week: 'Week 2', compliance: 88, target: 95 },
-  { week: 'Week 3', compliance: 94, target: 95 },
-  { week: 'Week 4', compliance: 91, target: 95 },
-  { week: 'Week 5', compliance: 96, target: 95 },
-  { week: 'Week 6', compliance: 89, target: 95 },
-  { week: 'Week 7', compliance: 93, target: 95 },
-  { week: 'Week 8', compliance: 95, target: 95 },
-];
-
-const pestDistribution = [
-  { name: 'Avocado Thrips', value: 145, color: '#DC2626' },
-  { name: 'Phytophthora Root Rot', value: 98, color: '#D97706' },
-  { name: 'Persea Mite', value: 76, color: '#2D6A4F' },
-  { name: 'Anthracnose', value: 54, color: '#74C69D' },
-  { name: 'Other', value: 42, color: '#E0DDD6' },
-];
-
-const triageQueue = [
-  {
-    id: 'CSE-1024',
-    farm: 'Kangema Avocado Growers',
-    location: 'Murang\'a County',
-    severity: 'high',
-    pest: 'Avocado Thrips',
-    scout: 'Jane Wambui',
-    submittedHours: 2,
-    priority: 1,
-  },
-  {
-    id: 'CSE-1020',
-    farm: 'Kiambu Highland Farms',
-    location: 'Kiambu County',
-    severity: 'high',
-    pest: 'Anthracnose',
-    scout: 'Grace Achieng',
-    submittedHours: 4,
-    priority: 2,
-  },
-  {
-    id: 'CSE-1023',
-    farm: 'Gatanga Green Farms',
-    location: 'Murang\'a County',
-    severity: 'high',
-    pest: 'Root Rot',
-    scout: 'Samuel Omondi',
-    submittedHours: 8,
-    priority: 3,
-  },
-  {
-    id: 'CSE-1022',
-    farm: 'Tigoni Avocado Estates',
-    location: 'Kiambu County',
-    severity: 'medium',
-    pest: 'Persea Mite',
-    scout: 'Mary Akinyi',
-    submittedHours: 12,
-    priority: 4,
-  },
-];
-
-const recentScoutingRecords = [
-  {
-    id: 'SCT-2045',
-    scout: 'Jane Wambui',
-    farm: 'Kangema Avocado Growers',
-    location: 'Murang\'a County',
-    date: 'Mar 15, 2026',
-    time: '14:30',
-    blocksInspected: 3,
-    issuesFound: 2,
-    status: 'completed',
-  },
-  {
-    id: 'SCT-2044',
-    scout: 'Peter Mwangi',
-    farm: 'Nyeri Valley Growers',
-    location: 'Nyeri County',
-    date: 'Mar 15, 2026',
-    time: '12:15',
-    blocksInspected: 2,
-    issuesFound: 0,
-    status: 'completed',
-  },
-  {
-    id: 'SCT-2043',
-    scout: 'Grace Achieng',
-    farm: 'Kiambu Highland Farms',
-    location: 'Kiambu County',
-    date: 'Mar 15, 2026',
-    time: '10:45',
-    blocksInspected: 4,
-    issuesFound: 3,
-    status: 'completed',
-  },
-  {
-    id: 'SCT-2042',
-    scout: 'Samuel Omondi',
-    farm: 'Gatanga Green Farms',
-    location: 'Murang\'a County',
-    date: 'Mar 15, 2026',
-    time: '09:20',
-    blocksInspected: 2,
-    issuesFound: 1,
-    status: 'completed',
-  },
-  {
-    id: 'SCT-2041',
-    scout: 'Mary Akinyi',
-    farm: 'Tigoni Avocado Estates',
-    location: 'Kiambu County',
-    date: 'Mar 14, 2026',
-    time: '16:00',
-    blocksInspected: 5,
-    issuesFound: 2,
-    status: 'completed',
-  },
-];
+const METRIC_ICONS = {
+  activity: Activity,
+  alert: AlertTriangle,
+  check: CheckCircle,
+  clock: Clock,
+} as const;
 
 export function Dashboard() {
+  const [data, setData] = useState<DashboardPayload | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedTriageCase, setSelectedTriageCase] = useState(null);
   const [selectedScoutingRecord, setSelectedScoutingRecord] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDashboard()
+      .then((d) => {
+        if (!cancelled) setData(d);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError('Could not load dashboard data.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loadError) {
+    return (
+      <Layout>
+        <div className="p-8 rounded-lg border text-center" style={{ borderColor: '#E0DDD6' }}>
+          <p style={{ color: '#b45309', fontFamily: 'IBM Plex Sans, sans-serif' }}>{loadError}</p>
+          <p className="text-sm mt-2" style={{ color: '#717182' }}>
+            Using placeholder API — check console or run again.
+          </p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loading || !data) {
+    return (
+      <Layout>
+        <div className="animate-pulse space-y-6">
+          <div className="h-10 bg-slate-200 rounded w-48" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-32 bg-slate-200 rounded-lg" />
+            ))}
+          </div>
+          <div className="h-64 bg-slate-200 rounded-lg" />
+        </div>
+      </Layout>
+    );
+  }
+
+  const {
+    metrics,
+    weeklyComplianceData,
+    weeklyTrends,
+    pestDistribution,
+    triageQueue,
+    recentScoutingRecords,
+    complianceSummary,
+    todayLabel,
+  } = data;
 
   return (
     <Layout>
@@ -158,102 +96,52 @@ export function Dashboard() {
         </p>
       </header>
 
-      {/* Key Metrics */}
+      {/* Key Metrics (placeholder API) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 min-w-0 max-w-full [&>*]:min-w-0">
-        <div 
-          className="p-6 rounded-lg border"
-          style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
-        >
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-sm mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Total Cases
-              </p>
-              <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-                415
-              </p>
+        {metrics.map((m) => {
+          const Icon = METRIC_ICONS[m.icon];
+          return (
+            <div
+              key={m.label}
+              className="p-6 rounded-lg border"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-sm mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    {m.label}
+                  </p>
+                  <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+                    {m.value}
+                  </p>
+                </div>
+                <div
+                  className="w-12 h-12 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: m.iconBg }}
+                >
+                  <Icon className="w-6 h-6" style={{ color: m.iconColor }} />
+                </div>
+              </div>
+              {m.sublabel ? (
+                <div className="flex items-center gap-1 text-sm">
+                  <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>{m.sublabel}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-sm">
+                  {m.trendUp ? (
+                    <TrendingUp className="w-4 h-4" style={{ color: '#74C69D' }} />
+                  ) : (
+                    <TrendingDown className="w-4 h-4" style={{ color: '#74C69D' }} />
+                  )}
+                  <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#74C69D' }}>
+                    {m.trendPercent}%
+                  </span>
+                  <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>{m.trendVs}</span>
+                </div>
+              )}
             </div>
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#74C69D20' }}>
-              <Activity className="w-6 h-6" style={{ color: '#2D6A4F' }} />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            <TrendingUp className="w-4 h-4" style={{ color: '#74C69D' }} />
-            <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#74C69D' }}>12%</span>
-            <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>vs last month</span>
-          </div>
-        </div>
-
-        <div 
-          className="p-6 rounded-lg border"
-          style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
-        >
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-sm mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Active Outbreaks
-              </p>
-              <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-                23
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEE2E2' }}>
-              <AlertTriangle className="w-6 h-6" style={{ color: '#DC2626' }} />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            <TrendingDown className="w-4 h-4" style={{ color: '#74C69D' }} />
-            <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#74C69D' }}>8%</span>
-            <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>vs last month</span>
-          </div>
-        </div>
-
-        <div 
-          className="p-6 rounded-lg border"
-          style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
-        >
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-sm mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Scouting Compliance
-              </p>
-              <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-                95%
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#74C69D20' }}>
-              <CheckCircle className="w-6 h-6" style={{ color: '#74C69D' }} />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            <TrendingUp className="w-4 h-4" style={{ color: '#74C69D' }} />
-            <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#74C69D' }}>2%</span>
-            <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>vs last week</span>
-          </div>
-        </div>
-
-        <div 
-          className="p-6 rounded-lg border"
-          style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
-        >
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-sm mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                Pending Reviews
-              </p>
-              <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-                12
-              </p>
-            </div>
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
-              <Clock className="w-6 h-6" style={{ color: '#D97706' }} />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Avg. wait: </span>
-            <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>6.2 hrs</span>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {/* Charts Row 1: Weekly Compliance & Area Risk Map */}
@@ -268,7 +156,7 @@ export function Dashboard() {
               Weekly Scouting Compliance
             </h3>
             <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-              Target: 95% | Current: 95%
+              Target: {complianceSummary.target}% | Current: {complianceSummary.current}%
             </p>
           </div>
           <ResponsiveContainer width="100%" height={280}>
@@ -458,7 +346,7 @@ export function Dashboard() {
             className="px-3 py-1 rounded"
             style={{ backgroundColor: '#74C69D20', color: '#2D6A4F', fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
-            Today: {recentScoutingRecords.filter(r => r.date === 'Mar 15, 2026').length} reports
+            Today: {recentScoutingRecords.filter((r) => r.date === todayLabel).length} reports
           </div>
         </div>
         

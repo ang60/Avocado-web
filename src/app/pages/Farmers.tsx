@@ -1,186 +1,15 @@
 import { Layout } from '../components/Layout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchFarmersList } from '../api/placeholderApi';
+import type { FarmerListRow } from '../api/types';
 import { 
   ArrowUpDown, Filter, Smartphone, Phone, 
   MessageSquare, Send, AlertCircle, CheckCircle, Calendar, MapPin
 } from 'lucide-react';
 import { KenyaFarmerRegionalMap } from '../components/KenyaFarmerRegionalMap';
 import { useNavigate } from 'react-router';
+import { AppToast } from '../components/AppToast';
 
-interface FarmerData {
-  id: string;
-  name: string;
-  owner: string;
-  location: string;
-  county: string;
-  ward: string;
-  primaryChannel: 'smartphone' | 'ussd';
-  weeklyScoutingLogs: [number, number, number, number]; // 4 weeks
-  lastScoutingResult: {
-    status: 'high-risk' | 'medium-risk' | 'low-risk' | 'no-pests';
-    finding: string;
-  };
-  exportEligibility: 'ready' | 'at-risk' | 'suspended';
-  totalAcres: number;
-  phone: string;
-  lastInspection: string;
-  overdueScouts: boolean;
-}
-
-const farmersData: FarmerData[] = [
-  {
-    id: 'FRM-1024',
-    name: 'Peter Mwangi',
-    owner: 'Kangema Avocado Growers',
-    location: 'Kangema',
-    county: 'Murang\'a',
-    ward: 'Kangema',
-    primaryChannel: 'smartphone',
-    weeklyScoutingLogs: [1, 1, 1, 1], // All weeks complete
-    lastScoutingResult: {
-      status: 'high-risk',
-      finding: 'False Codling Moth',
-    },
-    exportEligibility: 'at-risk',
-    totalAcres: 245,
-    phone: '+254 722 345 678',
-    lastInspection: 'Mar 14, 2026',
-    overdueScouts: false,
-  },
-  {
-    id: 'FRM-1023',
-    name: 'Grace Wanjiku',
-    owner: 'Gatanga Green Farms',
-    location: 'Gatanga',
-    county: 'Murang\'a',
-    ward: 'Gatanga',
-    primaryChannel: 'ussd',
-    weeklyScoutingLogs: [1, 1, 0, 1], // Week 3 missing
-    lastScoutingResult: {
-      status: 'medium-risk',
-      finding: 'Thrips Detected',
-    },
-    exportEligibility: 'at-risk',
-    totalAcres: 189,
-    phone: '+254 733 456 789',
-    lastInspection: 'Mar 13, 2026',
-    overdueScouts: true,
-  },
-  {
-    id: 'FRM-1022',
-    name: 'David Kipchirchir',
-    owner: 'Tigoni Avocado Estates',
-    location: 'Tigoni',
-    county: 'Kiambu',
-    ward: 'Limuru',
-    primaryChannel: 'smartphone',
-    weeklyScoutingLogs: [1, 1, 1, 1],
-    lastScoutingResult: {
-      status: 'no-pests',
-      finding: 'No Pests Detected',
-    },
-    exportEligibility: 'ready',
-    totalAcres: 312,
-    phone: '+254 711 234 567',
-    lastInspection: 'Mar 13, 2026',
-    overdueScouts: false,
-  },
-  {
-    id: 'FRM-1021',
-    name: 'Faith Njeri',
-    owner: 'Meru Sunrise Orchards',
-    location: 'Meru Town',
-    county: 'Meru',
-    ward: 'Meru Central',
-    primaryChannel: 'smartphone',
-    weeklyScoutingLogs: [1, 1, 1, 1],
-    lastScoutingResult: {
-      status: 'no-pests',
-      finding: 'Clean',
-    },
-    exportEligibility: 'ready',
-    totalAcres: 156,
-    phone: '+254 720 678 901',
-    lastInspection: 'Mar 12, 2026',
-    overdueScouts: false,
-  },
-  {
-    id: 'FRM-1020',
-    name: 'John Kimani',
-    owner: 'Kiambu Highland Farms',
-    location: 'Kiambu Town',
-    county: 'Kiambu',
-    ward: 'Kiambaa',
-    primaryChannel: 'ussd',
-    weeklyScoutingLogs: [1, 0, 1, 0], // Weeks 2 & 4 missing
-    lastScoutingResult: {
-      status: 'low-risk',
-      finding: 'Minor Scale Insects',
-    },
-    exportEligibility: 'at-risk',
-    totalAcres: 278,
-    phone: '+254 712 567 890',
-    lastInspection: 'Mar 12, 2026',
-    overdueScouts: true,
-  },
-  {
-    id: 'FRM-1019',
-    name: 'Mary Wambui',
-    owner: 'Nyeri Valley Growers',
-    location: 'Nyeri Town',
-    county: 'Nyeri',
-    ward: 'Nyeri Central',
-    primaryChannel: 'smartphone',
-    weeklyScoutingLogs: [1, 1, 1, 1],
-    lastScoutingResult: {
-      status: 'no-pests',
-      finding: 'Clean',
-    },
-    exportEligibility: 'ready',
-    totalAcres: 198,
-    phone: '+254 734 678 901',
-    lastInspection: 'Mar 11, 2026',
-    overdueScouts: false,
-  },
-  {
-    id: 'FRM-1018',
-    name: 'Samuel Omondi',
-    owner: 'Bungoma Green Valley',
-    location: 'Bungoma',
-    county: 'Bungoma',
-    ward: 'Bungoma East',
-    primaryChannel: 'ussd',
-    weeklyScoutingLogs: [0, 0, 0, 1], // Only week 4
-    lastScoutingResult: {
-      status: 'high-risk',
-      finding: 'Root Rot Suspected',
-    },
-    exportEligibility: 'suspended',
-    totalAcres: 134,
-    phone: '+254 745 123 456',
-    lastInspection: 'Mar 8, 2026',
-    overdueScouts: true,
-  },
-  {
-    id: 'FRM-1017',
-    name: 'Jane Wambui',
-    owner: 'Limuru Avocado Hub',
-    location: 'Limuru',
-    county: 'Kiambu',
-    ward: 'Limuru Central',
-    primaryChannel: 'smartphone',
-    weeklyScoutingLogs: [1, 1, 1, 0], // Week 4 missing
-    lastScoutingResult: {
-      status: 'low-risk',
-      finding: 'Leaf Minor',
-    },
-    exportEligibility: 'ready',
-    totalAcres: 167,
-    phone: '+254 723 987 654',
-    lastInspection: 'Mar 10, 2026',
-    overdueScouts: true,
-  },
-];
 
 type SortField = 'id' | 'name' | 'county' | 'exportEligibility';
 type SortOrder = 'asc' | 'desc';
@@ -234,7 +63,7 @@ function ChannelBadge({ channel }: { channel: 'smartphone' | 'ussd' }) {
   );
 }
 
-function ScoutingResultBadge({ result }: { result: FarmerData['lastScoutingResult'] }) {
+function ScoutingResultBadge({ result }: { result: FarmerListRow['lastScoutingResult'] }) {
   const config = {
     'high-risk': { bg: '#FEE2E2', text: '#C0392B', border: '#C0392B' },
     'medium-risk': { bg: '#FEF3C7', text: '#D97706', border: '#D97706' },
@@ -290,10 +119,34 @@ function ExportEligibilityPill({ status }: { status: 'ready' | 'at-risk' | 'susp
 }
 
 export function Farmers() {
+  const [farmersList, setFarmersList] = useState<FarmerListRow[]>([]);
+  const [farmersLoading, setFarmersLoading] = useState(true);
+  const [farmersError, setFarmersError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('id');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchFarmersList()
+      .then((data) => {
+        if (!cancelled) {
+          setFarmersList(data);
+          setFarmersError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFarmersError('Could not load farmers.');
+      })
+      .finally(() => {
+        if (!cancelled) setFarmersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [complianceFilter, setComplianceFilter] = useState<string>('all');
   const [selectedFarmers, setSelectedFarmers] = useState<string[]>([]);
+  const [farmerToast, setFarmerToast] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleSort = (field: SortField) => {
@@ -305,7 +158,7 @@ export function Farmers() {
     }
   };
 
-  const filteredFarmers = farmersData.filter((farmer) => {
+  const filteredFarmers = farmersList.filter((farmer) => {
     if (complianceFilter === 'overdue-scouts') {
       return farmer.overdueScouts;
     }
@@ -326,10 +179,11 @@ export function Farmers() {
 
   const handleBulkSMS = () => {
     if (selectedFarmers.length > 0) {
-      console.log('Sending bulk SMS to:', selectedFarmers);
-      alert(`Sending compliance reminders to ${selectedFarmers.length} farmer(s)`);
+      setFarmerToast(`Compliance SMS queued for ${selectedFarmers.length} farmer(s).`);
+      window.setTimeout(() => setFarmerToast(null), 5000);
     } else {
-      alert('Please select farmers to send SMS reminders');
+      setFarmerToast('Select one or more farmers to send SMS reminders.');
+      window.setTimeout(() => setFarmerToast(null), 4000);
     }
   };
 
@@ -350,13 +204,36 @@ export function Farmers() {
   };
 
   // County distribution for mini-map
-  const countyDistribution = farmersData.reduce((acc, farmer) => {
+  const countyDistribution = farmersList.reduce((acc, farmer) => {
     acc[farmer.county] = (acc[farmer.county] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
+  if (farmersLoading) {
+    return (
+      <Layout>
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading farmers…</p>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
+      {farmerToast && (
+        <AppToast
+          message={farmerToast}
+          variant={farmerToast.startsWith('Select') ? 'info' : 'success'}
+          onDismiss={() => setFarmerToast(null)}
+        />
+      )}
+      {farmersError && (
+        <div
+          className="mb-4 p-4 rounded-lg border"
+          style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#991B1B', fontFamily: 'IBM Plex Sans, sans-serif' }}
+        >
+          {farmersError}
+        </div>
+      )}
       <div className="grid grid-cols-12 gap-6">
         {/* Main Content */}
         <div className="col-span-9">
@@ -565,7 +442,7 @@ export function Farmers() {
 
           {/* Results Summary */}
           <div className="mt-4 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-            Showing {sortedFarmers.length} of {farmersData.length} farmers
+            Showing {sortedFarmers.length} of {farmersList.length} farmers
           </div>
         </div>
 
@@ -643,7 +520,7 @@ export function Farmers() {
                   Export Ready
                 </span>
                 <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#15803D', fontWeight: '600' }}>
-                  {farmersData.filter(f => f.exportEligibility === 'ready').length}
+                  {farmersList.filter(f => f.exportEligibility === 'ready').length}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -651,7 +528,7 @@ export function Farmers() {
                   At Risk
                 </span>
                 <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#D97706', fontWeight: '600' }}>
-                  {farmersData.filter(f => f.exportEligibility === 'at-risk').length}
+                  {farmersList.filter(f => f.exportEligibility === 'at-risk').length}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -659,7 +536,7 @@ export function Farmers() {
                   Suspended
                 </span>
                 <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#C0392B', fontWeight: '600' }}>
-                  {farmersData.filter(f => f.exportEligibility === 'suspended').length}
+                  {farmersList.filter(f => f.exportEligibility === 'suspended').length}
                 </span>
               </div>
             </div>

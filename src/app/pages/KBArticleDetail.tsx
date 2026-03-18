@@ -1,20 +1,64 @@
 import { Layout } from '../components/Layout';
 import { ArrowLeft, CheckCircle2, Lock, Unlock, AlertTriangle, Code, Leaf, Beaker, MessageSquare, Send, Copy, Globe, FileText, TrendingUp, Calendar, Eye, Image as ImageIcon, ChevronRight } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UseInAdvisoryButton } from '../components/UseInAdvisoryButton';
+import { fetchKBArticle } from '../api/placeholderApi';
 import { articleData } from '../data/articleData';
+
+type ArticleDoc = (typeof articleData)['KB-045'];
 
 export function KBArticleDetail() {
   const navigate = useNavigate();
   const { articleId } = useParams();
+  const [article, setArticle] = useState<ArticleDoc | null>(null);
+  const [kbLoading, setKbLoading] = useState(true);
+  const [kbNotFound, setKbNotFound] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'sw'>('en');
   const [showChemicalGate, setShowChemicalGate] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
-  
-  const article = articleData[articleId || 'KB-045'];
-  
-  if (!article) {
+
+  useEffect(() => {
+    let cancelled = false;
+    setKbLoading(true);
+    fetchKBArticle(articleId)
+      .then((raw) => {
+        if (cancelled) return;
+        if (!raw) {
+          setArticle(null);
+          setKbNotFound(true);
+        } else {
+          setArticle(raw as ArticleDoc);
+          setKbNotFound(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setArticle(null);
+          setKbNotFound(true);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setKbLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [articleId]);
+
+  if (kbLoading) {
+    return (
+      <Layout>
+        <div className="animate-pulse space-y-6 max-w-3xl">
+          <div className="h-10 bg-slate-200 rounded w-2/3" />
+          <div className="h-4 bg-slate-200 rounded w-full" />
+          <div className="h-64 bg-slate-200 rounded-lg" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (kbNotFound || !article) {
     return (
       <Layout>
         <div className="text-center py-20">

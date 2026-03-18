@@ -1,109 +1,9 @@
 import { Layout } from '../components/Layout';
 import { BookOpen, Search, Tag, FileText, CheckCircle2, Lock, Unlock, AlertTriangle, TrendingUp, Code, Leaf, Beaker, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useState } from 'react';
-
-const knowledgeArticles = [
-  {
-    id: 'KB-045',
-    title: 'Avocado Thrips: Identification and Management',
-    category: 'Pest Management',
-    tags: ['Thrips', 'IPM', 'Treatment'],
-    summary: 'Comprehensive guide to identifying and managing avocado thrips infestations, including life cycle, damage symptoms, and control strategies.',
-    lastUpdated: 'Mar 10, 2026',
-    views: 1247,
-    severity: 'high',
-    activeUses: 14,
-    approvedContent: true,
-    ussdCode: '102',
-    chemicalGate: 'gated',
-    ipmLevel: 3,
-  },
-  {
-    id: 'KB-044',
-    title: 'Phytophthora Root Rot Prevention and Control',
-    category: 'Disease Management',
-    tags: ['Root Rot', 'Prevention', 'Drainage'],
-    summary: 'Best practices for preventing and controlling Phytophthora root rot, including soil management, irrigation practices, and treatment options.',
-    lastUpdated: 'Mar 8, 2026',
-    views: 982,
-    severity: 'high',
-    activeUses: 22,
-    approvedContent: true,
-    ussdCode: '205',
-    chemicalGate: 'gated',
-    ipmLevel: 3,
-  },
-  {
-    id: 'KB-043',
-    title: 'Integrated Pest Management (IPM) for Avocados',
-    category: 'Best Practices',
-    tags: ['IPM', 'Sustainable', 'Strategy'],
-    summary: 'Overview of integrated pest management principles and how to implement IPM programs in avocado orchards.',
-    lastUpdated: 'Mar 5, 2026',
-    views: 1534,
-    severity: 'low',
-    activeUses: 8,
-    approvedContent: true,
-    ussdCode: null,
-    chemicalGate: 'open',
-    ipmLevel: 1,
-  },
-  {
-    id: 'KB-042',
-    title: 'Scouting Techniques for Early Detection',
-    category: 'Field Operations',
-    tags: ['Scouting', 'Detection', 'Training'],
-    summary: 'Detailed scouting protocols and techniques for early detection of pests and diseases in avocado orchards.',
-    lastUpdated: 'Mar 3, 2026',
-    views: 876,
-    severity: 'low',
-    activeUses: 3,
-    approvedContent: true,
-    ussdCode: null,
-    chemicalGate: 'open',
-    ipmLevel: 1,
-  },
-  {
-    id: 'KB-041',
-    title: 'Understanding Persea Mite Biology and Behavior',
-    category: 'Pest Biology',
-    tags: ['Mites', 'Biology', 'Lifecycle'],
-    summary: 'In-depth look at persea mite biology, lifecycle, and environmental factors affecting population dynamics.',
-    lastUpdated: 'Feb 28, 2026',
-    views: 654,
-    severity: 'medium',
-    activeUses: 11,
-    approvedContent: true,
-    ussdCode: '104',
-    chemicalGate: 'open',
-    ipmLevel: 2,
-  },
-  {
-    id: 'KB-040',
-    title: 'Anthracnose Disease Management',
-    category: 'Disease Management',
-    tags: ['Anthracnose', 'Fungicide', 'Prevention'],
-    summary: 'Guidelines for managing anthracnose in avocados, including cultural practices and chemical control options.',
-    lastUpdated: 'Feb 25, 2026',
-    views: 723,
-    severity: 'medium',
-    activeUses: 17,
-    approvedContent: true,
-    ussdCode: '203',
-    chemicalGate: 'gated',
-    ipmLevel: 3,
-  },
-];
-
-const categories = [
-  { name: 'All Articles', count: 145 },
-  { name: 'Pest Management', count: 42 },
-  { name: 'Disease Management', count: 38 },
-  { name: 'Best Practices', count: 28 },
-  { name: 'Field Operations', count: 21 },
-  { name: 'Pest Biology', count: 16 },
-];
+import { useState, useEffect, useMemo } from 'react';
+import { fetchKnowledgeBaseList } from '../api/placeholderApi';
+import type { KnowledgeArticleSummary, KnowledgeCategoryRow } from '../api/types';
 
 const ussdSymptomCodes = [
   { code: '101', symptom: 'Wilting Leaves', category: 'General Symptoms' },
@@ -120,8 +20,49 @@ const ussdSymptomCodes = [
 
 export function KnowledgeBase() {
   const navigate = useNavigate();
+  const [knowledgeArticles, setKnowledgeArticles] = useState<KnowledgeArticleSummary[]>([]);
+  const [kbCategories, setKbCategories] = useState<KnowledgeCategoryRow[]>([]);
+  const [kbLoading, setKbLoading] = useState(true);
+  const [kbError, setKbError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Articles');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchKnowledgeBaseList()
+      .then(({ articles, categories }) => {
+        if (!cancelled) {
+          setKnowledgeArticles(articles);
+          setKbCategories(categories);
+          setKbError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setKbError('Could not load knowledge base.');
+      })
+      .finally(() => {
+        if (!cancelled) setKbLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredArticles = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return knowledgeArticles.filter((article) => {
+      const catOk =
+        selectedCategory === 'All Articles' || article.category === selectedCategory;
+      if (!catOk) return false;
+      if (!q) return true;
+      return (
+        article.title.toLowerCase().includes(q) ||
+        article.summary.toLowerCase().includes(q) ||
+        article.tags.some((t) => t.toLowerCase().includes(q)) ||
+        article.id.toLowerCase().includes(q)
+      );
+    });
+  }, [knowledgeArticles, searchTerm, selectedCategory]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -149,8 +90,24 @@ export function KnowledgeBase() {
     }
   };
 
+  if (kbLoading) {
+    return (
+      <Layout>
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading knowledge base…</p>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
+      {kbError && (
+        <div
+          className="mb-4 p-4 rounded-lg border"
+          style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#991B1B', fontFamily: 'IBM Plex Sans, sans-serif' }}
+        >
+          {kbError}
+        </div>
+      )}
       <header className="mb-8">
         <h1 
           className="text-4xl mb-2" 
@@ -202,7 +159,7 @@ export function KnowledgeBase() {
               Categories
             </h3>
             <div className="space-y-2">
-              {categories.map((category) => (
+              {kbCategories.map((category) => (
                 <button
                   key={category.name}
                   onClick={() => setSelectedCategory(category.name)}
@@ -270,7 +227,7 @@ export function KnowledgeBase() {
 
         {/* Articles */}
         <div className="col-span-3 space-y-4">
-          {knowledgeArticles.map((article) => {
+          {filteredArticles.map((article) => {
             const severityStyle = getSeverityColor(article.severity);
             
             return (

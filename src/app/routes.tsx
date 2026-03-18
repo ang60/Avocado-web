@@ -1,0 +1,71 @@
+import { lazy, Suspense, type ComponentType } from 'react';
+import { createBrowserRouter } from 'react-router';
+import { PageLoader } from './components/PageLoader';
+
+function lazyRoute<T extends Record<string, ComponentType<object>>>(
+  importer: () => Promise<T>,
+  exportName: keyof T
+) {
+  const LazyComp = lazy(() =>
+    importer().then((m) => ({ default: m[exportName] as ComponentType<object> }))
+  );
+  return function LazyRoute() {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <LazyComp />
+      </Suspense>
+    );
+  };
+}
+
+export const router = createBrowserRouter([
+  { path: '/', Component: lazyRoute(() => import('./pages/Dashboard'), 'Dashboard') },
+  {
+    path: '/scouting-reports',
+    Component: lazyRoute(() => import('./pages/ScoutingReports'), 'ScoutingReports'),
+  },
+  {
+    path: '/case-management',
+    Component: lazyRoute(() => import('./pages/CaseManagement'), 'CaseManagement'),
+  },
+  {
+    path: '/case-management/:caseId',
+    Component: lazyRoute(() => import('./pages/CaseDetail'), 'CaseDetail'),
+  },
+  {
+    path: '/outbreak-monitoring',
+    Component: lazyRoute(() => import('./pages/OutbreakMonitoring'), 'OutbreakMonitoring'),
+  },
+  {
+    path: '/kephis-quarantine',
+    Component: lazyRoute(() => import('./pages/KEPHISQuarantine'), 'KEPHISQuarantine'),
+  },
+  {
+    path: '/hcda-registry',
+    Component: lazyRoute(() => import('./pages/HCDARegistry'), 'HCDARegistry'),
+  },
+  { path: '/alerts', Component: lazyRoute(() => import('./pages/Alerts'), 'Alerts') },
+  {
+    path: '/knowledge-base',
+    Component: lazyRoute(() => import('./pages/KnowledgeBase'), 'KnowledgeBase'),
+  },
+  {
+    path: '/knowledge-base/:articleId',
+    Component: lazyRoute(() => import('./pages/KBArticleDetail'), 'KBArticleDetail'),
+  },
+  {
+    path: '/symptom-codebook',
+    Component: lazyRoute(() => import('./pages/SymptomCodebook'), 'SymptomCodebook'),
+  },
+  { path: '/farmers', Component: lazyRoute(() => import('./pages/Farmers'), 'Farmers') },
+  {
+    path: '/farmers/:farmerId',
+    Component: lazyRoute(() => import('./pages/FarmerDetail'), 'FarmerDetail'),
+  },
+  {
+    path: '/compliance-hub',
+    Component: lazyRoute(() => import('./pages/ComplianceHub'), 'ComplianceHub'),
+  },
+  { path: '/admin', Component: lazyRoute(() => import('./pages/Admin'), 'Admin') },
+  { path: '/exporter', Component: lazyRoute(() => import('./pages/Exporter'), 'Exporter') },
+]);

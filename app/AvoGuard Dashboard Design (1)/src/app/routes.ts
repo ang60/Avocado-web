@@ -4,6 +4,8 @@ import { ScoutingReports } from "./pages/ScoutingReports";
 import { CaseManagement } from "./pages/CaseManagement";
 import { CaseDetail } from "./pages/CaseDetail";
 import { OutbreakMonitoring } from "./pages/OutbreakMonitoring";
+import { KEPHISQuarantine } from "./pages/KEPHISQuarantine";
+import { HCDARegistry } from "./pages/HCDARegistry";
 import { Alerts } from "./pages/Alerts";
 import { KnowledgeBase } from "./pages/KnowledgeBase";
 import { KBArticleDetail } from "./pages/KBArticleDetail";
@@ -12,6 +14,7 @@ import { Farmers } from "./pages/Farmers";
 import { FarmerDetail } from "./pages/FarmerDetail";
 import { ComplianceHub } from "./pages/ComplianceHub";
 import { Admin } from "./pages/Admin";
+import { Exporter } from "./pages/Exporter";
 
 export const router = createBrowserRouter([
   {
@@ -33,6 +36,14 @@ export const router = createBrowserRouter([
   {
     path: "/outbreak-monitoring",
     Component: OutbreakMonitoring,
+  },
+  {
+    path: "/kephis-quarantine",
+    Component: KEPHISQuarantine,
+  },
+  {
+    path: "/hcda-registry",
+    Component: HCDARegistry,
   },
   {
     path: "/alerts",
@@ -65,5 +76,9 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     Component: Admin,
+  },
+  {
+    path: "/exporter",
+    Component: Exporter,
   },
 ]);

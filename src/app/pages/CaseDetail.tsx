@@ -1,5 +1,7 @@
 import { Layout } from '../components/Layout';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { fetchCaseDetail } from '../api/placeholderApi';
+import type { CaseDetailPayload } from '../api/types';
 import { 
   MapPin, User, Phone, Image, Mic, PlayCircle, ChevronDown, Lock, Unlock,
   AlertTriangle, CheckCircle, Clock, MessageSquare, FileText, Send, Shield
@@ -16,41 +18,30 @@ export function CaseDetail() {
   const [showDraftModal, setShowDraftModal] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'kiswahili'>('english');
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [caseData, setCaseData] = useState<CaseDetailPayload | null>(null);
+  const [caseLoading, setCaseLoading] = useState(true);
+  const [caseError, setCaseError] = useState<string | null>(null);
 
-  // Mock case data - in real app, fetch based on caseId
-  const caseData = {
-    id: 'CSE-1024',
-    farmerName: 'John Kamau Mwangi',
-    farmerPhone: '+254 712 345 678',
-    location: 'Murang\'a County',
-    subCounty: 'Kangema',
-    farm: 'Kangema Avocado Growers',
-    block: 'Block A-12',
-    blockCoordinates: { lat: -0.6833, lng: 37.0167 },
-    severity: 'high',
-    submissionChannel: 'smartphone',
-    pestDisease: 'False Codling Moth',
-    pestDiseaseKiswahili: 'Nondo wa Parachichi',
-    dateSubmitted: 'Mar 14, 2026 14:32',
-    scoutName: 'Jane Wambui',
-    scoutPhone: '+254 723 456 789',
-    affectedTrees: 45,
-    symptoms: ['Fruit damage', 'Larvae in fruit', 'Premature fruit drop'],
-    symptomCodes: ['FCM-01', 'FCM-03', 'FCM-05'], // For USSD submissions
-    notes: 'Heavy infestation of false codling moth observed. Larvae found inside developing fruit. Population density appears to be increasing. Recommend immediate pheromone trap deployment and intervention.',
-    photos: [
-      { id: 1, url: 'photo1.jpg', caption: 'Damaged fruit with larvae' },
-      { id: 2, url: 'photo2.jpg', caption: 'Entry hole on avocado' },
-      { id: 3, url: 'photo3.jpg', caption: 'Multiple affected fruits' },
-    ],
-    voiceNote: { duration: '2:34', url: 'voice-note.mp3' },
-    timeline: [
-      { stage: 'Report Received', timestamp: 'Mar 14, 2026 14:32', status: 'completed' },
-      { stage: 'Auto-Triage', timestamp: 'Mar 14, 2026 14:33', status: 'completed' },
-      { stage: 'Agronomist Review', timestamp: 'Mar 15, 2026 09:15', status: 'current' },
-      { stage: 'Advisory Issued', timestamp: null, status: 'pending' },
-    ],
-  };
+  useEffect(() => {
+    let cancelled = false;
+    setCaseLoading(true);
+    fetchCaseDetail(caseId)
+      .then((data) => {
+        if (!cancelled) {
+          setCaseData(data);
+          setCaseError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCaseError('Could not load case.');
+      })
+      .finally(() => {
+        if (!cancelled) setCaseLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [caseId]);
 
   const pestDiseaseKnowledgeBase = [
     { value: 'false-codling-moth', label: 'False Codling Moth' },
@@ -76,6 +67,21 @@ export function CaseDetail() {
       setSelectedIPMSteps([...selectedIPMSteps, stepId]);
     }
   };
+
+  if (caseLoading || !caseData) {
+    return (
+      <Layout>
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+          {caseLoading ? 'Loading case…' : 'Case not found.'}
+        </p>
+        {caseError && (
+          <p className="mt-2" style={{ color: '#991B1B', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            {caseError}
+          </p>
+        )}
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
