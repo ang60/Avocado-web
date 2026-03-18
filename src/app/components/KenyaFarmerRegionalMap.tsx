@@ -1,11 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
-import { geoPath, geoTransform } from 'd3-geo';
-import {
-  countyKeyFromName2,
-  extendBoundsFromGeometry,
-} from './kenyaMapShared';
+import { useEffect, useMemo, useState } from 'react';
+import { geoMercator, geoPath } from 'd3-geo';
+import { countyKeyFromName2 } from './kenyaMapShared';
 
-const LOCATION_GEO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}geo/Location.json`;
+/** Farmers regional map uses the same county boundaries as the Dashboard heat map (KEN_adm2.json, WGS84). */
+const COUNTY_GEO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}geo/KEN_adm2.json`;
 
 const NO_FARMERS_COLOR = '#0f0f0f';
 const STROKE_COLOR = '#64748b';
@@ -14,7 +12,7 @@ const MAP_BG = '#e2e8f0';
 function farmerChoroplethFill(count: number, maxCount: number): string {
   if (count <= 0) return NO_FARMERS_COLOR;
   const t = Math.min(1, count / Math.max(maxCount, 1));
-  // Light mint → deep AvoGuard green
+  // Light mint -> deep AvoGuard green
   const r = Math.round(226 - t * 200);
   const g = Math.round(232 - t * 80);
   const b = Math.round(239 - t * 139);
@@ -24,42 +22,46 @@ function farmerChoroplethFill(count: number, maxCount: number): string {
   return `rgb(${Math.round(r * (1 - t) + r2 * t)},${Math.round(g * (1 - t) + g2 * t)},${Math.round(b * (1 - t) + b2 * t)})`;
 }
 
-type GeoFeature = {
-  type: string;
-  properties: Record<string, unknown>;
-  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
-};
+type GeoFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>>;
 
 const WIDTH = 320;
 const HEIGHT = 200;
 const PADDING = 10;
 
 export interface KenyaFarmerRegionalMapProps {
-  /** County name → registered farmer count (keys should match farmer `county` / GeoJSON NAME_2) */
+  /** County name -> registered farmer count (keys should match GeoJSON NAME_2) */
   farmerCountByCounty: Record<string, number>;
 }
 
 export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegionalMapProps) {
   const [hovered, setHovered] = useState<{ county: string; count: number } | null>(null);
   const [tooltip, setTooltip] = useState({ x: 0, y: 0 });
-  const [geoFeatures, setGeoFeatures] = useState<GeoFeature[] | null>(null);
+  const [geoCollection, setGeoCollection] = useState<
+    GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>> | null
+  >(null);
   const [geoError, setGeoError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(LOCATION_GEO_URL)
+
+    fetch(COUNTY_GEO_URL)
       .then((r) => {
-        if (!r.ok) throw new Error('fail');
+        if (!r.ok) throw new Error('bad status');
+        const ct = r.headers.get('content-type') || '';
+        if (ct.includes('text/html')) throw new Error('html');
         return r.json();
       })
       .then((data) => {
-        const f = data?.features;
-        if (!cancelled && Array.isArray(f) && f.length) setGeoFeatures(f);
-        else if (!cancelled) setGeoError(true);
+        if (!cancelled && data?.type === 'FeatureCollection' && Array.isArray(data?.features) && data.features.length) {
+          setGeoCollection(data);
+        } else if (!cancelled) {
+          setGeoError(true);
+        }
       })
       .catch(() => {
         if (!cancelled) setGeoError(true);
       });
+
     return () => {
       cancelled = true;
     };
@@ -71,43 +73,27 @@ export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegio
   );
 
   const paths = useMemo(() => {
-    const features = geoFeatures;
-    if (!features?.length) return [];
+    const collection = geoCollection;
+    if (!collection?.features?.length) return [];
 
-    const bounds = {
-      minX: Number.POSITIVE_INFINITY,
-      maxX: Number.NEGATIVE_INFINITY,
-      minY: Number.POSITIVE_INFINITY,
-      maxY: Number.NEGATIVE_INFINITY,
-    };
-    for (const feature of features) {
-      extendBoundsFromGeometry(bounds, feature.geometry);
-    }
-    const spanX = bounds.maxX - bounds.minX;
-    const spanY = bounds.maxY - bounds.minY;
-    if (!(spanX > 0 && spanY > 0)) return [];
+    const projection = geoMercator().fitExtent(
+      [
+        [PADDING, PADDING],
+        [WIDTH - PADDING, HEIGHT - PADDING],
+      ],
+      collection as GeoJSON.GeoJSON
+    );
 
-    const innerW = WIDTH - 2 * PADDING;
-    const innerH = HEIGHT - 2 * PADDING;
-    const scale = Math.min(innerW / spanX, innerH / spanY);
-    const offsetX = PADDING + (innerW - scale * spanX) / 2 - scale * bounds.minX;
-    const offsetY = PADDING + (innerH - scale * spanY) / 2 + scale * bounds.maxY;
-
-    const projection = geoTransform({
-      point(x: number, y: number) {
-        this.stream.point(offsetX + x * scale, offsetY - y * scale);
-      },
-    });
     const pathGenerator = geoPath().projection(projection);
 
-    return features
+    return collection.features
       .map((feature, index) => {
-        const pathD = pathGenerator(feature as Parameters<typeof pathGenerator>[0]);
-        const countyKey = countyKeyFromName2(feature.properties);
+        const f = feature as GeoFeature;
+        const pathD = pathGenerator(f);
+        const countyKey = countyKeyFromName2(f.properties);
         const count = countyKey ? farmerCountByCounty[countyKey] ?? 0 : 0;
-        const fill = countyKey
-          ? farmerChoroplethFill(count, maxCount)
-          : NO_FARMERS_COLOR;
+        const fill = countyKey ? farmerChoroplethFill(count, maxCount) : NO_FARMERS_COLOR;
+
         return {
           key: `${countyKey || 'x'}-${index}`,
           pathD,
@@ -117,42 +103,50 @@ export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegio
         };
       })
       .filter((p): p is typeof p & { pathD: string } => p.pathD != null && p.pathD.length > 0);
-  }, [farmerCountByCounty, maxCount, geoFeatures]);
+  }, [farmerCountByCounty, maxCount, geoCollection]);
 
   return (
     <div className="relative w-full min-w-0 max-w-full mb-6">
       <div
         className="relative w-full rounded-lg border border-slate-300 overflow-hidden"
         style={{ backgroundColor: MAP_BG }}
-        onMouseMove={(e) => {
-          if (hovered) setTooltip({ x: e.clientX, y: e.clientY });
+        onPointerMove={(e) => {
+          if (!hovered) return;
+          if (e.pointerType === 'touch') return;
+          setTooltip({ x: e.clientX, y: e.clientY });
         }}
-        onMouseLeave={() => setHovered(null)}
+        onPointerLeave={() => setHovered(null)}
       >
-        {!geoFeatures && !geoError && (
+        {!geoCollection && !geoError && (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center text-xs"
             style={{ backgroundColor: 'rgba(226,232,240,0.9)', color: '#64748b', fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
-            Loading regional map…
+            Loading regional map...
           </div>
         )}
+
         {geoError && (
           <div
-            className="absolute inset-0 z-10 flex items-center justify-center p-2 text-center text-xs"
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 p-2 text-center text-xs"
             style={{ backgroundColor: '#fef2f2', color: '#991b1b', fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
-            Add public/geo/Location.json for this map.
+            <span>Map data failed to load.</span>
+            <span className="text-[10px] opacity-90 break-all max-w-full">
+              Ensure <code className="bg-white px-1 rounded">/geo/KEN_adm2.json</code> is deployed.
+            </span>
           </div>
         )}
+
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          className="w-full h-auto block max-h-[200px]"
+          className="w-full h-auto block max-h-[200px] touch-pan-y"
           preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label="Kenya farmers by county"
         >
           <rect width={WIDTH} height={HEIGHT} fill={MAP_BG} />
+
           {paths.map(({ key, pathD, fill, countyKey, count }) => (
             <path
               key={key}
@@ -161,12 +155,15 @@ export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegio
               stroke={count > 0 ? 'rgba(255,255,255,0.25)' : STROKE_COLOR}
               strokeWidth={0.35}
               className="cursor-pointer hover:opacity-90"
-              onMouseEnter={(e) => {
+              onPointerEnter={(e) => {
+                if (e.pointerType === 'touch') return;
                 if (!countyKey) return;
-                setHovered({
-                  county: countyKey,
-                  count: farmerCountByCounty[countyKey] ?? 0,
-                });
+                setHovered({ county: countyKey, count: farmerCountByCounty[countyKey] ?? 0 });
+                setTooltip({ x: e.clientX, y: e.clientY });
+              }}
+              onPointerDown={(e) => {
+                if (!countyKey) return;
+                setHovered({ county: countyKey, count: farmerCountByCounty[countyKey] ?? 0 });
                 setTooltip({ x: e.clientX, y: e.clientY });
               }}
             />
@@ -176,7 +173,7 @@ export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegio
 
       {hovered && (
         <div
-          className="fixed z-50 px-3 py-2 rounded-lg border shadow-lg pointer-events-none text-sm"
+          className="fixed z-50 px-3 py-2 rounded-lg border shadow-lg pointer-events-none text-sm w-auto max-w-[80vw]"
           style={{
             backgroundColor: '#FFFFFF',
             borderColor: '#E0DDD6',
@@ -189,11 +186,16 @@ export function KenyaFarmerRegionalMap({ farmerCountByCounty }: KenyaFarmerRegio
         >
           <span className="font-medium">{hovered.county}</span>
           <span className="text-[#717182]"> — </span>
-          <span>{hovered.count} farmer{hovered.count !== 1 ? 's' : ''}</span>
+          <span>
+            {hovered.count} farmer{hovered.count !== 1 ? 's' : ''}
+          </span>
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-4 mt-2 text-[10px]" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+      <div
+        className="flex items-center justify-center gap-4 mt-2 text-[10px]"
+        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
+      >
         <span className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: NO_FARMERS_COLOR }} />
           None

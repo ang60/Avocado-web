@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 interface SidebarContextType {
   isCollapsed: boolean;
@@ -8,7 +8,20 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const MOBILE_BREAKPOINT_PX = 768;
+
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < MOBILE_BREAKPOINT_PX;
+  });
+
+  useEffect(() => {
+    const onResize = () => {
+      setIsCollapsed(window.innerWidth < MOBILE_BREAKPOINT_PX);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   return (
     <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>

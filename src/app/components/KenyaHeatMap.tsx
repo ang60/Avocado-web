@@ -109,6 +109,17 @@ export function KenyaHeatMap() {
     return () => ro.disconnect();
   }, []);
 
+  useLayoutEffect(() => {
+    if (geoStatus !== 'ready') return;
+    const el = wrapRef.current;
+    if (!el) return;
+    // Some flex layouts report 0×0 on first paint; re-measure after geo is ready.
+    const w = Math.floor(el.clientWidth);
+    if (w < 1) return;
+    const h = Math.max(280, Math.round(w * 0.56));
+    setSize((s) => (s.w === w && s.h === h ? s : { w, h }));
+  }, [geoStatus]);
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !collection.features?.length || size.w < 1) return;
@@ -234,24 +245,30 @@ export function KenyaHeatMap() {
         )}
         <canvas
           ref={canvasRef}
-          className="block w-full max-w-full cursor-crosshair touch-none"
+          className="block w-full max-w-full cursor-crosshair touch-pan-y"
           role="img"
           aria-label="Kenya area risk map by county"
-          onMouseMove={(e) => handlePointer(e.clientX, e.clientY)}
-          onMouseLeave={() => setHoveredCountyKey(null)}
+          onPointerMove={(e) => {
+            // On touch devices, let the browser handle gestures (we update on tap).
+            if (e.pointerType === 'touch') return;
+            handlePointer(e.clientX, e.clientY);
+          }}
+          onPointerDown={(e) => handlePointer(e.clientX, e.clientY)}
+          onPointerLeave={() => setHoveredCountyKey(null)}
         />
       </div>
 
       {hoveredCountyKey && (
         <div
-          className="fixed z-50 p-4 rounded-lg border shadow-lg pointer-events-none"
+          className="fixed z-50 p-3 sm:p-4 rounded-lg border shadow-lg pointer-events-none w-auto max-w-[80vw]"
           style={{
             backgroundColor: '#FFFFFF',
             borderColor: '#E0DDD6',
             borderRadius: '8px',
             left: tooltip.x + 16,
             top: tooltip.y - 8,
-            minWidth: '200px',
+            minWidth: '160px',
+            maxWidth: '80vw',
             transform: 'translateY(-100%)',
           }}
         >
