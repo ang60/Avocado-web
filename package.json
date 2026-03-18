@@ -3,12 +3,13 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "scripts": {
-    "build": "vite build",
-    "dev": "vite",
-    "build:kenya-geojson": "node scripts/build-kenya-geojson.mjs",
-    "build:ken-adm2": "node scripts/build-ken-adm2-geojson.mjs"
-  },
+ "scripts": {
+  "build": "vite build",
+  "dev": "vite",
+  "start": "vite preview",
+  "build:kenya-geojson": "node scripts/build-kenya-geojson.mjs",
+  "build:ken-adm2": "node scripts/build-ken-adm2-geojson.mjs"
+},
   "dependencies": {
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
