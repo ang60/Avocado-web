@@ -18,6 +18,7 @@ export const PLACEHOLDER_FARMERS: FarmerListRow[] = [
     phone: '+254 722 345 678',
     lastInspection: 'Mar 14, 2026',
     overdueScouts: false,
+    linkedExporter: '1',
   },
   {
     id: 'FRM-1023',
@@ -37,6 +38,7 @@ export const PLACEHOLDER_FARMERS: FarmerListRow[] = [
     phone: '+254 733 456 789',
     lastInspection: 'Mar 13, 2026',
     overdueScouts: true,
+    linkedExporter: '2',
   },
   {
     id: 'FRM-1022',

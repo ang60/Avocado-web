@@ -4,9 +4,11 @@ import { fetchFarmersList } from '../api/placeholderApi';
 import type { FarmerListRow } from '../api/types';
 import { 
   ArrowUpDown, Filter, Smartphone, Phone, 
-  MessageSquare, Send, AlertCircle, CheckCircle, Calendar, MapPin
+  MessageSquare, Send, AlertCircle, CheckCircle, Calendar, MapPin, Eye, Link2
 } from 'lucide-react';
 import { KenyaFarmerRegionalMap } from '../components/KenyaFarmerRegionalMap';
+import { LinkExporterModal } from '../components/LinkExporterModal';
+import { exporters } from '../data/exporters';
 import { useNavigate } from 'react-router';
 import { AppToast } from '../components/AppToast';
 
@@ -147,7 +149,32 @@ export function Farmers() {
   const [complianceFilter, setComplianceFilter] = useState<string>('all');
   const [selectedFarmers, setSelectedFarmers] = useState<string[]>([]);
   const [farmerToast, setFarmerToast] = useState<string | null>(null);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [farmerForLink, setFarmerForLink] = useState<FarmerListRow | null>(null);
   const navigate = useNavigate();
+
+  const exporterCompanyName = (id?: string) =>
+    id ? exporters.find((e) => e.id === id)?.companyName : undefined;
+
+  const handleSaveExporterLink = (data: {
+    farmerId: string;
+    exporterId: string;
+    contractStartDate: string;
+    contractReference: string;
+    seasonYear: string;
+    exclusiveSupply: boolean;
+  }) => {
+    setFarmersList((list) =>
+      list.map((f) => (f.id === data.farmerId ? { ...f, linkedExporter: data.exporterId } : f))
+    );
+    const ex = exporterCompanyName(data.exporterId);
+    setFarmerToast(
+      ex
+        ? `Linked farmer ${data.farmerId} to ${ex}.`
+        : `Linked farmer ${data.farmerId} to exporter ${data.exporterId}.`
+    );
+    window.setTimeout(() => setFarmerToast(null), 5000);
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -379,6 +406,12 @@ export function Farmers() {
                         <ArrowUpDown className="w-3 h-3" />
                       </div>
                     </th>
+                    <th
+                      className="text-center px-4 py-4 text-xs uppercase tracking-wider"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', minWidth: '140px' }}
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -416,6 +449,11 @@ export function Farmers() {
                             <MapPin className="w-3 h-3" />
                             {farmer.location}, {farmer.county}
                           </div>
+                          {exporterCompanyName(farmer.linkedExporter) && (
+                            <div className="text-xs mt-1" style={{ color: '#2D6A4F', fontWeight: 600 }}>
+                              Exporter: {exporterCompanyName(farmer.linkedExporter)}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -432,6 +470,46 @@ export function Farmers() {
                       </td>
                       <td className="px-6 py-4">
                         <ExportEligibilityPill status={farmer.exportEligibility} />
+                      </td>
+                      <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/farmers/${farmer.id}`)}
+                            className="px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-all"
+                            style={{
+                              backgroundColor: '#2D6A4F',
+                              color: '#FFFFFF',
+                              fontFamily: 'IBM Plex Sans, sans-serif',
+                              borderRadius: '8px',
+                              fontWeight: '600',
+                              fontSize: '12px',
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFarmerForLink(farmer);
+                              setLinkModalOpen(true);
+                            }}
+                            className="px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition-all border"
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              color: '#1B4332',
+                              borderColor: '#E0DDD6',
+                              fontFamily: 'IBM Plex Sans, sans-serif',
+                              borderRadius: '8px',
+                              fontWeight: '600',
+                              fontSize: '12px',
+                            }}
+                          >
+                            <Link2 className="w-4 h-4" />
+                            Link
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -543,6 +621,26 @@ export function Farmers() {
           </div>
         </div>
       </div>
+
+      <LinkExporterModal
+        isOpen={linkModalOpen}
+        onClose={() => {
+          setLinkModalOpen(false);
+          setFarmerForLink(null);
+        }}
+        onSave={handleSaveExporterLink}
+        farmer={
+          farmerForLink
+            ? {
+                id: farmerForLink.id,
+                name: farmerForLink.name,
+                county: farmerForLink.county,
+                owner: farmerForLink.owner,
+              }
+            : null
+        }
+        exporters={exporters}
+      />
     </Layout>
   );
 }

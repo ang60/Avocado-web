@@ -1,6 +1,7 @@
 
 import { Layout } from '../components/Layout';
-import { Shield, AlertTriangle, CheckCircle, Clock, Download, FileText, Search, Eye, FileCheck, History, X, Calendar, MoreVertical, XCircle } from 'lucide-react';
+import { KEPHISRiskIntelTab } from '../components/KEPHISRiskIntelTab';
+import { Shield, AlertTriangle, CheckCircle, Clock, Download, FileText, Search, Eye, FileCheck, History, X, Calendar, MoreVertical, XCircle, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 
 interface QuarantineBlock {
@@ -140,6 +141,7 @@ const mockQuarantineData: QuarantineBlock[] = [
 ];
 
 export function KEPHISQuarantine() {
+  const [activeTab, setActiveTab] = useState<'quarantine' | 'risk-intel'>('quarantine');
   const [blocks, setBlocks] = useState<QuarantineBlock[]>(mockQuarantineData);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -230,8 +232,9 @@ export function KEPHISQuarantine() {
 
   return (
     <Layout>
+      <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 
             className="mb-2"
             style={{ 
@@ -255,8 +258,44 @@ export function KEPHISQuarantine() {
           </p>
         </div>
 
+        {/* Tabs */}
+        <div className="mb-8 border-b" style={{ borderColor: '#E0DDD6' }}>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab('quarantine')}
+              className="px-6 py-3 font-semibold transition-all relative"
+              style={{
+                fontFamily: 'IBM Plex Sans, sans-serif',
+                color: activeTab === 'quarantine' ? '#1B4332' : '#717182',
+                backgroundColor: 'transparent',
+                borderBottom: activeTab === 'quarantine' ? '3px solid #2D6A4F' : '3px solid transparent',
+              }}
+            >
+              <Shield className="w-4 h-4 inline mr-2" />
+              Quarantine Management
+            </button>
+            <button
+              onClick={() => setActiveTab('risk-intel')}
+              className="px-6 py-3 font-semibold transition-all relative"
+              style={{
+                fontFamily: 'IBM Plex Sans, sans-serif',
+                color: activeTab === 'risk-intel' ? '#1B4332' : '#717182',
+                backgroundColor: 'transparent',
+                borderBottom: activeTab === 'risk-intel' ? '3px solid #2D6A4F' : '3px solid transparent',
+              }}
+            >
+              <TrendingUp className="w-4 h-4 inline mr-2" />
+              Risk Intelligence
+            </button>
+          </div>
+        </div>
+
+        {/* Quarantine Management Tab */}
+        {activeTab === 'quarantine' && (
+        <div>
+
         {/* High-Level Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8 min-w-0 max-w-full [&>*]:min-w-0">
+        <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Active Gated Blocks */}
           <div 
             className="p-6 rounded-lg border-2"
@@ -401,16 +440,16 @@ export function KEPHISQuarantine() {
 
         {/* Filters and Actions */}
         <div 
-          className="p-6 rounded-lg mb-6 min-w-0 max-w-full"
+          className="p-6 rounded-lg mb-6"
           style={{ 
             backgroundColor: '#FFFFFF',
             border: '1px solid #E0DDD6',
           }}
         >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 min-w-0">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 flex-1">
               {/* Search */}
-              <div className="relative flex-1 min-w-0 max-w-full sm:max-w-md">
+              <div className="relative flex-1 max-w-md">
                 <Search 
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" 
                   style={{ color: '#717182' }} 
@@ -485,7 +524,7 @@ export function KEPHISQuarantine() {
 
         {/* Specialized Quarantine Table */}
         <div 
-          className="rounded-lg border overflow-hidden min-w-0 max-w-full"
+          className="rounded-lg border overflow-hidden"
           style={{ 
             backgroundColor: '#FFFFFF',
             borderColor: '#E0DDD6',
@@ -954,6 +993,13 @@ export function KEPHISQuarantine() {
             </p>
           </div>
         </div>
+        </div>
+        )}
+
+        {/* Risk Intelligence Tab */}
+        {activeTab === 'risk-intel' && (
+          <KEPHISRiskIntelTab />
+        )}
 
         {/* View Details Modal */}
         {detailsModalOpen && selectedBlock && (
@@ -1906,6 +1952,7 @@ export function KEPHISQuarantine() {
             </div>
           );
         })()}
+      </div>
     </Layout>
   );
 }

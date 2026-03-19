@@ -1,6 +1,6 @@
 
 import { Layout } from '../components/Layout';
-import { Building2, MapPin, TrendingUp, CheckCircle, XCircle, Clock, Search, Download, FileCheck } from 'lucide-react';
+import { Building2, MapPin, TrendingUp, CheckCircle, XCircle, Clock, Search, Download, FileCheck, Eye, X, User, Phone, Mail } from 'lucide-react';
 import { useState } from 'react';
 
 interface FarmerRegistration {
@@ -188,6 +188,8 @@ export function HCDARegistry() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExporter, setSelectedExporter] = useState<string>('all');
   const [selectedGAPStatus, setSelectedGAPStatus] = useState<string>('all');
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerRegistration | null>(null);
 
   const compliantCount = farmers.filter(f => f.globalGAPStatus === 'compliant').length;
   const expiredCount = farmers.filter(f => f.globalGAPStatus === 'expired').length;
@@ -246,8 +248,19 @@ export function HCDARegistry() {
     }
   };
 
+  const openViewModal = (farmer: FarmerRegistration) => {
+    setSelectedFarmer(farmer);
+    setViewModalOpen(true);
+  };
+
+  const closeViewModal = () => {
+    setSelectedFarmer(null);
+    setViewModalOpen(false);
+  };
+
   return (
     <Layout>
+      <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-2">
@@ -275,7 +288,7 @@ export function HCDARegistry() {
         </div>
 
         {/* High-Level Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 min-w-0 max-w-full [&>*]:min-w-0">
+        <div className="grid grid-cols-4 gap-6 mb-8">
           <div 
             className="p-6 rounded-lg"
             style={{ 
@@ -461,7 +474,7 @@ export function HCDARegistry() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6 min-w-0 max-w-full [&>*]:min-w-0">
+        <div className="grid grid-cols-12 gap-6">
           {/* Left Filter Panel */}
           <div className="col-span-3">
             <div 
@@ -839,6 +852,20 @@ export function HCDARegistry() {
                       >
                         Primary Exporter
                       </th>
+                      <th 
+                        className="p-4 text-center"
+                        style={{ 
+                          fontFamily: 'IBM Plex Sans, sans-serif',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: '#FFFFFF',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          width: '120px',
+                        }}
+                      >
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -955,6 +982,29 @@ export function HCDARegistry() {
                               {farmer.primaryExporter}
                             </span>
                           </td>
+                          <td className="p-4 text-center">
+                            <button
+                              onClick={() => openViewModal(farmer)}
+                              className="px-4 py-2 rounded-lg flex items-center gap-2 transition-all mx-auto"
+                              style={{
+                                backgroundColor: '#2D6A4F',
+                                color: '#FFFFFF',
+                                fontFamily: 'IBM Plex Sans, sans-serif',
+                                fontSize: '13px',
+                                border: 'none',
+                                cursor: 'pointer',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#1B4332';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#2D6A4F';
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                              View
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -992,6 +1042,163 @@ export function HCDARegistry() {
             </div>
           </div>
         </div>
+
+        {/* View Modal */}
+        {viewModalOpen && selectedFarmer && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div 
+              className="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full"
+              style={{ 
+                fontFamily: 'IBM Plex Sans, sans-serif',
+              }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 
+                  className="text-xl font-bold"
+                  style={{ 
+                    color: '#1B4332',
+                  }}
+                >
+                  Farmer Details
+                </h2>
+                <button
+                  className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
+                  onClick={closeViewModal}
+                >
+                  <X className="w-5 h-5" style={{ color: '#717182' }} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p 
+                    className="text-sm font-semibold"
+                    style={{ 
+                      color: '#717182',
+                    }}
+                  >
+                    Farmer Name
+                  </p>
+                  <p 
+                    className="text-lg"
+                    style={{ 
+                      color: '#2C2C2E',
+                    }}
+                  >
+                    {selectedFarmer.farmerName}
+                  </p>
+                </div>
+                <div>
+                  <p 
+                    className="text-sm font-semibold"
+                    style={{ 
+                      color: '#717182',
+                    }}
+                  >
+                    HCDA Reg. #
+                  </p>
+                  <p 
+                    className="text-lg"
+                    style={{ 
+                      color: '#2C2C2E',
+                    }}
+                  >
+                    {selectedFarmer.hcdaRegNumber}
+                  </p>
+                </div>
+                <div>
+                  <p 
+                    className="text-sm font-semibold"
+                    style={{ 
+                      color: '#717182',
+                    }}
+                  >
+                    Location (Ward/County)
+                  </p>
+                  <p 
+                    className="text-lg"
+                    style={{ 
+                      color: '#2C2C2E',
+                    }}
+                  >
+                    {selectedFarmer.ward}, {selectedFarmer.county} County
+                  </p>
+                </div>
+                <div>
+                  <p 
+                    className="text-sm font-semibold"
+                    style={{ 
+                      color: '#717182',
+                    }}
+                  >
+                    Acreage
+                  </p>
+                  <p 
+                    className="text-lg"
+                    style={{ 
+                      color: '#2C2C2E',
+                    }}
+                  >
+                    {selectedFarmer.acreage.toFixed(1)} ha
+                  </p>
+                </div>
+                <div>
+                  <p 
+                    className="text-sm font-semibold"
+                    style={{ 
+                      color: '#717182',
+                    }}
+                  >
+                    GlobalGAP Status
+                  </p>
+                  <div>
+                    <span 
+                      className="px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-2"
+                      style={{ 
+                        backgroundColor: getStatusColor(selectedFarmer.globalGAPStatus).bg,
+                        color: getStatusColor(selectedFarmer.globalGAPStatus).text,
+                      }}
+                    >
+                      {getStatusIcon(selectedFarmer.globalGAPStatus)}
+                      {getStatusLabel(selectedFarmer.globalGAPStatus)}
+                    </span>
+                    <p 
+                      className="text-xs mt-1"
+                      style={{ 
+                        color: '#717182',
+                      }}
+                    >
+                      Exp: {new Date(selectedFarmer.globalGAPExpiry).toLocaleDateString('en-GB', { 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric' 
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p 
+                    className="text-sm font-semibold"
+                    style={{ 
+                      color: '#717182',
+                    }}
+                  >
+                    Primary Exporter
+                  </p>
+                  <p 
+                    className="text-lg"
+                    style={{ 
+                      color: '#2C2C2E',
+                    }}
+                  >
+                    {selectedFarmer.primaryExporter}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </Layout>
   );
 }

@@ -303,8 +303,9 @@ export function Exporter() {
 
   return (
     <Layout>
+      <div className="p-8" style={{ backgroundColor: '#F7F4EF', minHeight: '100vh' }}>
         {/* Header */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-w-0">
+        <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 
               className="text-4xl mb-2"
@@ -332,7 +333,7 @@ export function Exporter() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 min-w-0 max-w-full [&>*]:min-w-0">
+        <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Total Contracted Acreage - Blue */}
           <div 
             className="bg-white rounded-lg p-6 shadow-sm"
@@ -1339,6 +1340,7 @@ export function Exporter() {
             </div>
           </div>
         )}
+      </div>
     </Layout>
   );
 }

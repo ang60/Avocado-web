@@ -224,6 +224,8 @@ export interface FarmerListRow {
   phone: string;
   lastInspection: string;
   overdueScouts: boolean;
+  /** Placeholder: linked exporter id from `data/exporters.ts` */
+  linkedExporter?: string;
 }
 
 export interface ComplianceFarmerRow {

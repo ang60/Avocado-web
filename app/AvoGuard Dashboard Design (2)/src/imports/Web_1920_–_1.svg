@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <clipPath id="clip-Web_1920_1">
+      <rect width="1920" height="1080"/>
+    </clipPath>
+  </defs>
+  <g id="Web_1920_1" data-name="Web 1920 – 1" clip-path="url(#clip-Web_1920_1)">
+    <rect width="1920" height="1080" fill="#fff"/>
+    <rect id="Rectangle_2601" data-name="Rectangle 2601" width="1923" height="1202" transform="translate(0 -60)" fill="#f7f4ef"/>
+    <rect id="Rectangle_2602" data-name="Rectangle 2602" width="694" height="934" rx="16" transform="translate(107.5 74)" fill="#fff" stroke="#e0ddd6" stroke-width="1"/>
+    <text id="Welcome_Back" data-name="Welcome Back" transform="translate(336 257)" fill="#1b1a0e" font-size="37" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Welcome Back</tspan></text>
+    <text id="Sign_in_to_your_Dashboard" data-name="Sign in to your Dashboard" transform="translate(351 309)" fill="#5d6d7e" font-size="18" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Sign in to your Dashboard</tspan></text>
+    <text id="Email_Address" data-name="Email Address" transform="translate(241 382)" fill="#1b1a0e" font-size="16" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Email Address</tspan></text>
+    <rect id="Rectangle_2604" data-name="Rectangle 2604" width="427" height="54" rx="8" transform="translate(241 409)" fill="#f0faf3" stroke="#e0ddd6" stroke-width="1"/>
+    <text id="Enter_your_email" data-name="Enter your email" transform="translate(281 442)" fill="#5d6d7e" font-size="16" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Enter your email</tspan></text>
+    <text id="Password" transform="translate(241 489)" fill="#1b1a0e" font-size="16" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Password</tspan></text>
+    <rect id="Rectangle_2605" data-name="Rectangle 2605" width="427" height="54" rx="8" transform="translate(241 516)" fill="#f0faf3" stroke="#e0ddd6" stroke-width="1"/>
+    <rect id="Rectangle_2610" data-name="Rectangle 2610" width="427" height="54" rx="8" transform="translate(241 753)" fill="none" stroke="#e0ddd6" stroke-width="1"/>
+    <text id="Enter_your_password" data-name="Enter your password" transform="translate(281 549)" fill="#5d6d7e" font-size="16" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Enter your password</tspan></text>
+    <text id="Remember_me" data-name="Remember me" transform="translate(277 596)" fill="#5d6d7e" font-size="16" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Remember me</tspan></text>
+    <text id="Forgot_Password_" data-name="Forgot Password?" transform="translate(508 595)" fill="#74c69d" font-size="15" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Forgot Password?</tspan></text>
+    <rect id="Rectangle_2607" data-name="Rectangle 2607" width="427" height="53" rx="8" transform="translate(241 650)" fill="#40916c"/>
+    <text id="Sign_In" data-name="Sign In" transform="translate(401 686)" fill="#fff" font-size="18" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Sign In</tspan></text>
+    <text id="Don_t_have_an_account_Create_Account" data-name="Don&apos;t have an account?        Create Account" transform="translate(241 729)" fill="#5d6d7e" font-size="16" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0" xml:space="preserve">Don&apos;t have an account?        </tspan><tspan y="0" fill="#74c69d">Create Account</tspan></text>
+    <text id="Secure_login_protected_by_encryption" data-name="Secure login protected by encryption" transform="translate(331 785)" fill="#5d6d7e" font-size="16" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Secure login protected by encryption</tspan></text>
+    <rect id="Rectangle_2608" data-name="Rectangle 2608" width="961" height="934" rx="16" transform="translate(855 74)" fill="#1b4332" stroke="#e0ddd6" stroke-width="1"/>
+    <circle id="Ellipse_1273" data-name="Ellipse 1273" cx="8" cy="8" r="8" transform="translate(1327 974)" fill="#74c69d"/>
+    <circle id="Ellipse_1274" data-name="Ellipse 1274" cx="8" cy="8" r="8" transform="translate(1354 974)" fill="#2d6a4f"/>
+    <circle id="Ellipse_1275" data-name="Ellipse 1275" cx="8" cy="8" r="8" transform="translate(1381 974)" fill="#2d6a4f"/>
+    <circle id="Ellipse_1276" data-name="Ellipse 1276" cx="32" cy="32" r="32" transform="translate(962 397)" fill="#74c69d"/>
+    <text id="Real-time_Dashboard" data-name="Real-time Dashboard" transform="translate(1047 429)" fill="#fff" font-size="32" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Real-time Dashboard</tspan></text>
+    <text id="Monitor_farms_pest_reports_and_alerts_in_real-time" data-name="Monitor farms, pest reports, and alerts in real-time" transform="translate(1047 481)" fill="#74c69d" font-size="18" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Monitor farms, pest reports, and alerts in real-time</tspan></text>
+    <circle id="Ellipse_1277" data-name="Ellipse 1277" cx="32" cy="32" r="32" transform="translate(962 557)" fill="#74c69d"/>
+    <text id="Case_Management" data-name="Case Management" transform="translate(1047 589)" fill="#fff" font-size="32" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Case Management</tspan></text>
+    <text id="Track_assign_and_resolve_pest_and_disease_cases_efficiently" data-name="Track, assign, and resolve pest and disease cases efficiently" transform="translate(1047 641)" fill="#74c69d" font-size="18" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Track, assign, and resolve pest and disease cases efficiently</tspan></text>
+    <circle id="Ellipse_1278" data-name="Ellipse 1278" cx="32" cy="32" r="32" transform="translate(962 717)" fill="#74c69d"/>
+    <text id="Farmer_Insights" data-name="Farmer Insights" transform="translate(1047 749)" fill="#fff" font-size="32" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">Farmer Insights</tspan></text>
+    <text id="View_farm_profiles_locations_crops_and_historical_case_data" data-name="View farm profiles, locations, crops, and historical case data" transform="translate(1047 802)" fill="#74c69d" font-size="18" font-family="SegoeUI, Segoe UI"><tspan x="0" y="0">View farm profiles, locations, crops, and historical case data</tspan></text>
+    <g id="_3994380_access_enter_input_login_sign_in_icon" data-name="3994380_access_enter_input_login_sign in_icon" transform="translate(593.118 668.404)">
+      <path id="Path_45" data-name="Path 45" d="M9.063,31.82a1.243,1.243,0,1,0,1.757,1.757l3.728-3.728a1.242,1.242,0,0,0,0-1.757L10.82,24.365a1.243,1.243,0,1,0-1.757,1.757l1.607,1.607H1.243a1.243,1.243,0,0,0,0,2.485h9.427Z" transform="translate(0 -19.03)" fill="#fff"/>
+      <path id="Path_46" data-name="Path 46" d="M37.669,0H25.243A1.242,1.242,0,0,0,24,1.243V3.728a1.243,1.243,0,0,0,2.485,0V2.485h9.941V17.4H26.485V16.154a1.243,1.243,0,0,0-2.485,0V18.64a1.242,1.242,0,0,0,1.243,1.243H37.669a1.242,1.242,0,0,0,1.243-1.243V1.243A1.242,1.242,0,0,0,37.669,0Z" transform="translate(-19.029 0)" fill="#fff"/>
+    </g>
+    <rect id="Rectangle_2609" data-name="Rectangle 2609" width="18" height="18" rx="3" transform="translate(250 581)" fill="#efefef"/>
+    <path id="email-1-svgrepo-com" d="M3.75,5.25,3,6V18l.75.75h16.5L21,18V6l-.75-.75ZM4.5,7.7V17.25h15V7.7L12,14.514ZM18.31,6.75H5.69L12,12.486Z" transform="translate(604 427.75)" fill="#b7b7b7" fill-rule="evenodd"/>
+    <g id="eye-svgrepo-com" transform="translate(603.541 533)">
+      <path id="Path_12635" data-name="Path 12635" d="M15,12a3,3,0,1,1-3-3A3,3,0,0,1,15,12Z" fill="none" stroke="#b7b7b7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      <path id="Path_12636" data-name="Path 12636" d="M12,5a10,10,0,0,0-9.542,7,10,10,0,0,0,19.084,0A10,10,0,0,0,12,5Z" fill="none" stroke="#b7b7b7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    </g>
+    <g id="Group_4329" data-name="Group 4329" transform="translate(405 105.613)">
+      <circle id="Ellipse_1" data-name="Ellipse 1" cx="47.168" cy="47.168" r="47.168" transform="translate(0 6.407)" fill="#fef7a2"/>
+      <g id="Group_22" data-name="Group 22" transform="translate(17.321)">
+        <path id="Path_10226" data-name="Path 10226" d="M463.567,589.3c17.8,0,12.032,21.509,19.657,33.878,42.325,68.687-81.63,68.687-39.3,0,7.615-12.359,1.852-33.878,19.657-33.878Z" transform="translate(-434.968 -569.306)" fill="#328b09"/>
+        <path id="Path_10227" data-name="Path 10227" d="M704.8,408.927c.04-4.486.782-16.37,7.3-21.529,0,0,4.5-.119,6.932,5.516a28.884,28.884,0,0,0-9.754,16.132c-.525,2.664-4.506,2.892-4.476-.129h0Z" transform="translate(-678.071 -387.398)" fill="#98db04"/>
+        <path id="Path_10228" data-name="Path 10228" d="M459.74,662.275c7.407-11.854.7-25.421-8.061-18.647-3.555,7.378-2.971,18.974-7.833,26.867-24.678,40.057,7.19,56.754,29.649,50.089,11.874-15.013,1.733-27.52-12.428-34.274-8.883-4.238-8.18-13.062-1.327-24.025h0Z" transform="translate(-434.904 -616.622)" fill="#287305"/>
+        <path id="Path_10229" data-name="Path 10229" d="M748.839,644.646c-3.565-3.714-9.754-1.307-6.14,5.813s2.159,12.943-2.307,18.142c-10.873,12.686,28.154,22.173,16.261,2.872-4.852-7.873-4.278-19.459-7.813-26.827Z" transform="translate(-708.396 -617.611)" fill="#53c506"/>
+        <path id="Path_10230" data-name="Path 10230" d="M674.4,1050.194c.2,18.459-16.617,26.946-32.066,25.451-4.268-.782-8.675-11.111-.386-16.082,8.328-5,2.5-9.329-1.664-13.329-6.358-6.1,6.189-21.826,19.113-2.06,4.189,6.4,4.3,11.26,15.013,6.021h-.01Z" transform="translate(-617.227 -970.436)" fill="#e2e266"/>
+        <ellipse id="Ellipse_2" data-name="Ellipse 2" cx="3.624" cy="2.604" rx="3.624" ry="2.604" transform="translate(15.458 80.699)" fill="#e2e266"/>
+        <path id="Path_10231" data-name="Path 10231" d="M640.281,1046.152c4.169,4,10,8.328,1.664,13.329-8.289,4.971-3.882,15.3.386,16.082,1.079.109,2.169.158,3.258.168-3.842-2.6-6.833-9.685-1.594-12.824,4.4-2.634,7.7-6.774,5.476-12.022-1.119-2.634-3.327-4.694-5.407-6.645-1.575-1.476-1.723-3.179-.9-4.318,1.654-2.3,7.219-2.317,12.894,6.348,5.249,8.011,7.308,12.755,17.924,9.021a26.452,26.452,0,0,0,.416-5.179c-10.715,5.229-10.824.376-15.013-6.021-8.19-12.527-16.231-10.794-19.4-6.3-1.832,2.594-2.04,6.12.287,8.358h0Z" transform="translate(-617.227 -970.365)" fill="#bfbf5b"/>
+        <path id="Path_10232" data-name="Path 10232" d="M744.741,558.823c25.54-15.369,30.848,23.955,50.881,17.607-39.661,30.194-29.867-19.717-51.822-14.934Z" transform="translate(-713.21 -538.611)" fill="#98db04"/>
+        <path id="Path_10233" data-name="Path 10233" d="M795.532,602.4c-29.828,17.3-27.887-25.7-49.227-17.241-.624.248-1.268.535-1.941.881-.059.03-.119.059-.188.089l-.475,1.337a10.538,10.538,0,0,1,7.794.961c12.359,7.051,10.111,39.79,44.028,13.973Z" transform="translate(-713.12 -564.57)" fill="#7ab300"/>
+      </g>
+    </g>
+    <path id="secure-svgrepo-com" d="M12.447,1.106a1,1,0,0,0-.894,0l-8,4A1,1,0,0,0,3,6v6a10.1,10.1,0,0,0,2.4,6.716,15.833,15.833,0,0,0,6.218,4.209,1,1,0,0,0,.757,0A15.834,15.834,0,0,0,18.6,18.716,10.1,10.1,0,0,0,21,12V6a1,1,0,0,0-.553-.894ZM5,12V6.618l7-3.5,7,3.5V12a8.1,8.1,0,0,1-1.93,5.425A13.5,13.5,0,0,1,12,20.916a13.5,13.5,0,0,1-5.07-3.491A8.1,8.1,0,0,1,5,12ZM16.757,9.653a1,1,0,0,0-1.514-1.306l-4.48,5.193L8.7,11.517a1,1,0,1,0-1.4,1.428l2.824,2.769a1,1,0,0,0,1.457-.061Z" transform="translate(290 766)" fill="#40916c" fill-rule="evenodd"/>
+    <g id="user-account-profile-svgrepo-com" transform="translate(411 710)">
+      <circle id="Ellipse_1279" data-name="Ellipse 1279" cx="4" cy="4" r="4" transform="translate(8 3)" fill="none" stroke="#40916c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      <path id="Path_12637" data-name="Path 12637" d="M4,21V17a2,2,0,0,1,2-2H18a2,2,0,0,1,2,2v4" fill="none" stroke="#40916c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    </g>
+    <path id="arrow-trend-up-svgrepo-com" d="M21.793,3,19.578,5.215l5.078,5.078-6.186,6.186L11.826,9.835.293,21.368,3.425,24.5l8.4-8.4,6.645,6.645,9.318-9.318L32.867,18.5l2.215-2.215V3Z" transform="translate(976.685 412.5)" fill="#fff"/>
+    <path id="Path_12638" data-name="Path 12638" d="M30.971,10a.64.64,0,0,0-.648.719s.046.44.046.728a2.895,2.895,0,0,1-5.789,0c0-.287.046-.728.046-.728A.64.64,0,0,0,23.977,10H18.066a.724.724,0,0,0-.724.724v5.911a.64.64,0,0,1-.719.648s-.44-.046-.728-.046a2.895,2.895,0,0,0,0,5.789c.287,0,.728-.046.728-.046a.64.64,0,0,1,.719.648v4.464a.724.724,0,0,0,.724.724h5.911a.64.64,0,0,0,.648-.719s-.046-.44-.046-.728a2.895,2.895,0,0,1,5.789,0c0,.287-.046.728-.046.728a.64.64,0,0,0,.648.719h3.016a.724.724,0,0,0,.724-.724V10.724A.724.724,0,0,0,33.987,10Z" transform="translate(977.056 569.842)" fill="#fff"/>
+    <path id="Path_12639" data-name="Path 12639" d="M15.579,21.474a4.347,4.347,0,0,1,4.342-4.342V12.066a.724.724,0,0,0-.724-.724H13.286a.64.64,0,0,1-.648-.719s.046-.441.046-.728a2.895,2.895,0,0,0-5.789,0c0,.287.046.728.046.728a.64.64,0,0,1-.648.719H4.724A.724.724,0,0,0,4,12.066V29.434a.724.724,0,0,0,.724.724H6.293a.64.64,0,0,1,.648.719s-.046.441-.046.728a2.895,2.895,0,1,0,5.789,0c0-.287-.046-.728-.046-.728a.64.64,0,0,1,.648-.719H19.2a.724.724,0,0,0,.724-.724V25.816A4.347,4.347,0,0,1,15.579,21.474Z" transform="translate(973.03 568.5)" fill="#fff"/>
+    <path id="insights-svgrepo-com" d="M4.318,3.159A1.159,1.159,0,1,0,2,3.159V23.092a2.086,2.086,0,0,0,2.086,2.086H24.019a1.159,1.159,0,1,0,0-2.318H4.318ZM24.838,8.614A1.159,1.159,0,1,0,23.2,6.975l-7.293,7.293-3.816-3.816a1.159,1.159,0,0,0-1.639,0L5.816,15.087a1.159,1.159,0,1,0,1.639,1.639l3.816-3.816,3.816,3.816a1.159,1.159,0,0,0,1.639,0Z" transform="translate(980.733 734.867)" fill="#fff" fill-rule="evenodd"/>
+    <g id="Group_4331" data-name="Group 4331" transform="translate(0 -1343)">
+      <g id="Group_4330" data-name="Group 4330" transform="translate(961.5 1447.042)">
+        <ellipse id="Ellipse_1-2" data-name="Ellipse 1" cx="87.704" cy="87.704" rx="87.704" ry="87.704" transform="translate(0 11.914)" fill="#fff"/>
+        <g id="Group_22-2" data-name="Group 22" transform="translate(32.206)">
+          <path id="Path_10226-2" data-name="Path 10226" d="M488.14,589.3c33.089,0,22.373,39.994,36.551,62.993,78.7,127.717-151.783,127.717-73.084,0,14.16-22.98,3.443-62.993,36.551-62.993Z" transform="translate(-434.962 -552.123)" fill="#328b09"/>
+          <path id="Path_10227-2" data-name="Path 10227" d="M704.8,427.43c.074-8.341,1.455-30.438,13.571-40.031,0,0,8.36-.221,12.89,10.256,0,0-14.4,10.919-18.137,30-.976,4.953-8.378,5.377-8.323-.239h0Z" transform="translate(-655.101 -387.398)" fill="#98db04"/>
+          <path id="Path_10228-2" data-name="Path 10228" d="M481.084,679.857c13.773-22.041,1.307-47.268-14.989-34.673-6.61,13.718-5.524,35.28-14.565,49.956-45.887,74.483,13.368,105.528,55.13,93.136,22.078-27.915,3.222-51.171-23.109-63.73-16.517-7.881-15.21-24.287-2.467-44.671h0Z" transform="translate(-434.904 -594.97)" fill="#287305"/>
+          <path id="Path_10229-2" data-name="Path 10229" d="M757.762,646.135c-6.629-6.905-18.137-2.431-11.417,10.809s4.014,24.067-4.29,33.734c-20.218,23.588,52.35,41.228,30.235,5.34-9.023-14.639-7.955-36.183-14.528-49.883Z" transform="translate(-682.562 -595.865)" fill="#53c506"/>
+          <path id="Path_10230-2" data-name="Path 10230" d="M706.306,1063.665c.368,34.323-30.9,50.1-59.623,47.323-7.936-1.455-16.13-20.66-.718-29.9,15.486-9.3,4.64-17.346-3.093-24.785-11.822-11.343,11.508-40.584,35.538-3.83,7.789,11.9,7.991,20.936,27.915,11.2h-.018Z" transform="translate(-600.004 -915.362)" fill="#e2e266"/>
+          <ellipse id="Ellipse_2-2" data-name="Ellipse 2" cx="6.739" cy="4.843" rx="6.739" ry="4.843" transform="translate(28.743 150.053)" fill="#e2e266"/>
+          <path id="Path_10231-2" data-name="Path 10231" d="M642.871,1056.217c7.752,7.439,18.6,15.486,3.094,24.785-15.412,9.244-7.218,28.449.718,29.9,2.007.2,4.033.295,6.058.313-7.144-4.843-12.705-18.009-2.965-23.846,8.176-4.9,14.326-12.6,10.183-22.354-2.081-4.9-6.187-8.728-10.054-12.356-2.928-2.744-3.2-5.911-1.676-8.028,3.075-4.272,13.424-4.309,23.974,11.8,9.759,14.9,13.589,23.716,33.329,16.775a49.182,49.182,0,0,0,.773-9.63c-19.923,9.722-20.126.7-27.915-11.2-15.228-23.293-30.18-20.071-36.072-11.711-3.407,4.824-3.793,11.38.534,15.541h0Z" transform="translate(-600.004 -915.297)" fill="#bfbf5b"/>
+          <path id="Path_10232-2" data-name="Path 10232" d="M745.549,561.91c47.489-28.578,57.358,44.542,94.609,32.739-73.747,56.143-55.535-36.662-96.358-27.768Z" transform="translate(-686.921 -524.328)" fill="#98db04"/>
+          <path id="Path_10233-2" data-name="Path 10233" d="M840.077,618.175c-55.462,32.169-51.853-47.783-91.534-32.058-1.16.46-2.357.994-3.609,1.639-.11.055-.221.11-.35.166l-.884,2.486c5.911-1.289,10.606-.442,14.492,1.786,22.98,13.111,18.8,73.986,81.867,25.982Z" transform="translate(-686.839 -547.834)" fill="#7ab300"/>
+        </g>
+        <text id="AvoGuard" transform="translate(198.812 109.151)" fill="#fff" font-size="77" font-family="Mont-HeavyDEMO, Mont DEMO" font-weight="800"><tspan x="0" y="0">AvoGuard</tspan></text>
+      </g>
+      <text id="Pest_and_Disease_Monitoring_System" data-name="Pest and Disease Monitoring System" transform="translate(1164.05 1612.424)" fill="#74c69d" font-size="18" font-family="Mont-HeavyDEMO, Mont DEMO" font-weight="800"><tspan x="0" y="0">Pest and Disease Monitoring System</tspan></text>
+    </g>
+  </g>
+</svg>

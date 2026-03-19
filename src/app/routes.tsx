@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ComponentType } from 'react';
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, redirect } from 'react-router';
 import { PageLoader } from './components/PageLoader';
 
 function lazyRoute<T extends Record<string, ComponentType<object>>>(
@@ -20,6 +20,14 @@ function lazyRoute<T extends Record<string, ComponentType<object>>>(
 
 export const router = createBrowserRouter([
   { path: '/', Component: lazyRoute(() => import('./pages/Dashboard'), 'Dashboard') },
+  {
+    path: '/login',
+    loader: () => redirect('/dashboard'),
+  },
+  {
+    path: '/dashboard',
+    Component: lazyRoute(() => import('./pages/Dashboard'), 'Dashboard'),
+  },
   {
     path: '/scouting-reports',
     Component: lazyRoute(() => import('./pages/ScoutingReports'), 'ScoutingReports'),
@@ -68,4 +76,8 @@ export const router = createBrowserRouter([
   },
   { path: '/admin', Component: lazyRoute(() => import('./pages/Admin'), 'Admin') },
   { path: '/exporter', Component: lazyRoute(() => import('./pages/Exporter'), 'Exporter') },
+  {
+    path: '*',
+    loader: () => redirect('/dashboard'),
+  },
 ]);
