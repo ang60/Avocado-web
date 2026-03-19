@@ -7,8 +7,8 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { isCollapsed } = useSidebar();
-  const marginLeft = isCollapsed ? '72px' : '240px';
+  const { isCollapsed, isMobile } = useSidebar();
+  const marginLeft = isMobile ? '0px' : isCollapsed ? '72px' : '240px';
 
   return (
     <div
@@ -20,18 +20,18 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main: fills viewport under top bar; inner scroll so footer stays visible */}
       <main
-        className="flex min-h-0 flex-1 flex-col pt-20 transition-all duration-300"
+        className="flex min-h-0 flex-1 flex-col pt-[4.25rem] transition-all duration-300 sm:pt-20"
         style={{ marginLeft }}
       >
-        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
-          <div className="mx-auto w-full max-w-[min(100%,1920px)] px-3 py-3 sm:px-5 sm:py-4">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+          <div className="mx-auto min-w-0 w-full max-w-[min(100%,1920px)] px-3 py-3 sm:px-5 sm:py-4">
             {children}
           </div>
         </div>
       </main>
 
       <footer
-        className="flex-shrink-0 border-t py-2.5 text-center text-sm transition-all duration-300 sm:py-3"
+        className="flex-shrink-0 border-t px-2 py-2.5 text-center text-xs leading-snug transition-all duration-300 sm:px-4 sm:py-3 sm:text-sm"
         style={{
           backgroundColor: '#353535',
           borderColor: '#E0DDD6',

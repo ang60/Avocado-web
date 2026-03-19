@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { useState } from 'react';
 import { 
   MapPin, User, Phone, Image, Mic, PlayCircle, ChevronDown, Lock, Unlock,
@@ -78,7 +77,7 @@ export function CaseDetail() {
   };
 
   return (
-    <Layout>
+    <>
       <div className="grid grid-cols-12 gap-6">
         {/* Main Content Area */}
         <div className="col-span-9">
@@ -117,7 +116,7 @@ export function CaseDetail() {
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-4 mt-4">
+                <div className="mt-4 grid grid-cols-1 gap-3 min-w-0 sm:grid-cols-3 sm:gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <User className="w-4 h-4" style={{ color: '#2D6A4F' }} />
@@ -222,7 +221,7 @@ export function CaseDetail() {
                       Smartphone Evidence ({caseData.photos.length} photos)
                     </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-3 min-w-0 sm:grid-cols-3 sm:gap-4">
                     {caseData.photos.map((photo) => (
                       <div 
                         key={photo.id}
@@ -325,7 +324,7 @@ export function CaseDetail() {
           </div>
 
           {/* Diagnostic & Advisory Panel */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="mb-4 grid grid-cols-1 gap-4 min-w-0 sm:mb-6 sm:grid-cols-2 sm:gap-6">
             {/* Left Side: Diagnosis */}
             <div 
               className="p-6 rounded-lg border"
@@ -1309,6 +1308,6 @@ export function CaseDetail() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }

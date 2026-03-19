@@ -1,6 +1,6 @@
-import { Layout } from '../components/Layout';
 import { ArrowLeft, Edit3, Phone, AlertTriangle, ExternalLink, Search, Download, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
+import { TableScroll } from '../components/TableScroll';
 import { useState } from 'react';
 
 const ussdSymptomCodes = [
@@ -187,7 +187,7 @@ export function SymptomCodebook() {
   });
 
   return (
-    <Layout>
+    <>
       {/* Header */}
       <header className="mb-4 md:mb-5">
         <div className="flex items-start justify-between mb-4">
@@ -386,7 +386,7 @@ export function SymptomCodebook() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="mb-4 grid grid-cols-2 gap-3 min-w-0 sm:mb-6 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         <div 
           className="p-4 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -438,7 +438,8 @@ export function SymptomCodebook() {
         className="rounded-lg border overflow-hidden"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
-        <table className="w-full">
+        <TableScroll>
+        <table className="w-full min-w-[720px]">
           <thead>
             <tr style={{ backgroundColor: '#1B4332' }}>
               <th 
@@ -561,6 +562,7 @@ export function SymptomCodebook() {
             })}
           </tbody>
         </table>
+        </TableScroll>
       </div>
 
       {filteredCodes.length === 0 && (
@@ -836,6 +838,6 @@ export function SymptomCodebook() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }

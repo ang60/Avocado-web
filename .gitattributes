@@ -1,0 +1,16 @@
+# Normalize line endings for consistent diffs across OSes
+* text=auto eol=lf
+
+# Windows scripts (if added later)
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

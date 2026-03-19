@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
@@ -7,6 +6,7 @@ import {
   MapPin, TrendingUp, BarChart3, Users, Shield, Zap,
   Calendar, Filter, ChevronDown
 } from 'lucide-react';
+import { TableScroll } from '../components/TableScroll';
 
 type ReportType = 
   | 'phytosanitary' 
@@ -355,7 +355,7 @@ export function ComplianceHub() {
   // If no report selected, show selection interface
   if (!selectedReport) {
     return (
-      <Layout>
+      <>
         <header className="mb-4 md:mb-5">
           <h1 
             className="mb-1 text-2xl sm:text-3xl" 
@@ -372,7 +372,7 @@ export function ComplianceHub() {
         </header>
 
         {/* Report Type Selection Cards */}
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 min-w-0 md:grid-cols-3 md:gap-6">
           {reportCards.map((report) => {
             const Icon = report.icon;
             return (
@@ -417,14 +417,14 @@ export function ComplianceHub() {
             );
           })}
         </div>
-      </Layout>
+      </>
     );
   }
 
   const currentReport = reportCards.find(r => r.id === selectedReport);
 
   return (
-    <Layout>
+    <>
       {/* Header with Back Button */}
       <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -472,7 +472,7 @@ export function ComplianceHub() {
           </h3>
         </div>
 
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 min-w-0 sm:grid-cols-2 xl:grid-cols-4 xl:gap-6">
           {/* Date Range */}
           <div>
             <label 
@@ -602,7 +602,7 @@ export function ComplianceHub() {
       {selectedReport === 'farmer-ranking' && <FarmerRankingReport />}
       {selectedReport === 'system-adoption' && <SystemAdoptionReport />}
       {selectedReport === 'agronomist-efficiency' && <AgronomistEfficiencyReport />}
-    </Layout>
+    </>
   );
 }
 
@@ -630,7 +630,7 @@ function PhytosanitaryReport({
   return (
     <>
       {/* Metrics Row */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -783,7 +783,8 @@ function PhytosanitaryReport({
         }}
       >
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <TableScroll>
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th className="px-4 py-4 w-12">
@@ -914,6 +915,7 @@ function PhytosanitaryReport({
               ))}
             </tbody>
           </table>
+          </TableScroll>
         </div>
       </div>
     </>
@@ -933,7 +935,7 @@ function AreaRiskReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -1037,7 +1039,8 @@ function AreaRiskReport() {
         }}
       >
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <TableScroll>
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th 
@@ -1141,6 +1144,7 @@ function AreaRiskReport() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         </div>
       </div>
     </>
@@ -1160,7 +1164,7 @@ function IPMAuditReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -1264,7 +1268,8 @@ function IPMAuditReport() {
         }}
       >
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <TableScroll>
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th 
@@ -1368,6 +1373,7 @@ function IPMAuditReport() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         </div>
       </div>
     </>
@@ -1387,7 +1393,7 @@ function FarmerRankingReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -1491,7 +1497,8 @@ function FarmerRankingReport() {
         }}
       >
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <TableScroll>
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th 
@@ -1627,6 +1634,7 @@ function FarmerRankingReport() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         </div>
       </div>
     </>
@@ -1638,7 +1646,7 @@ function SystemAdoptionReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -1765,7 +1773,7 @@ function AgronomistEfficiencyReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}

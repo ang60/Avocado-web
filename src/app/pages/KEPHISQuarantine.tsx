@@ -1,8 +1,9 @@
 
-import { Layout } from '../components/Layout';
 import { KEPHISRiskIntelTab } from '../components/KEPHISRiskIntelTab';
 import { Shield, AlertTriangle, CheckCircle, Clock, Download, FileText, Search, Eye, FileCheck, History, X, Calendar, MoreVertical, XCircle, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
+import { TableScroll } from '../components/TableScroll';
+import { OptimizedImage } from '../components/OptimizedImage';
 
 interface QuarantineBlock {
   id: string;
@@ -231,7 +232,7 @@ export function KEPHISQuarantine() {
   };
 
   return (
-    <Layout>
+    <>
       <div className="w-full">
         {/* Header */}
         <div className="mb-3 sm:mb-4">
@@ -295,7 +296,7 @@ export function KEPHISQuarantine() {
         <div>
 
         {/* High-Level Metrics */}
-        <div className="mb-4 grid grid-cols-3 gap-4 sm:mb-5 sm:gap-5">
+        <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-3 sm:gap-4 md:gap-5">
           {/* Active Gated Blocks */}
           <div 
             className="p-6 rounded-lg border-2"
@@ -524,14 +525,14 @@ export function KEPHISQuarantine() {
 
         {/* Specialized Quarantine Table */}
         <div 
-          className="rounded-lg border overflow-hidden"
+          className="min-w-0 overflow-hidden rounded-lg border"
           style={{ 
             backgroundColor: '#FFFFFF',
             borderColor: '#E0DDD6',
           }}
         >
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <TableScroll>
+            <table className="w-full min-w-[1000px]">
               <thead>
                 <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '2px solid #E0DDD6' }}>
                   <th className="p-4 text-left" style={{ width: '50px' }}>
@@ -941,7 +942,7 @@ export function KEPHISQuarantine() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
 
           {filteredBlocks.length === 0 && (
             <div className="p-12 text-center">
@@ -1512,10 +1513,11 @@ export function KEPHISQuarantine() {
                     className="relative rounded-lg overflow-hidden border-2"
                     style={{ borderColor: '#E0DDD6' }}
                   >
-                    <img 
+                    <OptimizedImage
                       src="https://images.unsplash.com/photo-1753105091436-1854e9ef3ae4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhdm9jYWRvJTIwcGVzdCUyMGRhbWFnZSUyMGluZmVzdGF0aW9ufGVufDF8fHx8MTc3MzgzMDkyN3ww&ixlib=rb-4.1.0&q=80&w=1080"
-                      alt="Pest Evidence"
-                      className="w-full h-80 object-cover"
+                      alt="Pest evidence"
+                      priority
+                      className="h-80 w-full object-cover"
                     />
                     
                     {/* Verified Watermark */}
@@ -1676,10 +1678,11 @@ export function KEPHISQuarantine() {
                       </div>
 
                       <div 
-                        className="rounded-lg border overflow-hidden"
+                        className="min-w-0 overflow-hidden rounded-lg border"
                         style={{ borderColor: '#E0DDD6' }}
                       >
-                        <table className="w-full">
+                        <TableScroll>
+                        <table className="w-full min-w-[520px]">
                           <thead>
                             <tr style={{ backgroundColor: '#2D6A4F' }}>
                               <th 
@@ -1755,6 +1758,7 @@ export function KEPHISQuarantine() {
                             ))}
                           </tbody>
                         </table>
+                        </TableScroll>
                       </div>
                     </div>
                   )}
@@ -1783,10 +1787,11 @@ export function KEPHISQuarantine() {
                       </div>
 
                       <div 
-                        className="rounded-lg border overflow-hidden"
+                        className="min-w-0 overflow-hidden rounded-lg border"
                         style={{ borderColor: '#E0DDD6' }}
                       >
-                        <table className="w-full">
+                        <TableScroll>
+                        <table className="w-full min-w-[560px]">
                           <thead>
                             <tr style={{ backgroundColor: '#C0392B' }}>
                               <th 
@@ -1871,6 +1876,7 @@ export function KEPHISQuarantine() {
                             ))}
                           </tbody>
                         </table>
+                        </TableScroll>
                       </div>
                     </div>
                   )}
@@ -1953,6 +1959,6 @@ export function KEPHISQuarantine() {
           );
         })()}
       </div>
-    </Layout>
+    </>
   );
 }

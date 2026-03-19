@@ -13,17 +13,17 @@ interface KPICardProps {
 function KPICard({ title, value, icon: Icon, iconColor, iconBg }: KPICardProps) {
   return (
     <div 
-      className="rounded-lg p-6 border"
+      className="rounded-lg border p-3 sm:p-4 md:p-6"
       style={{
         backgroundColor: '#FFFFFF',
         borderColor: '#E0DDD6',
         borderRadius: '8px',
       }}
     >
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <p 
-            className="text-sm mb-2" 
+            className="mb-1 text-xs sm:mb-2 sm:text-sm" 
             style={{ 
               fontFamily: 'IBM Plex Sans, sans-serif',
               color: '#717182'
@@ -32,7 +32,7 @@ function KPICard({ title, value, icon: Icon, iconColor, iconBg }: KPICardProps) 
             {title}
           </p>
           <p 
-            className="text-3xl" 
+            className="text-xl sm:text-2xl md:text-3xl" 
             style={{ 
               fontFamily: 'DM Serif Display, serif',
               color: '#1B4332'
@@ -42,10 +42,10 @@ function KPICard({ title, value, icon: Icon, iconColor, iconBg }: KPICardProps) 
           </p>
         </div>
         <div 
-          className="w-12 h-12 rounded-lg flex items-center justify-center"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12"
           style={{ backgroundColor: iconBg }}
         >
-          <Icon className="w-6 h-6" style={{ color: iconColor }} />
+          <Icon className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: iconColor }} />
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { MoreVertical } from 'lucide-react';
+import { TableScroll } from './TableScroll';
 
 interface CaseData {
   id: string;
@@ -162,15 +163,15 @@ function StatusPill({ status }: { status: CaseData['status'] }) {
 export function CaseTable() {
   return (
     <div 
-      className="rounded-lg border overflow-hidden"
+      className="min-w-0 overflow-hidden rounded-lg border"
       style={{
         backgroundColor: '#FFFFFF',
         borderColor: '#E0DDD6',
         borderRadius: '8px',
       }}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <TableScroll>
+        <table className="w-full min-w-[720px]">
           <thead>
             <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
               <th 
@@ -298,7 +299,7 @@ export function CaseTable() {
             ))}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }

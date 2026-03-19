@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown, MapPin, Filter, Download, AlertTriangle, Eye, X, CheckCircle, XCircle } from 'lucide-react';
 import { useState } from 'react';
 import { LineChart, Line, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { TableScroll } from './TableScroll';
 
 const generateSparklineData = (trend: 'up' | 'down' | 'stable') => {
   const baseValues = trend === 'up' 
@@ -96,7 +97,7 @@ export function KEPHISRiskIntelTab() {
   return (
     <div>
       {/* Summary Cards with 7-Day Sparkline Trends */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         {/* Total Pest Detections */}
         <div 
           className="p-6 rounded-xl border shadow-sm"
@@ -348,7 +349,7 @@ export function KEPHISRiskIntelTab() {
         </div>
 
         {/* Simplified Heatmap Visualization */}
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 gap-3 min-w-0 sm:grid-cols-3 lg:grid-cols-5 sm:gap-4">
           {infectionClusters.map((cluster, index) => (
             <div
               key={index}
@@ -442,7 +443,7 @@ export function KEPHISRiskIntelTab() {
 
       {/* Exporter Compliance Table */}
       <div 
-        className="rounded-xl border shadow-sm overflow-hidden"
+        className="min-w-0 overflow-hidden rounded-xl border shadow-sm"
         style={{ 
           backgroundColor: '#FFFFFF',
           borderColor: '#E0DDD6',
@@ -487,7 +488,8 @@ export function KEPHISRiskIntelTab() {
           </div>
         </div>
 
-        <table className="w-full">
+        <TableScroll>
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
               <th 
@@ -633,6 +635,7 @@ export function KEPHISRiskIntelTab() {
             ))}
           </tbody>
         </table>
+        </TableScroll>
       </div>
 
       {/* View Exporter Modal */}
@@ -691,7 +694,7 @@ export function KEPHISRiskIntelTab() {
             {/* Modal Body */}
             <div className="px-8 py-6">
               {/* Quick Stats */}
-              <div className="mb-4 grid grid-cols-3 gap-4 sm:mb-5">
+              <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-3 sm:gap-4">
                 <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6' }}>
                   <div className="flex items-center gap-3 mb-2">
                     <CheckCircle className="w-5 h-5" style={{ color: '#2D6A4F' }} />

@@ -1,5 +1,6 @@
-import { Search, ChevronRight, Bell, Settings } from 'lucide-react';
-import { useLocation, Link } from 'react-router';
+import { Search, ChevronRight, Bell, Settings, Menu } from 'lucide-react';
+import { useLocation } from 'react-router';
+import { AppLink } from './AppLink';
 import { useState } from 'react';
 import { useSidebar } from '../context/SidebarContext';
 
@@ -8,6 +9,9 @@ const routeNames: Record<string, string> = {
   '/scouting-reports': 'Scouting Reports',
   '/case-management': 'Case Management',
   '/outbreak-monitoring': 'Outbreak Monitoring',
+  '/kephis-quarantine': 'KEPHIS',
+  '/hcda-registry': 'HCDA',
+  '/exporter': 'Exporter',
   '/alerts': 'Alerts',
   '/knowledge-base': 'Knowledge Base',
   '/symptom-codebook': 'Symptom Codebook',
@@ -44,7 +48,7 @@ const articleTitles: Record<string, string> = {
 export function TopBar() {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
-  const { isCollapsed } = useSidebar();
+  const { isCollapsed, isMobile, setMobileNavOpen } = useSidebar();
 
   const getBreadcrumbs = () => {
     const path = location.pathname;
@@ -96,37 +100,50 @@ export function TopBar() {
     <div 
       className="fixed top-0 right-0 z-40 border-b transition-all duration-300"
       style={{ 
-        left: isCollapsed ? '72px' : '240px',
+        left: isMobile ? 0 : isCollapsed ? '72px' : '240px',
         backgroundColor: '#FFFFFF',
         borderColor: '#E0DDD6',
       }}
     >
-      <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        {/* Breadcrumbs */}
-        <div className="flex items-center gap-2">
-          {breadcrumbs.map((crumb, index) => (
-            <div key={crumb.path} className="flex items-center gap-2">
-              {index > 0 && (
-                <ChevronRight className="w-4 h-4" style={{ color: '#717182' }} />
-              )}
-              <Link
-                to={crumb.path}
-                className="text-sm transition-colors"
-                style={{
-                  fontFamily: 'IBM Plex Sans, sans-serif',
-                  color: index === breadcrumbs.length - 1 ? '#1B4332' : '#717182',
-                  fontWeight: index === breadcrumbs.length - 1 ? '500' : '400',
-                  textDecoration: 'none',
-                }}
-              >
-                {crumb.name}
-              </Link>
-            </div>
-          ))}
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="flex-shrink-0 rounded-lg p-2 hover:bg-gray-100"
+              style={{ color: '#1B4332' }}
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
+          {/* Breadcrumbs */}
+          <div className="flex min-w-0 items-center gap-1 overflow-x-auto sm:gap-2">
+            {breadcrumbs.map((crumb, index) => (
+              <div key={crumb.path} className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+                {index > 0 && (
+                  <ChevronRight className="h-3 w-3 flex-shrink-0 sm:h-4 sm:w-4" style={{ color: '#717182' }} />
+                )}
+                <AppLink
+                  to={crumb.path}
+                  className="max-w-[42vw] truncate text-xs transition-colors sm:max-w-none sm:text-sm"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    color: index === breadcrumbs.length - 1 ? '#1B4332' : '#717182',
+                    fontWeight: index === breadcrumbs.length - 1 ? '500' : '400',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {crumb.name}
+                </AppLink>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="mx-2 min-w-0 flex-1 max-w-md sm:mx-4">
+        {/* Search Bar — hide on very small screens to save space */}
+        <div className="mx-1 hidden min-w-0 max-w-md flex-1 sm:mx-4 sm:flex">
           <div className="relative">
             <Search 
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" 
@@ -150,7 +167,7 @@ export function TopBar() {
         </div>
 
         {/* Right Section: Notifications, Settings, User */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-shrink-0 items-center gap-1 sm:gap-3 md:gap-4">
           {/* Notifications */}
           <button 
             className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors"
@@ -173,15 +190,15 @@ export function TopBar() {
 
           {/* Divider */}
           <div 
-            className="h-8 w-px"
+            className="hidden h-8 w-px sm:block"
             style={{ backgroundColor: '#E0DDD6' }}
           />
 
           {/* User Profile */}
-          <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors">
-            <div>
+          <div className="flex cursor-pointer items-center gap-2 rounded-lg p-1 transition-colors hover:bg-gray-50 sm:gap-3 sm:p-2">
+            <div className="hidden text-right sm:block">
               <p 
-                className="text-sm text-right"
+                className="text-sm"
                 style={{ 
                   fontFamily: 'IBM Plex Sans, sans-serif',
                   color: '#1B4332',
@@ -191,7 +208,7 @@ export function TopBar() {
                 {currentUser.name}
               </p>
               <p 
-                className="text-xs text-right"
+                className="text-xs"
                 style={{ 
                   fontFamily: 'IBM Plex Sans, sans-serif',
                   color: '#717182',
@@ -201,7 +218,7 @@ export function TopBar() {
               </p>
             </div>
             <div 
-              className="w-10 h-10 rounded-full flex items-center justify-center"
+              className="flex h-9 w-9 items-center justify-center rounded-full sm:h-10 sm:w-10"
               style={{
                 backgroundColor: '#2D6A4F',
                 color: '#FFFFFF',

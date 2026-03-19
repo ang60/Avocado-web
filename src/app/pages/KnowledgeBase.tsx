@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { BookOpen, Search, Tag, FileText, CheckCircle2, Lock, Unlock, AlertTriangle, TrendingUp, Code, Leaf, Beaker, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
@@ -150,7 +149,7 @@ export function KnowledgeBase() {
   };
 
   return (
-    <Layout>
+    <>
       <header className="mb-4 md:mb-5">
         <h1 
           className="mb-1 text-2xl sm:text-3xl" 
@@ -190,7 +189,7 @@ export function KnowledgeBase() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-4 min-w-0 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
         {/* Categories Sidebar */}
         <div className="col-span-1 space-y-6">
           {/* Categories */}
@@ -433,6 +432,6 @@ export function KnowledgeBase() {
           })}
         </div>
       </div>
-    </Layout>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 
-import { Layout } from '../components/Layout';
 import { Package, TrendingUp, AlertTriangle, Plus, Truck, CheckCircle, Clock, Eye, Calendar, X, MapPin, Phone, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { TableScroll } from '../components/TableScroll';
 
 interface ConsignmentBlock {
   id: string;
@@ -302,7 +302,7 @@ export function Exporter() {
   const clearedBlocks = blocks.filter(b => b.kephisStatus === 'cleared');
 
   return (
-    <Layout>
+    <>
       <div>
         {/* Header */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-5">
@@ -333,7 +333,7 @@ export function Exporter() {
         </div>
 
         {/* Summary Cards */}
-        <div className="mb-4 grid grid-cols-3 gap-4 sm:mb-5 sm:gap-5">
+        <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-3 sm:gap-4 md:gap-5">
           {/* Total Contracted Acreage - Blue */}
           <div 
             className="bg-white rounded-lg p-6 shadow-sm"
@@ -581,9 +581,9 @@ export function Exporter() {
         </div>
 
         {/* Main Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <div className="min-w-0 overflow-hidden rounded-lg bg-white shadow-sm">
+          <TableScroll>
+            <table className="w-full min-w-[960px]">
               <thead>
                 <tr style={{ backgroundColor: '#1B4332' }}>
                   <th 
@@ -791,7 +791,7 @@ export function Exporter() {
                 })}
               </tbody>
             </table>
-          </div>
+          </TableScroll>
         </div>
 
         {/* Schedule Pickup Modal */}
@@ -1129,7 +1129,8 @@ export function Exporter() {
                     </div>
                   ) : (
                     <div className="border rounded-lg overflow-hidden" style={{ borderColor: '#E0DDD6' }}>
-                      <table className="w-full">
+                      <TableScroll>
+                      <table className="w-full min-w-[640px]">
                         <thead>
                           <tr style={{ backgroundColor: '#F7F4EF' }}>
                             <th className="p-3 text-left text-xs font-semibold" style={{ color: '#1B4332' }}>
@@ -1202,6 +1203,7 @@ export function Exporter() {
                           })}
                         </tbody>
                       </table>
+                      </TableScroll>
                     </div>
                   )}
                 </div>
@@ -1341,6 +1343,6 @@ export function Exporter() {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   );
 }

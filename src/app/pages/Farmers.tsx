@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { useState, useEffect } from 'react';
 import { fetchFarmersList } from '../api/placeholderApi';
 import type { FarmerListRow } from '../api/types';
@@ -238,14 +237,14 @@ export function Farmers() {
 
   if (farmersLoading) {
     return (
-      <Layout>
+      <>
         <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading farmers…</p>
-      </Layout>
+      </>
     );
   }
 
   return (
-    <Layout>
+    <>
       {farmerToast && (
         <AppToast
           message={farmerToast}
@@ -261,9 +260,9 @@ export function Farmers() {
           {farmersError}
         </div>
       )}
-      <div className="grid grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 gap-6 min-w-0 lg:grid-cols-12">
         {/* Main Content */}
-        <div className="col-span-9">
+        <div className="min-w-0 lg:col-span-9">
           <header className="mb-4 md:mb-5">
             <h1 
               className="mb-1 text-2xl sm:text-3xl" 
@@ -281,7 +280,7 @@ export function Farmers() {
 
           {/* Top Filter Bar */}
           <div 
-            className="p-4 rounded-lg border mb-6 flex items-center gap-4"
+            className="mb-6 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
             style={{ 
               backgroundColor: '#FFFFFF', 
               borderColor: '#E0DDD6', 
@@ -317,7 +316,7 @@ export function Farmers() {
               <option value="high-severity">High Severity Cases</option>
             </select>
 
-            <div className="ml-auto flex items-center gap-3">
+            <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row sm:items-center sm:gap-3">
               <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                 {selectedFarmers.length} selected
               </span>
@@ -346,8 +345,8 @@ export function Farmers() {
               borderRadius: '8px',
             }}
           >
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="touch-pan-x overflow-x-auto">
+              <table className="w-full min-w-[680px]">
                 <thead>
                   <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                     <th className="px-4 py-4 w-12">
@@ -525,7 +524,7 @@ export function Farmers() {
         </div>
 
         {/* Mini-Map Sidebar */}
-        <div className="col-span-3">
+        <div className="min-w-0 lg:col-span-3">
           <div 
             className="p-6 rounded-lg border sticky top-6"
             style={{ 
@@ -641,6 +640,6 @@ export function Farmers() {
         }
         exporters={exporters}
       />
-    </Layout>
+    </>
   );
 }

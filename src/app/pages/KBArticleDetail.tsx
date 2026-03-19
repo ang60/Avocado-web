@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { ArrowLeft, CheckCircle2, Lock, Unlock, AlertTriangle, Code, Leaf, Beaker, MessageSquare, Send, Copy, Globe, FileText, TrendingUp, Calendar, Eye, Image as ImageIcon, ChevronRight } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
 import { useState } from 'react';
@@ -16,7 +15,7 @@ export function KBArticleDetail() {
   
   if (!article) {
     return (
-      <Layout>
+      <>
         <div className="text-center py-20">
           <h2 style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>Article Not Found</h2>
           <button
@@ -27,7 +26,7 @@ export function KBArticleDetail() {
             Back to Knowledge Base
           </button>
         </div>
-      </Layout>
+      </>
     );
   }
 
@@ -54,7 +53,7 @@ export function KBArticleDetail() {
   const severityStyle = getSeverityColor(article.severity);
 
   return (
-    <Layout>
+    <>
       {/* Back Button */}
       <button
         onClick={() => navigate('/knowledge-base')}
@@ -148,7 +147,7 @@ export function KBArticleDetail() {
       </div>
 
       {/* 2-Column Layout */}
-      <div className="grid grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-6 min-w-0 md:grid-cols-3 md:gap-8">
         {/* Left Column: Content */}
         <div className="col-span-2 space-y-6">
           {/* Identification Section */}
@@ -611,6 +610,6 @@ export function KBArticleDetail() {
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   );
 }

@@ -8,4 +8,8 @@
   Run `npm i` to install the dependencies.
 
   Run `npm run dev` to start the development server.
+
+  ## Change history
+
+  Notable updates are recorded in [`CHANGELOG.md`](./CHANGELOG.md). Add entries there when you make significant fixes or features.
   

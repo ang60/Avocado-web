@@ -1,6 +1,7 @@
-import { Layout } from '../components/Layout';
 import { AlertTriangle, TrendingUp, MapPin, Clock } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useIsNarrowPhone } from '../hooks/useMediaQuery';
+import { TableScroll } from '../components/TableScroll';
 
 const outbreakTrends = [
   { date: 'Mar 1', thrips: 12, rootRot: 5, mites: 8, anthracnose: 3 },
@@ -69,8 +70,11 @@ const countyHeatMapData = [
 ];
 
 export function OutbreakMonitoring() {
+  const narrowPhone = useIsNarrowPhone();
+  const chartH = narrowPhone ? 240 : 300;
+
   return (
-    <Layout>
+    <>
       <header className="mb-4 md:mb-5">
         <h1 
           className="mb-1 text-2xl sm:text-3xl" 
@@ -100,9 +104,9 @@ export function OutbreakMonitoring() {
       </div>
 
       {/* Stats Cards */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-2 gap-3 min-w-0 sm:mb-5 sm:grid-cols-4 sm:gap-4 md:gap-5">
         <div 
-          className="p-6 rounded-lg border"
+          className="rounded-lg border p-3 sm:p-4 md:p-6"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -111,13 +115,13 @@ export function OutbreakMonitoring() {
               Active Outbreaks
             </span>
           </div>
-          <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+          <p className="text-2xl sm:text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
             23
           </p>
         </div>
 
         <div 
-          className="p-6 rounded-lg border"
+          className="rounded-lg border p-3 sm:p-4 md:p-6"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -126,13 +130,13 @@ export function OutbreakMonitoring() {
               Critical
             </span>
           </div>
-          <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+          <p className="text-2xl sm:text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
             4
           </p>
         </div>
 
         <div 
-          className="p-6 rounded-lg border"
+          className="rounded-lg border p-3 sm:p-4 md:p-6"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -141,13 +145,13 @@ export function OutbreakMonitoring() {
               Regions Affected
             </span>
           </div>
-          <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+          <p className="text-2xl sm:text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
             8
           </p>
         </div>
 
         <div 
-          className="p-6 rounded-lg border"
+          className="rounded-lg border p-3 sm:p-4 md:p-6"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
           <div className="flex items-center gap-2 mb-2">
@@ -156,7 +160,7 @@ export function OutbreakMonitoring() {
               Avg. Response Time
             </span>
           </div>
-          <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+          <p className="text-2xl sm:text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
             18h
           </p>
         </div>
@@ -164,13 +168,14 @@ export function OutbreakMonitoring() {
 
       {/* Outbreak Trends Chart */}
       <div 
-        className="mb-4 rounded-lg border p-6 sm:mb-5"
+        className="mb-4 min-w-0 rounded-lg border p-3 sm:mb-5 sm:p-4 md:p-6"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
-        <h3 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+        <h3 className="mb-2 text-sm sm:mb-4 sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
           Outbreak Trends Over Time
         </h3>
-        <ResponsiveContainer width="100%" height={300}>
+        <div className="min-h-[240px] w-full min-w-0 sm:min-h-[300px]">
+        <ResponsiveContainer width="100%" height={chartH}>
           <LineChart data={outbreakTrends}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E0DDD6" />
             <XAxis dataKey="date" style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '12px' }} />
@@ -183,11 +188,12 @@ export function OutbreakMonitoring() {
             <Line type="monotone" dataKey="anthracnose" stroke="#74C69D" strokeWidth={2} name="Anthracnose" />
           </LineChart>
         </ResponsiveContainer>
+        </div>
       </div>
 
       {/* County Heat Map */}
       <div 
-        className="mb-4 rounded-lg border p-6 sm:mb-5"
+        className="mb-4 min-w-0 rounded-lg border p-3 sm:mb-5 sm:p-4 md:p-6"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
         <div className="mb-6">
@@ -200,11 +206,11 @@ export function OutbreakMonitoring() {
         </div>
 
         {/* Heat Map Grid */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-2 gap-2 min-w-0 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 md:gap-4">
           {countyHeatMapData.map((county) => (
             <div
               key={county.county}
-              className="p-6 rounded-lg border transition-all hover:shadow-md cursor-pointer"
+              className="cursor-pointer rounded-lg border p-3 transition-all hover:shadow-md sm:p-4 md:p-6"
               style={{
                 backgroundColor: county.color,
                 borderColor: '#E0DDD6',
@@ -319,7 +325,8 @@ export function OutbreakMonitoring() {
             Active Outbreak Events
           </h3>
         </div>
-        <table className="w-full">
+        <TableScroll>
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
               <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -411,7 +418,8 @@ export function OutbreakMonitoring() {
             })}
           </tbody>
         </table>
+        </TableScroll>
       </div>
-    </Layout>
+    </>
   );
 }

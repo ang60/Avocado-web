@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MoreVertical, ArrowUpDown, Filter, Smartphone, Phone, MessageSquare, UserPlus, Eye, X } from 'lucide-react';
 import { CaseDetailModal, CaseDetailData } from './CaseDetailModal';
 import { useNavigate } from 'react-router';
+import { TableScroll } from './TableScroll';
 import type { CaseManagementCaseRow } from '../api/types';
 
 type CaseData = CaseManagementCaseRow;
@@ -102,7 +103,7 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
   return (
     <>
       <div 
-        className="rounded-lg border overflow-hidden"
+        className="min-w-0 overflow-hidden rounded-lg border"
         style={{
           backgroundColor: '#FFFFFF',
           borderColor: '#E0DDD6',
@@ -111,7 +112,7 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
       >
         {/* Filters */}
         <div 
-          className="p-4 border-b flex items-center gap-4"
+          className="flex flex-wrap items-center gap-2 border-b p-3 sm:gap-4 sm:p-4"
           style={{ borderColor: '#E0DDD6' }}
         >
           <div className="flex items-center gap-2">
@@ -162,13 +163,13 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
             <option value="advisory-issued">Advisory Issued</option>
           </select>
 
-          <div className="ml-auto text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+          <div className="w-full text-sm sm:ml-auto sm:w-auto" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
             {filteredAndSortedCases.length} cases
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <TableScroll className="-mx-1 px-1 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th 
@@ -357,7 +358,7 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
               )}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </div>
 
       <CaseDetailModal 

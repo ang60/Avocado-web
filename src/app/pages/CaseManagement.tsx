@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { KPICards } from '../components/KPICards';
 import { CaseTableEnhanced } from '../components/CaseTableEnhanced';
 import { useEffect, useState } from 'react';
@@ -32,7 +31,7 @@ export function CaseManagement() {
 
   if (loading) {
     return (
-      <Layout>
+      <>
         <div className="animate-pulse space-y-6">
           <div className="h-10 bg-slate-200 rounded w-64" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -42,13 +41,13 @@ export function CaseManagement() {
           </div>
           <div className="h-96 bg-slate-200 rounded-lg" />
         </div>
-      </Layout>
+      </>
     );
   }
 
   if (error || !data) {
     return (
-      <Layout>
+      <>
         <header className="mb-4 md:mb-5">
           <h1
             className="mb-1 text-2xl sm:text-3xl"
@@ -68,12 +67,12 @@ export function CaseManagement() {
             Using placeholder API — check the network tab or try again.
           </p>
         </div>
-      </Layout>
+      </>
     );
   }
 
   return (
-    <Layout>
+    <>
       <header className="mb-4 md:mb-5">
         <h1 
           className="mb-1 text-2xl sm:text-3xl" 
@@ -90,6 +89,6 @@ export function CaseManagement() {
       </header>
       <KPICards kpis={data.kpis} />
       <CaseTableEnhanced cases={data.cases} />
-    </Layout>
+    </>
   );
 }

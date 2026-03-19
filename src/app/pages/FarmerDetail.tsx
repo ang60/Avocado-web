@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { 
@@ -68,7 +67,7 @@ export function FarmerDetail() {
   };
 
   return (
-    <Layout>
+    <>
       {/* Back Button */}
       <button
         onClick={() => navigate('/farmers')}
@@ -136,7 +135,7 @@ export function FarmerDetail() {
               {farmerData.farmName}
             </p>
 
-            <div className="grid grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 gap-3 min-w-0 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5 lg:gap-6">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <FileCheck className="w-4 h-4" style={{ color: '#2D6A4F' }} />
@@ -221,7 +220,7 @@ export function FarmerDetail() {
         {/* Main Content */}
         <div className="col-span-8">
           {/* Farm Statistics */}
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="mb-4 grid grid-cols-1 gap-4 min-w-0 sm:mb-6 sm:grid-cols-3 sm:gap-6">
             <div 
               className="p-6 rounded-lg border"
               style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -688,6 +687,6 @@ export function FarmerDetail() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }

@@ -1,10 +1,10 @@
-import { Layout } from '../components/Layout';
 import { Users, Settings, Shield, Activity, Database, Bell, Edit, Trash2, Plus, Building2, FileCheck, Calendar } from 'lucide-react';
 import { useState } from 'react';
 import { AddUserModal } from '../components/AddUserModal';
 import { AddRoleModal } from '../components/AddRoleModal';
 import { AddAlertRuleModal } from '../components/AddAlertRuleModal';
 import { AddEntityModal } from '../components/AddEntityModal';
+import { TableScroll } from '../components/TableScroll';
 
 const systemStats = [
   { label: 'Active Users', value: '42', icon: Users, color: '#2D6A4F' },
@@ -123,7 +123,7 @@ export function Admin() {
   });
 
   return (
-    <Layout>
+    <>
       <header className="mb-4 md:mb-5">
         <h1 
           className="mb-1 text-2xl sm:text-3xl" 
@@ -140,7 +140,7 @@ export function Admin() {
       </header>
 
       {/* System Stats */}
-      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+      <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {systemStats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -248,7 +248,8 @@ export function Admin() {
               Add User
             </button>
           </div>
-          <table className="w-full">
+          <TableScroll>
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -331,6 +332,7 @@ export function Admin() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         </div>
       )}
 
@@ -358,7 +360,8 @@ export function Admin() {
               Create Role
             </button>
           </div>
-          <table className="w-full">
+          <TableScroll>
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -418,6 +421,7 @@ export function Admin() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         </div>
       )}
 
@@ -500,7 +504,8 @@ export function Admin() {
               </button>
             </div>
           </div>
-          <table className="w-full">
+          <TableScroll>
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -590,6 +595,7 @@ export function Admin() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
 
           {/* Bulk Import Section - Available on Entities Tab */}
           <div 
@@ -607,7 +613,7 @@ export function Admin() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-4 min-w-0 md:grid-cols-3 md:gap-6">
               {/* Step 1 */}
               <div 
                 className="p-5 rounded-lg border-l-4"
@@ -780,7 +786,8 @@ export function Admin() {
               Create Alert Rule
             </button>
           </div>
-          <table className="w-full">
+          <TableScroll>
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -871,12 +878,13 @@ export function Admin() {
               ))}
             </tbody>
           </table>
+          </TableScroll>
         </div>
       )}
 
       {/* Settings Tab */}
       {activeTab === 'settings' && (
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 min-w-0 md:grid-cols-3 md:gap-6">
           {/* Quick Settings */}
           <div 
             className="rounded-lg border p-6"
@@ -960,6 +968,6 @@ export function Admin() {
         onClose={() => setIsAddEntityModalOpen(false)}
         onSave={handleAddEntity}
       />
-    </Layout>
+    </>
   );
 }

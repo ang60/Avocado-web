@@ -1,7 +1,7 @@
 
-import { Layout } from '../components/Layout';
 import { Building2, MapPin, TrendingUp, CheckCircle, XCircle, Clock, Search, Download, FileCheck, Eye, X, User, Phone, Mail } from 'lucide-react';
 import { useState } from 'react';
+import { TableScroll } from '../components/TableScroll';
 
 interface FarmerRegistration {
   id: string;
@@ -259,7 +259,7 @@ export function HCDARegistry() {
   };
 
   return (
-    <Layout>
+    <>
       <div className="w-full">
         {/* Page Header */}
         <div className="mb-4 sm:mb-5">
@@ -288,7 +288,7 @@ export function HCDARegistry() {
         </div>
 
         {/* High-Level Metrics */}
-        <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
+        <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
           <div 
             className="p-6 rounded-lg"
             style={{ 
@@ -474,18 +474,18 @@ export function HCDARegistry() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          {/* Left Filter Panel */}
-          <div className="col-span-3">
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
+          {/* Filters — full width on mobile, sidebar on lg+ */}
+          <div className="min-w-0 lg:col-span-3">
             <div 
-              className="p-6 rounded-lg sticky top-6"
+              className="rounded-lg p-4 sm:p-6 lg:sticky lg:top-4"
               style={{ 
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E0DDD6',
               }}
             >
               <h3 
-                className="mb-6 pb-3 border-b"
+                className="mb-4 border-b pb-3 sm:mb-6"
                 style={{ 
                   fontFamily: 'IBM Plex Sans, sans-serif',
                   fontSize: '16px',
@@ -720,17 +720,17 @@ export function HCDARegistry() {
             </div>
           </div>
 
-          {/* Right Content Area */}
-          <div className="col-span-9">
+          {/* Main: table + search — full width on mobile */}
+          <div className="min-w-0 lg:col-span-9">
             {/* Search and Export */}
             <div 
-              className="p-4 rounded-lg mb-6 flex items-center justify-between gap-4"
+              className="mb-4 flex flex-col gap-3 rounded-lg p-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4"
               style={{ 
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #E0DDD6',
               }}
             >
-              <div className="relative flex-1">
+              <div className="relative min-w-0 flex-1">
                 <Search 
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4" 
                   style={{ color: '#717182' }} 
@@ -749,7 +749,7 @@ export function HCDARegistry() {
                 />
               </div>
               <button
-                className="px-4 py-2 rounded-lg flex items-center gap-2 border transition-all hover:bg-gray-50"
+                className="flex w-full flex-shrink-0 items-center justify-center gap-2 rounded-lg border px-4 py-2 transition-all hover:bg-gray-50 sm:w-auto"
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderColor: '#E0DDD6',
@@ -762,16 +762,16 @@ export function HCDARegistry() {
               </button>
             </div>
 
-            {/* Registry Table */}
+            {/* Registry Table — horizontal scroll on narrow viewports */}
             <div 
-              className="rounded-lg border overflow-hidden"
+              className="min-w-0 max-w-full overflow-hidden rounded-lg border"
               style={{ 
                 backgroundColor: '#FFFFFF',
                 borderColor: '#E0DDD6',
               }}
             >
-              <div className="overflow-x-auto">
-                <table className="w-full">
+                <TableScroll className="block w-full max-w-full">
+                <table className="w-full min-w-[920px]">
                   <thead>
                     <tr style={{ backgroundColor: '#1B4332', borderBottom: '2px solid #E0DDD6' }}>
                       <th 
@@ -1010,7 +1010,7 @@ export function HCDARegistry() {
                     })}
                   </tbody>
                 </table>
-              </div>
+                </TableScroll>
 
               {filteredFarmers.length === 0 && (
                 <div className="p-12 text-center">
@@ -1199,6 +1199,6 @@ export function HCDARegistry() {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   );
 }

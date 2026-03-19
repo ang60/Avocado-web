@@ -219,8 +219,8 @@ export function KenyaHeatMap() {
     <div className="relative w-full min-w-0 max-w-full">
       <div
         ref={wrapRef}
-        className="relative w-full min-w-0 max-w-full overflow-hidden rounded border border-slate-300"
-        style={{ minHeight: '320px', backgroundColor: MAP_CANVAS_BG }}
+        className="relative min-h-[220px] w-full min-w-0 max-w-full overflow-hidden rounded border border-slate-300 sm:min-h-[280px] md:min-h-[320px]"
+        style={{ backgroundColor: MAP_CANVAS_BG }}
       >
         {geoStatus === 'loading' && (
           <div
@@ -312,7 +312,7 @@ export function KenyaHeatMap() {
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-6">
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-3 sm:mt-6 sm:gap-6">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded shrink-0" style={{ backgroundColor: riskColors.critical }} />
           <span className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Critical</span>

@@ -1,7 +1,7 @@
-import { Layout } from '../components/Layout';
 import { Search, Smartphone, Phone, CheckCircle, AlertCircle, Image as ImageIcon, Plus, Eye, X } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { OptimizedImage } from '../components/OptimizedImage';
 
 type SubmissionSource = 'app' | 'ussd';
 type SeverityLevel = 'high' | 'medium' | 'low';
@@ -272,7 +272,7 @@ export function ScoutingReports() {
   const ussdCount = scoutingFeed.filter(item => item.source === 'ussd').length;
 
   return (
-    <Layout>
+    <>
       <div
         className="sticky top-0 z-[8] -mx-3 mb-2 border-b border-[#E0DDD6] bg-[#F7F4EF] pb-2 sm:-mx-5"
       >
@@ -313,9 +313,9 @@ export function ScoutingReports() {
 
       {/* Filter Chips and Search */}
       <div className="mb-2">
-        <div className="mb-2 flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Filter Chips */}
-          <div className="flex items-center gap-2">
+        <div className="mb-4 flex flex-col gap-4 sm:mb-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          {/* Filter Chips — wrap on narrow screens; no clipped row */}
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
             <button
               onClick={() => setActiveFilter('all')}
               className="px-4 py-2 rounded-lg transition-all"
@@ -379,7 +379,7 @@ export function ScoutingReports() {
           </div>
 
           {/* Search Bar */}
-          <div className="relative min-w-[200px] flex-1 basis-full sm:ml-auto sm:basis-auto sm:max-w-md">
+          <div className="relative min-h-[44px] w-full min-w-0 flex-1 sm:ml-auto sm:max-w-md sm:basis-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#717182' }} />
             <input
               type="text"
@@ -436,11 +436,34 @@ export function ScoutingReports() {
       )}
       </div>
 
-      {/* Feed List */}
-      <div className="space-y-2">
-        {/* Column Headers */}
+      {/* Feed List — stacked cards on mobile; table-style row from lg */}
+      <div className="min-w-0 space-y-2 lg:-mx-1 lg:touch-pan-x lg:overflow-x-auto lg:px-1">
+        <div className="min-w-0 space-y-2 lg:min-w-[900px]">
+        {/* Select all — mobile only (desktop uses column header row) */}
+        <div
+          className="mb-1 flex items-center gap-3 rounded-lg border p-2 lg:hidden"
+          style={{
+            backgroundColor: '#F7F4EF',
+            borderColor: '#E0DDD6',
+            borderRadius: '8px',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={selectedItems.length === filteredFeed.length && filteredFeed.length > 0}
+            onChange={handleSelectAll}
+            style={{ accentColor: '#2D6A4F' }}
+          />
+          <span
+            className="text-xs"
+            style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
+          >
+            Select all visible
+          </span>
+        </div>
+        {/* Column Headers (desktop / large tablet only) */}
         <div 
-          className="flex items-center rounded-lg border"
+          className="hidden items-center rounded-lg border lg:flex"
           style={{ 
             backgroundColor: '#F7F4EF', 
             borderColor: '#E0DDD6', 
@@ -535,177 +558,231 @@ export function ScoutingReports() {
           const statusConfig = reviewStatusConfig[item.reviewed];
           const isHovered = hoveredItem === item.id;
 
+          const sourceBadge =
+            item.source === 'app' ? (
+              <div
+                className="flex shrink-0 items-center gap-1 rounded-lg px-3 py-1"
+                style={{
+                  backgroundColor: '#DBEAFE',
+                  borderRadius: '8px',
+                }}
+              >
+                <Smartphone className="h-3 w-3" style={{ color: '#1E40AF' }} />
+                <span
+                  className="whitespace-nowrap text-xs"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    color: '#1E40AF',
+                    fontWeight: '600',
+                  }}
+                >
+                  App
+                </span>
+              </div>
+            ) : (
+              <div
+                className="flex shrink-0 items-center gap-1 rounded-lg px-3 py-1"
+                style={{
+                  backgroundColor: '#FEF3C7',
+                  borderRadius: '8px',
+                }}
+              >
+                <Phone className="h-3 w-3" style={{ color: '#D97706' }} />
+                <span
+                  className="whitespace-nowrap text-xs"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    color: '#D97706',
+                    fontWeight: '600',
+                  }}
+                >
+                  USSD
+                </span>
+              </div>
+            );
+
+          const findingText =
+            item.status === 'clean' ? item.finding : `${item.finding} Detected`;
+
+          const mediaBlock =
+            item.source === 'app' && item.mediaPreview ? (
+              <div className="relative shrink-0">
+                <OptimizedImage
+                  src={item.mediaPreview}
+                  alt="Scouting preview"
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 rounded border object-cover"
+                  style={{ borderColor: '#E0DDD6' }}
+                />
+                <div
+                  className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full"
+                  style={{ backgroundColor: '#1E40AF' }}
+                >
+                  <ImageIcon className="h-2 w-2" style={{ color: '#FFFFFF' }} />
+                </div>
+              </div>
+            ) : item.ussdCode ? (
+              <div
+                className="rounded px-3 py-2"
+                style={{
+                  backgroundColor: '#FEF3C7',
+                  borderRadius: '4px',
+                }}
+              >
+                <span
+                  className="text-xs"
+                  style={{
+                    fontFamily: 'IBM Plex Mono, monospace',
+                    color: '#D97706',
+                    fontWeight: '600',
+                  }}
+                >
+                  Code {item.ussdCode}
+                </span>
+              </div>
+            ) : null;
+
+          const statusOrActionsDesktop =
+            isHovered && item.reviewed === 'new' ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCreateCaseModalItem(item)}
+                  className="flex items-center gap-1 rounded-lg border px-3 py-1 text-xs transition-colors hover:bg-gray-50"
+                  style={{
+                    borderColor: '#2D6A4F',
+                    color: '#2D6A4F',
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                  }}
+                >
+                  <Plus className="h-3 w-3" />
+                  Create Case
+                </button>
+                <button
+                  onClick={() => setReviewModalItem(item)}
+                  className="flex items-center gap-1 rounded-lg px-3 py-1 text-xs transition-colors hover:opacity-90"
+                  style={{
+                    backgroundColor: '#2D6A4F',
+                    color: '#FFFFFF',
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                  }}
+                >
+                  <Eye className="h-3 w-3" />
+                  Review
+                </button>
+              </div>
+            ) : (
+              <span
+                className="flex w-fit items-center gap-1 rounded-full px-3 py-1 text-xs"
+                style={{
+                  backgroundColor: statusConfig.bg,
+                  color: statusConfig.text,
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                }}
+              >
+                {statusConfig.label}
+              </span>
+            );
+
           return (
-            <div 
+            <div
               key={item.id}
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
-              className="flex items-center rounded-lg border transition-all hover:shadow-md overflow-hidden relative"
-              style={{ 
-                backgroundColor: '#FFFFFF', 
-                borderColor: '#E0DDD6', 
+              className="relative overflow-hidden rounded-lg border transition-all hover:shadow-md"
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderColor: '#E0DDD6',
                 borderRadius: '8px',
               }}
             >
-              {/* Severity Indicator Bar */}
-              <div 
-                className="w-1 h-full self-stretch absolute left-0"
+              <div
+                className="absolute bottom-0 left-0 top-0 w-1"
                 style={{ backgroundColor: severityColors[item.severity] }}
               />
 
-              {/* Checkbox */}
-              <div className="pl-5 pr-4">
-                <input
-                  type="checkbox"
-                  checked={selectedItems.includes(item.id)}
-                  onChange={() => handleSelectItem(item.id)}
-                  style={{ accentColor: '#2D6A4F' }}
-                />
-              </div>
-
-              {/* Source Badge */}
-              <div className="px-3">
-                {item.source === 'app' ? (
-                  <div
-                    className="px-3 py-1 rounded-lg flex items-center gap-1"
+              {/* Mobile: stacked card (no horizontal clip) */}
+              <div className="min-w-0 space-y-3 p-3 pl-4 lg:hidden">
+                <div className="flex min-w-0 items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.includes(item.id)}
+                      onChange={() => handleSelectItem(item.id)}
+                      className="shrink-0"
+                      style={{ accentColor: '#2D6A4F' }}
+                    />
+                    {sourceBadge}
+                  </div>
+                  <p
+                    className="shrink-0 text-xs whitespace-nowrap"
                     style={{
-                      backgroundColor: '#DBEAFE',
-                      borderRadius: '8px',
+                      fontFamily: 'IBM Plex Mono, monospace',
+                      color: '#717182',
                     }}
                   >
-                    <Smartphone className="w-3 h-3" style={{ color: '#1E40AF' }} />
-                    <span 
-                      className="text-xs whitespace-nowrap"
-                      style={{ 
-                        fontFamily: 'IBM Plex Sans, sans-serif', 
-                        color: '#1E40AF',
-                        fontWeight: '600',
-                      }}
-                    >
-                      App
-                    </span>
-                  </div>
-                ) : (
-                  <div
-                    className="px-3 py-1 rounded-lg flex items-center gap-1"
+                    {item.timestamp}
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <p
+                    className="text-sm break-words"
                     style={{
-                      backgroundColor: '#FEF3C7',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <Phone className="w-3 h-3" style={{ color: '#D97706' }} />
-                    <span 
-                      className="text-xs whitespace-nowrap"
-                      style={{ 
-                        fontFamily: 'IBM Plex Sans, sans-serif', 
-                        color: '#D97706',
-                        fontWeight: '600',
-                      }}
-                    >
-                      USSD
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Farmer Info */}
-              <div className="flex-1 px-3 py-2 sm:px-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <p 
-                    className="text-sm"
-                    style={{ 
-                      fontFamily: 'IBM Plex Sans, sans-serif', 
+                      fontFamily: 'IBM Plex Sans, sans-serif',
                       color: '#1B4332',
                       fontWeight: '600',
                     }}
                   >
                     {item.farmName} - {item.blockId}
                   </p>
+                  <p
+                    className="mt-0.5 text-xs break-words"
+                    style={{
+                      fontFamily: 'IBM Plex Sans, sans-serif',
+                      color: '#717182',
+                    }}
+                  >
+                    {item.farmerName} • {item.county}
+                  </p>
                 </div>
-                <p 
-                  className="text-xs"
-                  style={{ 
-                    fontFamily: 'IBM Plex Sans, sans-serif', 
-                    color: '#717182',
-                  }}
-                >
-                  {item.farmerName} • {item.county}
-                </p>
-              </div>
-
-              {/* Finding Summary */}
-              <div className="px-3 py-2 sm:px-4">
-                <p 
-                  className="text-sm mb-1"
-                  style={{ 
-                    fontFamily: 'IBM Plex Sans, sans-serif', 
+                <p
+                  className="text-sm break-words"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
                     color: item.status === 'clean' ? '#15803D' : '#C0392B',
                     fontWeight: '600',
                   }}
                 >
-                  {item.status === 'clean' ? item.finding : `${item.finding} Detected`}
+                  {findingText}
                 </p>
-              </div>
-
-              {/* Media/Data Preview */}
-              <div className="px-3 py-2 sm:px-4">
-                {item.source === 'app' && item.mediaPreview ? (
-                  <div className="relative">
-                    <img 
-                      src={item.mediaPreview} 
-                      alt="Preview" 
-                      className="w-10 h-10 rounded object-cover border"
-                      style={{ borderColor: '#E0DDD6' }}
-                    />
-                    <div 
-                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: '#1E40AF' }}
-                    >
-                      <ImageIcon className="w-2 h-2" style={{ color: '#FFFFFF' }} />
-                    </div>
-                  </div>
-                ) : item.ussdCode ? (
-                  <div
-                    className="px-3 py-2 rounded"
-                    style={{
-                      backgroundColor: '#FEF3C7',
-                      borderRadius: '4px',
-                    }}
-                  >
-                    <span 
-                      className="text-xs"
-                      style={{ 
-                        fontFamily: 'IBM Plex Mono, monospace', 
-                        color: '#D97706',
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                  {mediaBlock}
+                  {item.reviewed !== 'new' ? (
+                    <span
+                      className="ml-auto flex w-fit items-center gap-1 rounded-full px-3 py-1 text-xs"
+                      style={{
+                        backgroundColor: statusConfig.bg,
+                        color: statusConfig.text,
+                        fontFamily: 'IBM Plex Sans, sans-serif',
+                        borderRadius: '8px',
                         fontWeight: '600',
                       }}
                     >
-                      Code {item.ussdCode}
+                      {statusConfig.label}
                     </span>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Timestamp */}
-              <div className="px-3 py-2 sm:px-6">
-                <p 
-                  className="text-xs whitespace-nowrap"
-                  style={{ 
-                    fontFamily: 'IBM Plex Mono, monospace', 
-                    color: '#717182',
-                  }}
-                >
-                  {item.timestamp}
-                </p>
-              </div>
-
-              {/* Review Status Badge OR Action Buttons on Hover */}
-              <div className="min-w-[180px] px-3 py-2 sm:px-6">
-                {isHovered && item.reviewed === 'new' ? (
-                  <div className="flex items-center gap-2">
+                  ) : null}
+                </div>
+                {item.reviewed === 'new' ? (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button
                       onClick={() => setCreateCaseModalItem(item)}
-                      className="px-3 py-1 rounded-lg border transition-colors hover:bg-gray-50 text-xs flex items-center gap-1"
+                      className="flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded-lg border px-3 py-2 text-xs transition-colors hover:bg-gray-50 sm:flex-none"
                       style={{
                         borderColor: '#2D6A4F',
                         color: '#2D6A4F',
@@ -714,12 +791,12 @@ export function ScoutingReports() {
                         fontWeight: '600',
                       }}
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="h-3 w-3" />
                       Create Case
                     </button>
                     <button
                       onClick={() => setReviewModalItem(item)}
-                      className="px-3 py-1 rounded-lg transition-colors hover:opacity-90 text-xs flex items-center gap-1"
+                      className="flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs transition-colors hover:opacity-90 sm:flex-none"
                       style={{
                         backgroundColor: '#2D6A4F',
                         color: '#FFFFFF',
@@ -728,28 +805,77 @@ export function ScoutingReports() {
                         fontWeight: '600',
                       }}
                     >
-                      <Eye className="w-3 h-3" />
+                      <Eye className="h-3 w-3" />
                       Review
                     </button>
                   </div>
-                ) : (
-                  <span
-                    className="px-3 py-1 rounded-full text-xs flex items-center gap-1 w-fit"
+                ) : null}
+              </div>
+
+              {/* Desktop: original table-style row */}
+              <div className="relative hidden items-center lg:flex">
+                <div className="pl-5 pr-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.includes(item.id)}
+                    onChange={() => handleSelectItem(item.id)}
+                    style={{ accentColor: '#2D6A4F' }}
+                  />
+                </div>
+                <div className="px-3">{sourceBadge}</div>
+                <div className="flex-1 px-3 py-2 sm:px-4">
+                  <div className="mb-1 flex items-center gap-2">
+                    <p
+                      className="text-sm"
+                      style={{
+                        fontFamily: 'IBM Plex Sans, sans-serif',
+                        color: '#1B4332',
+                        fontWeight: '600',
+                      }}
+                    >
+                      {item.farmName} - {item.blockId}
+                    </p>
+                  </div>
+                  <p
+                    className="text-xs"
                     style={{
-                      backgroundColor: statusConfig.bg,
-                      color: statusConfig.text,
                       fontFamily: 'IBM Plex Sans, sans-serif',
-                      borderRadius: '8px',
+                      color: '#717182',
+                    }}
+                  >
+                    {item.farmerName} • {item.county}
+                  </p>
+                </div>
+                <div className="px-3 py-2 sm:px-4">
+                  <p
+                    className="mb-1 text-sm"
+                    style={{
+                      fontFamily: 'IBM Plex Sans, sans-serif',
+                      color: item.status === 'clean' ? '#15803D' : '#C0392B',
                       fontWeight: '600',
                     }}
                   >
-                    {statusConfig.label}
-                  </span>
-                )}
+                    {findingText}
+                  </p>
+                </div>
+                <div className="px-3 py-2 sm:px-4">{mediaBlock}</div>
+                <div className="px-3 py-2 sm:px-6">
+                  <p
+                    className="whitespace-nowrap text-xs"
+                    style={{
+                      fontFamily: 'IBM Plex Mono, monospace',
+                      color: '#717182',
+                    }}
+                  >
+                    {item.timestamp}
+                  </p>
+                </div>
+                <div className="min-w-[180px] px-3 py-2 sm:px-6">{statusOrActionsDesktop}</div>
               </div>
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Empty State */}
@@ -932,11 +1058,12 @@ export function ScoutingReports() {
                   >
                     Photo Evidence
                   </p>
-                  <img 
-                    src={reviewModalItem.mediaPreview} 
-                    alt="Field evidence" 
+                  <OptimizedImage
+                    src={reviewModalItem.mediaPreview}
+                    alt="Field evidence"
+                    priority
                     className="w-full rounded-lg border"
-                    style={{ 
+                    style={{
                       borderColor: '#E0DDD6',
                       borderRadius: '8px',
                       maxHeight: '400px',
@@ -1235,7 +1362,7 @@ export function ScoutingReports() {
                   console.log('Creating case:', caseTitle);
                   alert(`Case created: ${caseTitle}\n\nRedirecting to Case Management...`);
                   setCreateCaseModalItem(null);
-                  navigate('/cases');
+                  navigate('/case-management');
                 }}
                 className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center gap-2"
                 style={{
@@ -1253,6 +1380,6 @@ export function ScoutingReports() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }

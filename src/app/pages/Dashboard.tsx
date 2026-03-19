@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Activity, MapPin, Clock, Users, FileText, Eye } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { KenyaHeatMap } from '../components/KenyaHeatMap';
@@ -6,6 +5,8 @@ import { TriageCaseModal } from '../components/TriageCaseModal';
 import { ScoutingRecordModal } from '../components/ScoutingRecordModal';
 import { useState, useEffect } from 'react';
 import { fetchDashboard } from '../api/placeholderApi';
+import { useIsNarrowPhone } from '../hooks/useMediaQuery';
+import { TableScroll } from '../components/TableScroll';
 import type { DashboardPayload } from '../api/types';
 
 const METRIC_ICONS = {
@@ -16,6 +17,9 @@ const METRIC_ICONS = {
 } as const;
 
 export function Dashboard() {
+  const narrowPhone = useIsNarrowPhone();
+  const chartHeight = narrowPhone ? 220 : 280;
+  const pieOuterRadius = narrowPhone ? 62 : 90;
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,20 +45,20 @@ export function Dashboard() {
 
   if (loadError) {
     return (
-      <Layout>
+      <>
         <div className="p-8 rounded-lg border text-center" style={{ borderColor: '#E0DDD6' }}>
           <p style={{ color: '#b45309', fontFamily: 'IBM Plex Sans, sans-serif' }}>{loadError}</p>
           <p className="text-sm mt-2" style={{ color: '#717182' }}>
             Using placeholder API — check console or run again.
           </p>
         </div>
-      </Layout>
+      </>
     );
   }
 
   if (loading || !data) {
     return (
-      <Layout>
+      <>
         <div className="animate-pulse space-y-6">
           <div className="h-10 bg-slate-200 rounded w-48" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -64,7 +68,7 @@ export function Dashboard() {
           </div>
           <div className="h-64 bg-slate-200 rounded-lg" />
         </div>
-      </Layout>
+      </>
     );
   }
 
@@ -80,7 +84,7 @@ export function Dashboard() {
   } = data;
 
   return (
-    <Layout>
+    <>
       <header className="mb-4 md:mb-5">
         <h1 
           className="mb-1 text-2xl sm:text-3xl" 
@@ -103,23 +107,23 @@ export function Dashboard() {
           return (
             <div
               key={m.label}
-              className="p-6 rounded-lg border"
+              className="rounded-lg border p-3 sm:p-4 md:p-6"
               style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-sm mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              <div className="mb-2 flex items-start justify-between gap-2 sm:mb-4">
+                <div className="min-w-0 flex-1">
+                  <p className="mb-0.5 text-xs sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                     {m.label}
                   </p>
-                  <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+                  <p className="text-xl sm:text-2xl md:text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
                     {m.value}
                   </p>
                 </div>
                 <div
-                  className="w-12 h-12 rounded-lg flex items-center justify-center"
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12"
                   style={{ backgroundColor: m.iconBg }}
                 >
-                  <Icon className="w-6 h-6" style={{ color: m.iconColor }} />
+                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: m.iconColor }} />
                 </div>
               </div>
               {m.sublabel ? (
@@ -148,18 +152,19 @@ export function Dashboard() {
       <div className="mb-4 grid min-w-0 max-w-full grid-cols-1 gap-4 sm:mb-5 lg:grid-cols-2 lg:gap-6 [&>*]:min-w-0">
         {/* Weekly Scouting Compliance */}
         <div 
-          className="p-6 rounded-lg border"
+          className="min-w-0 rounded-lg border p-3 sm:p-4 md:p-6"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
-          <div className="mb-4">
-            <h3 className="mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+          <div className="mb-2 sm:mb-4">
+            <h3 className="mb-1 text-sm sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
               Weekly Scouting Compliance
             </h3>
-            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            <p className="text-xs sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
               Target: {complianceSummary.target}% | Current: {complianceSummary.current}%
             </p>
           </div>
-          <ResponsiveContainer width="100%" height={280}>
+          <div className="min-h-[220px] w-full min-w-0 sm:min-h-[280px]">
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <LineChart data={weeklyComplianceData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E0DDD6" />
               <XAxis 
@@ -177,18 +182,19 @@ export function Dashboard() {
               <Line key="target-line" type="monotone" dataKey="target" stroke="#D97706" strokeWidth={2} strokeDasharray="5 5" name="Target %" />
             </LineChart>
           </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Area Risk Monitoring - Kenya Heat Map */}
         <div 
-          className="p-6 rounded-lg border"
+          className="min-w-0 rounded-lg border p-3 sm:p-4 md:p-6"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
-          <div className="mb-4">
-            <h3 className="mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+          <div className="mb-2 sm:mb-4">
+            <h3 className="mb-1 text-sm sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
               Area Risk Monitoring
             </h3>
-            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            <p className="text-xs sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
               Hover over counties for detailed information
             </p>
           </div>
@@ -201,49 +207,49 @@ export function Dashboard() {
         className="mb-4 overflow-hidden rounded-lg border sm:mb-5"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
-        <div className="px-6 py-4 border-b flex items-center justify-between" style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}>
-          <div>
-            <h3 className="mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+        <div className="flex flex-col gap-2 border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4" style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}>
+          <div className="min-w-0">
+            <h3 className="mb-0.5 text-sm sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
               Agronomist Triage Queue
             </h3>
-            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            <p className="text-xs sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
               High-priority cases requiring immediate review
             </p>
           </div>
           <div 
-            className="px-3 py-1 rounded-full"
+            className="w-fit flex-shrink-0 rounded-full px-3 py-1 text-xs sm:text-sm"
             style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
             {triageQueue.length} pending
           </div>
         </div>
         
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <TableScroll className="-mx-1 px-1 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Priority
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Case ID
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Farm / Location
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Severity
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Issue
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Scout
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Wait Time
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Action
                 </th>
               </tr>
@@ -255,7 +261,7 @@ export function Dashboard() {
                   className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                   style={{ borderBottom: index !== triageQueue.length - 1 ? '1px solid #E0DDD6' : 'none' }}
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2 sm:px-6 sm:py-4">
                     <div 
                       className="w-8 h-8 rounded-full flex items-center justify-center"
                       style={{ 
@@ -267,10 +273,10 @@ export function Dashboard() {
                       {item.priority}
                     </div>
                   </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
                     {item.id}
                   </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                     <div>
                       <div>{item.farm}</div>
                       <div className="text-xs" style={{ color: '#717182' }}>
@@ -278,7 +284,7 @@ export function Dashboard() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2 sm:px-6 sm:py-4">
                     <span
                       className="px-3 py-1 rounded-full text-xs"
                       style={{
@@ -291,13 +297,13 @@ export function Dashboard() {
                       {item.severity.charAt(0).toUpperCase() + item.severity.slice(1)}
                     </span>
                   </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                     {item.pest}
                   </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                     {item.scout}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2 sm:px-6 sm:py-4">
                     <span 
                       style={{ 
                         fontFamily: 'IBM Plex Sans, sans-serif', 
@@ -307,7 +313,7 @@ export function Dashboard() {
                       {item.submittedHours}h
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2 sm:px-6 sm:py-4">
                     <button
                       className="px-3 py-1 rounded-full text-xs"
                       style={{
@@ -325,7 +331,7 @@ export function Dashboard() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </div>
 
       {/* Recent Scouting Records */}
@@ -333,49 +339,49 @@ export function Dashboard() {
         className="mb-4 overflow-hidden rounded-lg border sm:mb-5"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
-        <div className="px-6 py-4 border-b flex items-center justify-between" style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}>
-          <div>
-            <h3 className="mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+        <div className="flex flex-col gap-2 border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4" style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}>
+          <div className="min-w-0">
+            <h3 className="mb-0.5 text-sm sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
               Recent Scouting Records
             </h3>
-            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            <p className="text-xs sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
               Latest field inspections and reports
             </p>
           </div>
           <div 
-            className="px-3 py-1 rounded"
+            className="w-fit flex-shrink-0 rounded px-3 py-1 text-xs sm:text-sm"
             style={{ backgroundColor: '#74C69D20', color: '#2D6A4F', fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
             Today: {recentScoutingRecords.filter((r) => r.date === todayLabel).length} reports
           </div>
         </div>
         
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <TableScroll className="-mx-1 px-1 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Record ID
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Scout
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Farm / Location
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Date & Time
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Blocks
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Issues Found
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Status
                 </th>
-                <th className="text-left px-6 py-4 text-xs uppercase tracking-wider" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                   Action
                 </th>
               </tr>
@@ -387,13 +393,13 @@ export function Dashboard() {
                   className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                   style={{ borderBottom: index !== recentScoutingRecords.length - 1 ? '1px solid #E0DDD6' : 'none' }}
                 >
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
                     {record.id}
                   </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                     {record.scout}
                   </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                     <div>
                       <div>{record.farm}</div>
                       <div className="text-xs" style={{ color: '#717182' }}>
@@ -401,16 +407,16 @@ export function Dashboard() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                     <div>
                       <div>{record.date}</div>
                       <div className="text-xs">{record.time}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                     {record.blocksInspected}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2 sm:px-6 sm:py-4">
                     <span
                       className="px-3 py-1 rounded-full text-xs"
                       style={{
@@ -423,7 +429,7 @@ export function Dashboard() {
                       {record.issuesFound}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2 sm:px-6 sm:py-4">
                     <span
                       className="px-3 py-1 rounded-full text-xs"
                       style={{
@@ -436,7 +442,7 @@ export function Dashboard() {
                       Completed
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2 sm:px-6 sm:py-4">
                     <button
                       className="px-3 py-1 rounded-full text-xs"
                       style={{
@@ -454,20 +460,21 @@ export function Dashboard() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       </div>
 
       {/* Charts Row 2: Case Trends & Pest Distribution */}
-      <div className="mb-4 grid grid-cols-2 gap-4 sm:mb-5 sm:gap-6">
+      <div className="mb-4 grid grid-cols-1 gap-4 min-w-0 sm:mb-5 md:grid-cols-2 md:gap-6">
         {/* Case Trends */}
         <div 
-          className="p-6 rounded-lg border"
+          className="min-w-0 rounded-lg border p-3 sm:p-4 md:p-6"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
-          <h3 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+          <h3 className="mb-2 text-sm sm:mb-4 sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
             Case Trends (Last 8 Weeks)
           </h3>
-          <ResponsiveContainer width="100%" height={280}>
+          <div className="min-h-[220px] w-full min-w-0 sm:min-h-[280px]">
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <AreaChart data={weeklyTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E0DDD6" />
               <XAxis 
@@ -484,25 +491,27 @@ export function Dashboard() {
               <Area key="resolved-area" type="monotone" dataKey="resolved" stackId="2" stroke="#2D6A4F" fill="#74C69D" name="Resolved" />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Pest Distribution */}
         <div 
-          className="p-6 rounded-lg border"
+          className="min-w-0 rounded-lg border p-3 sm:p-4 md:p-6"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
-          <h3 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+          <h3 className="mb-2 text-sm sm:mb-4 sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
             Pest & Disease Distribution
           </h3>
-          <ResponsiveContainer width="100%" height={280}>
+          <div className="min-h-[220px] w-full min-w-0 sm:min-h-[280px]">
+          <ResponsiveContainer width="100%" height={chartHeight}>
             <PieChart>
               <Pie
                 data={pestDistribution}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={90}
+                label={narrowPhone ? false : ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                outerRadius={pieOuterRadius}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -513,6 +522,7 @@ export function Dashboard() {
               <Tooltip contentStyle={{ fontFamily: 'IBM Plex Sans, sans-serif', borderRadius: '8px' }} />
             </PieChart>
           </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
@@ -526,6 +536,6 @@ export function Dashboard() {
         recordData={selectedScoutingRecord}
         onClose={() => setSelectedScoutingRecord(null)}
       />
-    </Layout>
+    </>
   );
 }

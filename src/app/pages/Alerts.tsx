@@ -1,4 +1,3 @@
-import { Layout } from '../components/Layout';
 import { Bell, AlertTriangle, Info, CheckCircle, Clock, Map, FileText, Users, Settings, X, MapPin, TrendingUp, Eye, Radio, CheckCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -286,11 +285,11 @@ export function Alerts() {
   const visibleAlerts = filteredAlerts;
 
   return (
-    <Layout>
+    <>
       {/* Header */}
       <header className="mb-4 md:mb-5">
-        <div className="flex items-start justify-between mb-4">
-          <div>
+        <div className="mb-4 flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h1 
               className="mb-1 text-2xl sm:text-3xl" 
               style={{ 
@@ -300,14 +299,14 @@ export function Alerts() {
             >
               Alert Command Center
             </h1>
-            <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6' }}>
+            <p className="text-sm sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6' }}>
               Case-action alerts with geo-cluster detection and severity escalation
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-shrink-0 sm:gap-3">
             <button
               onClick={handleMarkAllRead}
-              className="px-4 py-3 rounded-lg transition-all hover:shadow-md flex items-center gap-2 border"
+              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 transition-all hover:shadow-md sm:w-auto"
               style={{ 
                 backgroundColor: '#FFFFFF',
                 borderColor: '#E0DDD6',
@@ -321,7 +320,7 @@ export function Alerts() {
             </button>
             <button
               onClick={() => setShowConfigureRules(true)}
-              className="px-4 py-3 rounded-lg transition-all hover:shadow-md flex items-center gap-2"
+              className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg px-4 py-3 transition-all hover:shadow-md sm:w-auto"
               style={{ 
                 backgroundColor: '#2D6A4F',
                 color: '#F7F4EF',
@@ -336,8 +335,8 @@ export function Alerts() {
         </div>
       </header>
 
-      {/* Summary Metrics */}
-      <div className="mb-4 grid grid-cols-5 gap-3 sm:mb-5 sm:gap-4">
+      {/* Summary Metrics — single column on narrow phones to avoid clipped cards */}
+      <div className="mb-4 grid min-w-0 grid-cols-1 gap-3 sm:mb-5 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
         <div 
           className="p-4 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -414,11 +413,14 @@ export function Alerts() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6 border-b" style={{ borderColor: '#E0DDD6' }}>
+      {/* Filter Tabs — horizontal scroll on small screens so no tab is clipped */}
+      <div
+        className="-mx-1 mb-6 flex min-w-0 gap-1 overflow-x-auto border-b px-1 pb-px touch-pan-x overscroll-x-contain [-webkit-overflow-scrolling:touch] sm:mx-0 sm:gap-2 sm:px-0"
+        style={{ borderColor: '#E0DDD6' }}
+      >
         <button
           onClick={() => setSelectedFilter('all')}
-          className="px-4 py-3 transition-colors relative"
+          className="relative shrink-0 whitespace-nowrap px-3 py-3 transition-colors sm:px-4"
           style={{
             fontFamily: 'IBM Plex Sans, sans-serif',
             color: selectedFilter === 'all' ? '#1B4332' : '#717182',
@@ -430,7 +432,7 @@ export function Alerts() {
         </button>
         <button
           onClick={() => setSelectedFilter('unread')}
-          className="px-4 py-3 transition-colors relative"
+          className="relative shrink-0 whitespace-nowrap px-3 py-3 transition-colors sm:px-4"
           style={{
             fontFamily: 'IBM Plex Sans, sans-serif',
             color: selectedFilter === 'unread' ? '#1B4332' : '#717182',
@@ -442,7 +444,7 @@ export function Alerts() {
         </button>
         <button
           onClick={() => setSelectedFilter('biological')}
-          className="px-4 py-3 transition-colors relative flex items-center gap-2"
+          className="relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-3 transition-colors sm:px-4"
           style={{
             fontFamily: 'IBM Plex Sans, sans-serif',
             color: selectedFilter === 'biological' ? '#1B4332' : '#717182',
@@ -455,7 +457,7 @@ export function Alerts() {
         </button>
         <button
           onClick={() => setSelectedFilter('compliance')}
-          className="px-4 py-3 transition-colors relative flex items-center gap-2"
+          className="relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-3 transition-colors sm:px-4"
           style={{
             fontFamily: 'IBM Plex Sans, sans-serif',
             color: selectedFilter === 'compliance' ? '#1B4332' : '#717182',
@@ -468,7 +470,7 @@ export function Alerts() {
         </button>
         <button
           onClick={() => setSelectedFilter('system')}
-          className="px-4 py-3 transition-colors relative flex items-center gap-2"
+          className="relative flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-3 transition-colors sm:px-4"
           style={{
             fontFamily: 'IBM Plex Sans, sans-serif',
             color: selectedFilter === 'system' ? '#1B4332' : '#717182',
@@ -527,11 +529,11 @@ export function Alerts() {
                   />
                 )}
 
-                <div className="p-6">
-                  <div className="flex gap-4">
+                <div className="min-w-0 p-4 sm:p-6">
+                  <div className="flex min-w-0 flex-col gap-4 sm:flex-row">
                     {/* Icon */}
                     <div 
-                      className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center relative"
+                      className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg sm:mt-0"
                       style={{ backgroundColor: typeConfig.bg }}
                     >
                       {alert.type === 'biological' ? (
@@ -544,80 +546,86 @@ export function Alerts() {
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-3 flex-1">
-                          <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '18px', fontWeight: 600 }}>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
+                          <h3
+                            className="min-w-0 break-words text-base sm:text-lg"
+                            style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}
+                          >
                             {alert.title}
                           </h3>
                           {!alert.read && (
                             <div 
-                              className="w-2 h-2 rounded-full"
+                              className="h-2 w-2 shrink-0 rounded-full"
                               style={{ backgroundColor: '#2D6A4F' }}
                             />
                           )}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                        <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end sm:pl-2">
+                          <span
+                            className="text-sm whitespace-nowrap"
+                            style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
+                          >
                             {alert.timestamp}
                           </span>
                           <button
                             onClick={() => handleDismiss(alert.id)}
-                            className="p-1 rounded hover:bg-gray-100 transition-colors"
+                            className="shrink-0 rounded p-2 transition-colors hover:bg-gray-100"
                             style={{ color: '#717182' }}
                             title="Dismiss"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
 
-                      <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6', marginBottom: '16px' }}>
+                      <p className="mb-4 text-sm sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6' }}>
                         {alert.message}
                       </p>
 
                       {/* Geo-Cluster Context (for outbreak alerts) */}
                       {alert.geoCluster && (
                         <div 
-                          className="p-4 rounded-lg mb-4 border"
+                          className="mb-4 min-w-0 rounded-lg border p-3 sm:p-4"
                           style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}
                         >
-                          <div className="flex items-start gap-4">
+                          <div className="flex min-w-0 flex-col items-stretch gap-4 sm:flex-row sm:items-start">
                             <div 
-                              className="w-24 h-24 rounded flex items-center justify-center border"
+                              className="mx-auto flex h-24 w-full max-w-[12rem] shrink-0 items-center justify-center rounded border sm:mx-0 sm:h-24 sm:w-24 sm:max-w-none"
                               style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6' }}
                             >
                               <div className="text-center">
-                                <MapPin className="w-8 h-8 mx-auto mb-1" style={{ color: '#DC2626' }} />
+                                <MapPin className="mx-auto mb-1 h-8 w-8" style={{ color: '#DC2626' }} />
                                 <p className="text-xs" style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#717182' }}>
                                   {alert.geoCluster.radius}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex-1">
+                            <div className="min-w-0 flex-1">
                               <h4 className="mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
                                 Geo-Cluster Detection
                               </h4>
-                              <div className="grid grid-cols-2 gap-3 text-sm">
-                                <div>
+                              <div className="grid min-w-0 grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                                <div className="min-w-0">
                                   <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>County</p>
-                                  <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                                  <p className="break-words" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
                                     {alert.geoCluster.county}
                                   </p>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Cluster Radius</p>
                                   <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#1B4332', fontWeight: 600 }}>
                                     {alert.geoCluster.radius}
                                   </p>
                                 </div>
-                                <div>
+                                <div className="min-w-0 sm:col-span-2">
                                   <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Center Point</p>
-                                  <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                                  <p className="break-words" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
                                     {alert.geoCluster.centerPoint}
                                   </p>
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                   <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Affected Farms</p>
                                   <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#DC2626', fontWeight: 600 }}>
                                     {alert.geoCluster.affectedFarms}
@@ -635,11 +643,11 @@ export function Alerts() {
                           <p className="text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                             Affected Farmers ({alert.affectedFarmers.length})
                           </p>
-                          <div className="flex items-center gap-2">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-0">
                             {alert.affectedFarmers.slice(0, 4).map((farmer, index) => (
                               <div
                                 key={farmer.id}
-                                className="w-10 h-10 rounded-full flex items-center justify-center border-2"
+                                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 sm:-ml-2 first:sm:ml-0"
                                 style={{
                                   backgroundColor: '#2D6A4F',
                                   borderColor: '#FFFFFF',
@@ -647,7 +655,6 @@ export function Alerts() {
                                   fontFamily: 'IBM Plex Sans, sans-serif',
                                   fontWeight: 600,
                                   fontSize: '12px',
-                                  marginLeft: index > 0 ? '-8px' : '0',
                                   zIndex: 10 - index,
                                 }}
                                 title={farmer.name}
@@ -657,7 +664,7 @@ export function Alerts() {
                             ))}
                             {alert.affectedFarmers.length > 4 && (
                               <div
-                                className="w-10 h-10 rounded-full flex items-center justify-center border-2"
+                                className="flex h-10 w-10 items-center justify-center rounded-full border-2 sm:-ml-2"
                                 style={{
                                   backgroundColor: '#E0DDD6',
                                   borderColor: '#FFFFFF',
@@ -665,7 +672,6 @@ export function Alerts() {
                                   fontFamily: 'IBM Plex Sans, sans-serif',
                                   fontWeight: 600,
                                   fontSize: '12px',
-                                  marginLeft: '-8px',
                                 }}
                               >
                                 +{alert.affectedFarmers.length - 4}
@@ -676,10 +682,13 @@ export function Alerts() {
                       )}
 
                       {/* Action Footer */}
-                      <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: '#E0DDD6' }}>
-                        <div className="flex items-center gap-2">
+                      <div
+                        className="flex min-w-0 flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between"
+                        style={{ borderColor: '#E0DDD6' }}
+                      >
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
                           <span 
-                            className="px-2 py-1 rounded text-xs"
+                            className="rounded px-2 py-1 text-xs"
                             style={{ 
                               backgroundColor: typeConfig.bg,
                               color: typeConfig.color,
@@ -691,7 +700,7 @@ export function Alerts() {
                             {typeConfig.label.replace(' Alerts', '')}
                           </span>
                           <span 
-                            className="px-2 py-1 rounded text-xs"
+                            className="rounded px-2 py-1 text-xs"
                             style={{ 
                               backgroundColor: '#E0DDD6',
                               color: '#1B4332',
@@ -703,12 +712,12 @@ export function Alerts() {
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
                           {/* Secondary Action */}
                           {alert.secondaryAction.route !== null && (
                             <button
                               onClick={() => alert.secondaryAction.route ? navigate(alert.secondaryAction.route) : handleDismiss(alert.id)}
-                              className="px-4 py-2 rounded-lg transition-colors border text-sm"
+                              className="min-h-[40px] w-full rounded-lg border px-4 py-2 text-sm transition-colors sm:w-auto"
                               style={{ 
                                 backgroundColor: '#FFFFFF',
                                 borderColor: '#E0DDD6',
@@ -723,7 +732,7 @@ export function Alerts() {
                           {/* Primary Action */}
                           <button
                             onClick={() => handlePrimaryAction(alert.primaryAction)}
-                            className="px-4 py-2 rounded-lg transition-all hover:shadow-md flex items-center gap-2 text-sm"
+                            className="flex min-h-[40px] w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm transition-all hover:shadow-md sm:w-auto"
                             style={{ 
                               backgroundColor: '#2D6A4F',
                               color: '#F7F4EF',
@@ -891,6 +900,6 @@ export function Alerts() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }
