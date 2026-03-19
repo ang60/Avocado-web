@@ -96,7 +96,7 @@ export function KEPHISRiskIntelTab() {
   return (
     <div>
       {/* Summary Cards with 7-Day Sparkline Trends */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         {/* Total Pest Detections */}
         <div 
           className="p-6 rounded-xl border shadow-sm"
@@ -311,7 +311,7 @@ export function KEPHISRiskIntelTab() {
 
       {/* Risk Heatmap & Infection Density */}
       <div 
-        className="p-6 rounded-xl border shadow-sm mb-8"
+        className="mb-4 rounded-xl border p-6 shadow-sm sm:mb-5"
         style={{ 
           backgroundColor: '#FFFFFF',
           borderColor: '#E0DDD6',
@@ -691,7 +691,7 @@ export function KEPHISRiskIntelTab() {
             {/* Modal Body */}
             <div className="px-8 py-6">
               {/* Quick Stats */}
-              <div className="grid grid-cols-3 gap-4 mb-8">
+              <div className="mb-4 grid grid-cols-3 gap-4 sm:mb-5">
                 <div className="p-4 rounded-lg border" style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6' }}>
                   <div className="flex items-center gap-3 mb-2">
                     <CheckCircle className="w-5 h-5" style={{ color: '#2D6A4F' }} />

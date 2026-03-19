@@ -232,14 +232,14 @@ export function KEPHISQuarantine() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
+      <div className="w-full">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-3 sm:mb-4">
           <h1 
-            className="mb-2"
+            className="mb-1"
             style={{ 
               fontFamily: 'DM Serif Display, serif',
-              fontSize: '32px',
+              fontSize: 'clamp(1.375rem, 2.5vw, 1.75rem)',
               color: '#1B4332',
               margin: 0,
             }}
@@ -259,7 +259,7 @@ export function KEPHISQuarantine() {
         </div>
 
         {/* Tabs */}
-        <div className="mb-8 border-b" style={{ borderColor: '#E0DDD6' }}>
+        <div className="mb-4 border-b sm:mb-5" style={{ borderColor: '#E0DDD6' }}>
           <div className="flex gap-1">
             <button
               onClick={() => setActiveTab('quarantine')}
@@ -295,7 +295,7 @@ export function KEPHISQuarantine() {
         <div>
 
         {/* High-Level Metrics */}
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="mb-4 grid grid-cols-3 gap-4 sm:mb-5 sm:gap-5">
           {/* Active Gated Blocks */}
           <div 
             className="p-6 rounded-lg border-2"
@@ -1654,7 +1654,7 @@ export function KEPHISQuarantine() {
                 <div className="p-8 overflow-y-auto flex-1">
                   {/* Successfully Issued Permits */}
                   {successfulBlocks.length > 0 && (
-                    <div className="mb-8">
+                    <div className="mb-4 sm:mb-5">
                       <div className="flex items-center gap-3 mb-4">
                         <div 
                           className="p-2 rounded-lg"

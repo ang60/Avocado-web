@@ -189,11 +189,11 @@ export function SymptomCodebook() {
   return (
     <Layout>
       {/* Header */}
-      <header className="mb-8">
+      <header className="mb-4 md:mb-5">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 
-              className="text-4xl mb-2" 
+              className="mb-1 text-2xl sm:text-3xl" 
               style={{ 
                 fontFamily: 'DM Serif Display, serif',
                 color: '#1B4332'

@@ -71,9 +71,9 @@ const countyHeatMapData = [
 export function OutbreakMonitoring() {
   return (
     <Layout>
-      <header className="mb-8">
+      <header className="mb-4 md:mb-5">
         <h1 
-          className="text-4xl mb-2" 
+          className="mb-1 text-2xl sm:text-3xl" 
           style={{ 
             fontFamily: 'DM Serif Display, serif',
             color: '#1B4332'
@@ -88,7 +88,7 @@ export function OutbreakMonitoring() {
 
       {/* Alert Banner */}
       <div 
-        className="p-4 rounded-lg border mb-8 flex items-center gap-3"
+        className="mb-4 flex items-center gap-3 rounded-lg border p-4 sm:mb-5"
         style={{ backgroundColor: '#FEE2E2', borderColor: '#DC2626', borderRadius: '8px' }}
       >
         <AlertTriangle className="w-5 h-5" style={{ color: '#DC2626' }} />
@@ -100,7 +100,7 @@ export function OutbreakMonitoring() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -164,7 +164,7 @@ export function OutbreakMonitoring() {
 
       {/* Outbreak Trends Chart */}
       <div 
-        className="p-6 rounded-lg border mb-8"
+        className="mb-4 rounded-lg border p-6 sm:mb-5"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
         <h3 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
@@ -187,7 +187,7 @@ export function OutbreakMonitoring() {
 
       {/* County Heat Map */}
       <div 
-        className="p-6 rounded-lg border mb-8"
+        className="mb-4 rounded-lg border p-6 sm:mb-5"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
         <div className="mb-6">

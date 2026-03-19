@@ -273,10 +273,13 @@ export function ScoutingReports() {
 
   return (
     <Layout>
-      <div className="flex items-center justify-between mb-8">
+      <div
+        className="sticky top-0 z-[8] -mx-3 mb-2 border-b border-[#E0DDD6] bg-[#F7F4EF] pb-2 sm:-mx-5"
+      >
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div>
           <h1 
-            className="text-4xl mb-2" 
+            className="mb-1 text-2xl sm:text-3xl" 
             style={{ 
               fontFamily: 'DM Serif Display, serif',
               color: '#1B4332'
@@ -284,7 +287,7 @@ export function ScoutingReports() {
           >
             Scouting Feed
           </h1>
-          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+          <p className="text-sm sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
             Real-time field submissions from farmers and scouts
           </p>
         </div>
@@ -309,8 +312,8 @@ export function ScoutingReports() {
       </div>
 
       {/* Filter Chips and Search */}
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4">
+      <div className="mb-2">
+        <div className="mb-2 flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Filter Chips */}
           <div className="flex items-center gap-2">
             <button
@@ -376,7 +379,7 @@ export function ScoutingReports() {
           </div>
 
           {/* Search Bar */}
-          <div className="ml-auto relative flex-1 max-w-md">
+          <div className="relative min-w-[200px] flex-1 basis-full sm:ml-auto sm:basis-auto sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#717182' }} />
             <input
               type="text"
@@ -403,7 +406,7 @@ export function ScoutingReports() {
       {/* Bulk Actions Bar */}
       {selectedItems.length > 0 && (
         <div 
-          className="mb-6 p-4 rounded-lg border flex items-center justify-between"
+          className="mb-2 flex items-center justify-between rounded-lg border p-3"
           style={{ 
             backgroundColor: '#2D6A4F', 
             borderColor: '#2D6A4F', 
@@ -431,9 +434,10 @@ export function ScoutingReports() {
           </button>
         </div>
       )}
+      </div>
 
       {/* Feed List */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {/* Column Headers */}
         <div 
           className="flex items-center rounded-lg border"
@@ -444,7 +448,7 @@ export function ScoutingReports() {
           }}
         >
           {/* Checkbox column */}
-          <div className="pl-5 pr-4 py-3">
+          <div className="py-2 pl-5 pr-4">
             <input
               type="checkbox"
               checked={selectedItems.length === filteredFeed.length && filteredFeed.length > 0}
@@ -454,7 +458,7 @@ export function ScoutingReports() {
           </div>
 
           {/* Source column */}
-          <div className="px-3 py-3 w-24">
+          <div className="w-24 px-3 py-2">
             <span 
               className="text-xs uppercase tracking-wider"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
@@ -464,7 +468,7 @@ export function ScoutingReports() {
           </div>
 
           {/* Farmer & Location column */}
-          <div className="flex-1 px-4 py-3">
+          <div className="flex-1 px-4 py-2">
             <span 
               className="text-xs uppercase tracking-wider"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
@@ -474,7 +478,7 @@ export function ScoutingReports() {
           </div>
 
           {/* Finding column */}
-          <div className="px-4 py-3 w-48">
+          <div className="w-48 px-4 py-2">
             <span 
               className="text-xs uppercase tracking-wider"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
@@ -484,7 +488,7 @@ export function ScoutingReports() {
           </div>
 
           {/* Media column */}
-          <div className="px-4 py-3 w-20 text-center">
+          <div className="w-20 px-4 py-2 text-center">
             <span 
               className="text-xs uppercase tracking-wider"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
@@ -494,7 +498,7 @@ export function ScoutingReports() {
           </div>
 
           {/* Time column */}
-          <div className="px-6 py-3 w-32">
+          <div className="w-32 px-4 py-2 sm:px-6">
             <span 
               className="text-xs uppercase tracking-wider"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
@@ -504,7 +508,7 @@ export function ScoutingReports() {
           </div>
 
           {/* Status column */}
-          <div className="px-6 py-3 w-48">
+          <div className="w-48 px-4 py-2 sm:px-6">
             <span 
               className="text-xs uppercase tracking-wider"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
@@ -605,7 +609,7 @@ export function ScoutingReports() {
               </div>
 
               {/* Farmer Info */}
-              <div className="flex-1 px-4 py-4">
+              <div className="flex-1 px-3 py-2 sm:px-4">
                 <div className="flex items-center gap-2 mb-1">
                   <p 
                     className="text-sm"
@@ -630,7 +634,7 @@ export function ScoutingReports() {
               </div>
 
               {/* Finding Summary */}
-              <div className="px-4 py-4">
+              <div className="px-3 py-2 sm:px-4">
                 <p 
                   className="text-sm mb-1"
                   style={{ 
@@ -644,7 +648,7 @@ export function ScoutingReports() {
               </div>
 
               {/* Media/Data Preview */}
-              <div className="px-4 py-4">
+              <div className="px-3 py-2 sm:px-4">
                 {item.source === 'app' && item.mediaPreview ? (
                   <div className="relative">
                     <img 
@@ -683,7 +687,7 @@ export function ScoutingReports() {
               </div>
 
               {/* Timestamp */}
-              <div className="px-6 py-4">
+              <div className="px-3 py-2 sm:px-6">
                 <p 
                   className="text-xs whitespace-nowrap"
                   style={{ 
@@ -696,7 +700,7 @@ export function ScoutingReports() {
               </div>
 
               {/* Review Status Badge OR Action Buttons on Hover */}
-              <div className="px-6 py-4 min-w-[180px]">
+              <div className="min-w-[180px] px-3 py-2 sm:px-6">
                 {isHovered && item.reviewed === 'new' ? (
                   <div className="flex items-center gap-2">
                     <button

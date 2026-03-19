@@ -5,7 +5,9 @@ import { SidebarProvider } from './context/SidebarContext';
 function App() {
   return (
     <SidebarProvider>
-      <RouterProvider router={router} />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <RouterProvider router={router} />
+      </div>
     </SidebarProvider>
   );
 }

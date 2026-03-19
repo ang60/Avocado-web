@@ -260,14 +260,14 @@ export function HCDARegistry() {
 
   return (
     <Layout>
-      <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
+      <div className="w-full">
         {/* Page Header */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-5">
           <div className="flex items-center gap-4 mb-2">
             <h1 
               style={{ 
                 fontFamily: 'DM Serif Display, serif',
-                fontSize: '32px',
+                fontSize: 'clamp(1.375rem, 2.5vw, 1.75rem)',
                 color: '#1B4332',
                 margin: 0,
               }}
@@ -288,7 +288,7 @@ export function HCDARegistry() {
         </div>
 
         {/* High-Level Metrics */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
+        <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
           <div 
             className="p-6 rounded-lg"
             style={{ 

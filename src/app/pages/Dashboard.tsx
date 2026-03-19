@@ -81,9 +81,9 @@ export function Dashboard() {
 
   return (
     <Layout>
-      <header className="mb-8">
+      <header className="mb-4 md:mb-5">
         <h1 
-          className="text-4xl mb-2" 
+          className="mb-1 text-2xl sm:text-3xl" 
           style={{ 
             fontFamily: 'DM Serif Display, serif',
             color: '#1B4332'
@@ -97,7 +97,7 @@ export function Dashboard() {
       </header>
 
       {/* Key Metrics (placeholder API) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 min-w-0 max-w-full [&>*]:min-w-0">
+      <div className="mb-4 grid min-w-0 max-w-full grid-cols-2 gap-3 sm:mb-5 sm:gap-4 lg:grid-cols-4 lg:gap-6 [&>*]:min-w-0">
         {metrics.map((m) => {
           const Icon = METRIC_ICONS[m.icon];
           return (
@@ -145,7 +145,7 @@ export function Dashboard() {
       </div>
 
       {/* Charts Row 1: Weekly Compliance & Area Risk Map */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 min-w-0 max-w-full [&>*]:min-w-0">
+      <div className="mb-4 grid min-w-0 max-w-full grid-cols-1 gap-4 sm:mb-5 lg:grid-cols-2 lg:gap-6 [&>*]:min-w-0">
         {/* Weekly Scouting Compliance */}
         <div 
           className="p-6 rounded-lg border"
@@ -198,7 +198,7 @@ export function Dashboard() {
 
       {/* Agronomist Triage Queue */}
       <div 
-        className="rounded-lg border overflow-hidden mb-8"
+        className="mb-4 overflow-hidden rounded-lg border sm:mb-5"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
         <div className="px-6 py-4 border-b flex items-center justify-between" style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}>
@@ -330,7 +330,7 @@ export function Dashboard() {
 
       {/* Recent Scouting Records */}
       <div 
-        className="rounded-lg border overflow-hidden mb-8"
+        className="mb-4 overflow-hidden rounded-lg border sm:mb-5"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
       >
         <div className="px-6 py-4 border-b flex items-center justify-between" style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}>
@@ -458,7 +458,7 @@ export function Dashboard() {
       </div>
 
       {/* Charts Row 2: Case Trends & Pest Distribution */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-2 gap-4 sm:mb-5 sm:gap-6">
         {/* Case Trends */}
         <div 
           className="p-6 rounded-lg border"

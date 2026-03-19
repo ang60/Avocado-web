@@ -49,9 +49,9 @@ export function CaseManagement() {
   if (error || !data) {
     return (
       <Layout>
-        <header className="mb-8">
+        <header className="mb-4 md:mb-5">
           <h1
-            className="text-4xl mb-2"
+            className="mb-1 text-2xl sm:text-3xl"
             style={{
               fontFamily: 'DM Serif Display, serif',
               color: '#1B4332',
@@ -74,9 +74,9 @@ export function CaseManagement() {
 
   return (
     <Layout>
-      <header className="mb-8">
+      <header className="mb-4 md:mb-5">
         <h1 
-          className="text-4xl mb-2" 
+          className="mb-1 text-2xl sm:text-3xl" 
           style={{ 
             fontFamily: 'DM Serif Display, serif',
             color: '#1B4332'

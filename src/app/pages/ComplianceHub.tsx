@@ -356,9 +356,9 @@ export function ComplianceHub() {
   if (!selectedReport) {
     return (
       <Layout>
-        <header className="mb-8">
+        <header className="mb-4 md:mb-5">
           <h1 
-            className="text-4xl mb-2" 
+            className="mb-1 text-2xl sm:text-3xl" 
             style={{ 
               fontFamily: 'DM Serif Display, serif',
               color: '#1B4332'
@@ -426,17 +426,17 @@ export function ComplianceHub() {
   return (
     <Layout>
       {/* Header with Back Button */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <button
             onClick={() => setSelectedReport(null)}
-            className="text-sm mb-3 hover:opacity-70 transition-opacity flex items-center gap-2"
+            className="mb-2 flex items-center gap-2 text-sm transition-opacity hover:opacity-70 sm:mb-3"
             style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F', fontWeight: '600' }}
           >
             ← Back to Report Selection
           </button>
           <h1 
-            className="text-4xl mb-2" 
+            className="mb-1 text-2xl sm:text-3xl" 
             style={{ 
               fontFamily: 'DM Serif Display, serif',
               color: '#1B4332'
@@ -452,7 +452,7 @@ export function ComplianceHub() {
 
       {/* Filter Options Panel */}
       <div 
-        className="p-6 rounded-lg border mb-8"
+        className="mb-4 rounded-lg border p-6 sm:mb-5"
         style={{ 
           backgroundColor: '#FFFFFF', 
           borderColor: '#E0DDD6', 
@@ -630,7 +630,7 @@ function PhytosanitaryReport({
   return (
     <>
       {/* Metrics Row */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -933,7 +933,7 @@ function AreaRiskReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -1160,7 +1160,7 @@ function IPMAuditReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -1387,7 +1387,7 @@ function FarmerRankingReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -1638,7 +1638,7 @@ function SystemAdoptionReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -1765,7 +1765,7 @@ function AgronomistEfficiencyReport() {
   return (
     <>
       {/* Metrics */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         <div 
           className="p-6 rounded-lg border"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}

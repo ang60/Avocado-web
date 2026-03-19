@@ -2,7 +2,7 @@ import { Search } from 'lucide-react';
 
 export function Header() {
   return (
-    <header className="flex items-center justify-between mb-8">
+    <header className="mb-4 flex items-center justify-between md:mb-5">
       <h1 
         className="text-4xl" 
         style={{ 

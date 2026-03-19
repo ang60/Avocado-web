@@ -303,12 +303,12 @@ export function Exporter() {
 
   return (
     <Layout>
-      <div className="p-8" style={{ backgroundColor: '#F7F4EF', minHeight: '100vh' }}>
+      <div>
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-5">
           <div>
             <h1 
-              className="text-4xl mb-2"
+              className="mb-1 text-2xl sm:text-3xl"
               style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
             >
               Exporter Consignment Hub
@@ -333,7 +333,7 @@ export function Exporter() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="mb-4 grid grid-cols-3 gap-4 sm:mb-5 sm:gap-5">
           {/* Total Contracted Acreage - Blue */}
           <div 
             className="bg-white rounded-lg p-6 shadow-sm"
@@ -429,7 +429,7 @@ export function Exporter() {
         </div>
 
         {/* Batch Progress Component */}
-        <div className="bg-white rounded-lg p-6 mb-8 shadow-sm">
+        <div className="mb-4 rounded-lg bg-white p-6 shadow-sm sm:mb-5">
           <h3 
             className="text-lg font-bold mb-6"
             style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}

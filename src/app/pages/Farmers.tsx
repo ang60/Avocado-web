@@ -264,9 +264,9 @@ export function Farmers() {
       <div className="grid grid-cols-12 gap-6">
         {/* Main Content */}
         <div className="col-span-9">
-          <header className="mb-8">
+          <header className="mb-4 md:mb-5">
             <h1 
-              className="text-4xl mb-2" 
+              className="mb-1 text-2xl sm:text-3xl" 
               style={{ 
                 fontFamily: 'DM Serif Display, serif',
                 color: '#1B4332'

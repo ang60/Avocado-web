@@ -101,7 +101,7 @@ export function TopBar() {
         borderColor: '#E0DDD6',
       }}
     >
-      <div className="flex items-center justify-between px-8 py-4">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2">
           {breadcrumbs.map((crumb, index) => (
@@ -126,7 +126,7 @@ export function TopBar() {
         </div>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-md mx-8">
+        <div className="mx-2 min-w-0 flex-1 max-w-md sm:mx-4">
           <div className="relative">
             <Search 
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" 

@@ -66,11 +66,11 @@ export function KBArticleDetail() {
       </button>
 
       {/* Split Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
+      <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:mb-5 sm:flex-row">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
             <h1 
-              className="text-4xl" 
+              className="text-2xl sm:text-3xl" 
               style={{ 
                 fontFamily: 'DM Serif Display, serif',
                 color: '#1B4332'

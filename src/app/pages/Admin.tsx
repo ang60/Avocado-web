@@ -124,9 +124,9 @@ export function Admin() {
 
   return (
     <Layout>
-      <header className="mb-8">
+      <header className="mb-4 md:mb-5">
         <h1 
-          className="text-4xl mb-2" 
+          className="mb-1 text-2xl sm:text-3xl" 
           style={{ 
             fontFamily: 'DM Serif Display, serif',
             color: '#1B4332'
@@ -140,7 +140,7 @@ export function Admin() {
       </header>
 
       {/* System Stats */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="mb-4 grid grid-cols-4 gap-4 sm:mb-5 sm:gap-5">
         {systemStats.map((stat, index) => {
           const Icon = stat.icon;
           return (

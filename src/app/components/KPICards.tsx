@@ -61,7 +61,7 @@ const KPI_ICONS: Record<CaseManagementKpi['icon'], ComponentType<{ className?: s
 
 export function KPICards({ kpis }: { kpis: CaseManagementKpi[] }) {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 min-w-0 max-w-full [&>*]:min-w-0">
+    <div className="mb-4 grid min-w-0 max-w-full grid-cols-2 gap-3 sm:mb-5 sm:gap-4 lg:grid-cols-4 lg:gap-6 [&>*]:min-w-0">
       {kpis.map((kpi, index) => {
         const Icon = KPI_ICONS[kpi.icon];
         return (
