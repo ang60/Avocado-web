@@ -2,7 +2,9 @@
 node_modules/
 
 # Build / cache
-dist/
+# dist/ is tracked so you can push built files for simple static hosting (git pull + serve).
+# If you prefer CI-only builds, uncomment the next line and stop committing dist/.
+# dist/
 *.tsbuildinfo
 .vite/
 

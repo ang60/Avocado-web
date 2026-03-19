@@ -1,7 +1,4 @@
-/**
- * Placeholder API — simulates network latency. Replace calls with real fetch() when backend exists.
- * Set VITE_API_BASE_URL later and branch here, or swap this module.
- */
+
 import type {
   AdminPayload,
   CaseDetailPayload,
@@ -22,6 +19,7 @@ import type {
 import { PLACEHOLDER_ALERTS } from './placeholderData/alertsData';
 import { PLACEHOLDER_ADMIN } from './placeholderData/adminData';
 import { getPlaceholderCaseDetail } from './placeholderData/caseDetailData';
+import { PLACEHOLDER_CASE_MANAGEMENT } from './placeholderData/caseManagementData';
 import { PLACEHOLDER_DASHBOARD } from './placeholderData/dashboardPayload';
 import { getPlaceholderFarmerDetail } from './placeholderData/farmerDetailData';
 import { PLACEHOLDER_FARMERS } from './placeholderData/farmersListData';
