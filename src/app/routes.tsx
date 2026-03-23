@@ -16,16 +16,16 @@ function lazyRoute<T extends Record<string, ComponentType<object>>>(
 
 export const router = createBrowserRouter([
   {
+    path: '/login',
+    Component: lazyRoute(() => import('./pages/Login'), 'Login'),
+  },
+  {
     path: '/',
     Component: AppShell,
     children: [
       {
         index: true,
         Component: lazyRoute(() => import('./pages/Dashboard'), 'Dashboard'),
-      },
-      {
-        path: 'login',
-        loader: () => redirect('/dashboard'),
       },
       {
         path: 'dashboard',
@@ -91,10 +91,10 @@ export const router = createBrowserRouter([
         path: 'exporter',
         Component: lazyRoute(() => import('./pages/Exporter'), 'Exporter'),
       },
-      {
-        path: '*',
-        loader: () => redirect('/dashboard'),
-      },
     ],
+  },
+  {
+    path: '*',
+    loader: () => redirect('/dashboard'),
   },
 ]);

@@ -1,6 +1,6 @@
-import { BookOpen, Search, Tag, FileText, CheckCircle2, Lock, Unlock, AlertTriangle, TrendingUp, Code, Leaf, Beaker, Phone } from 'lucide-react';
+import { BookOpen, Search, CheckCircle2, Lock, Unlock, AlertTriangle, TrendingUp, Code, Leaf, Beaker, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 const knowledgeArticles = [
   {
@@ -148,6 +148,55 @@ export function KnowledgeBase() {
     }
   };
 
+  const filteredArticles = useMemo(() => {
+    return knowledgeArticles.filter((article) => {
+      const catOk =
+        selectedCategory === 'All Articles' || article.category === selectedCategory;
+      if (!catOk) return false;
+      const q = searchTerm.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        article.title.toLowerCase().includes(q) ||
+        article.summary.toLowerCase().includes(q) ||
+        article.tags.some((t) => t.toLowerCase().includes(q)) ||
+        article.id.toLowerCase().includes(q)
+      );
+    });
+  }, [searchTerm, selectedCategory]);
+
+  const ussdCodeRows = useMemo(
+    () =>
+      ussdSymptomCodes.map((item) => (
+        <div
+          key={item.code}
+          className="cursor-pointer rounded border p-2 transition-colors hover:bg-gray-50"
+          style={{ borderColor: '#E0DDD6' }}
+        >
+          <div className="flex items-start gap-2">
+            <span
+              className="shrink-0 rounded px-2 py-0.5 text-xs"
+              style={{
+                backgroundColor: '#1B4332',
+                color: '#F7F4EF',
+                fontFamily: 'IBM Plex Mono, monospace',
+              }}
+            >
+              {item.code}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm break-words" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                {item.symptom}
+              </p>
+              <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                {item.category}
+              </p>
+            </div>
+          </div>
+        </div>
+      )),
+    [],
+  );
+
   return (
     <>
       <header className="mb-4 md:mb-5">
@@ -189,123 +238,63 @@ export function KnowledgeBase() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 min-w-0 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
-        {/* Categories Sidebar */}
-        <div className="col-span-1 space-y-6">
-          {/* Categories */}
-          <div 
-            className="p-6 rounded-lg border sticky top-8"
-            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
-          >
-            <h3 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
-              Categories
-            </h3>
-            <div className="space-y-2">
-              {categories.map((category) => (
-                <button
-                  key={category.name}
-                  onClick={() => setSelectedCategory(category.name)}
-                  className="w-full text-left px-3 py-2 rounded-lg transition-colors hover:bg-gray-50"
-                  style={{
-                    backgroundColor: selectedCategory === category.name ? '#74C69D20' : 'transparent',
-                    fontFamily: 'IBM Plex Sans, sans-serif',
-                    color: selectedCategory === category.name ? '#2D6A4F' : '#1B4332',
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">{category.name}</span>
-                    <span className="text-xs" style={{ color: '#717182' }}>
-                      {category.count}
-                    </span>
-                  </div>
-                </button>
-              ))}
+      {/* lg: 1 col sidebar + 3 col articles; below lg single column with articles first */}
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-4 lg:gap-5">
+        {/* Articles — order-1 on mobile so they appear before filters */}
+        <div className="order-1 min-w-0 space-y-4 lg:order-2 lg:col-span-3">
+          {filteredArticles.length === 0 ? (
+            <div
+              className="rounded-lg border p-8 text-center"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                No articles match your filters
+              </p>
+              <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                Try another category or clear the search.
+              </p>
             </div>
-          </div>
-
-          {/* USSD Code Lookup */}
-          <div 
-            className="p-6 rounded-lg border"
-            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <Phone className="w-5 h-5" style={{ color: '#2D6A4F' }} />
-              <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
-                USSD Code Lookup
-              </h3>
-            </div>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {ussdSymptomCodes.map((item) => (
-                <div 
-                  key={item.code}
-                  className="p-2 rounded border cursor-pointer hover:bg-gray-50 transition-colors"
-                  style={{ borderColor: '#E0DDD6' }}
-                >
-                  <div className="flex items-start gap-2">
-                    <span 
-                      className="px-2 py-0.5 rounded text-xs flex-shrink-0"
-                      style={{ 
-                        backgroundColor: '#1B4332',
-                        color: '#F7F4EF',
-                        fontFamily: 'IBM Plex Mono, monospace',
-                      }}
-                    >
-                      {item.code}
-                    </span>
-                    <div>
-                      <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                        {item.symptom}
-                      </p>
-                      <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                        {item.category}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Articles */}
-        <div className="col-span-3 space-y-4">
-          {knowledgeArticles.map((article) => {
+          ) : null}
+          {filteredArticles.map((article) => {
             const severityStyle = getSeverityColor(article.severity);
             
             return (
               <div 
                 key={article.id}
                 onClick={() => navigate(`/knowledge-base/${article.id}`)}
-                className="p-6 rounded-lg border cursor-pointer transition-all hover:shadow-md hover:border-opacity-100"
+                className="min-w-0 cursor-pointer rounded-lg border p-4 transition-all hover:border-opacity-100 hover:shadow-md sm:p-6"
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderColor: '#E0DDD6',
                   borderRadius: '8px',
                 }}
               >
-                <div className="flex items-start gap-4">
+                <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
                   <div 
-                    className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg sm:mt-0.5"
                     style={{ backgroundColor: '#74C69D20' }}
                   >
-                    <BookOpen className="w-6 h-6" style={{ color: '#2D6A4F' }} />
+                    <BookOpen className="h-6 w-6" style={{ color: '#2D6A4F' }} />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <h3
+                            className="min-w-0 text-base break-words sm:text-lg"
+                            style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}
+                          >
                             {article.title}
                           </h3>
                           {article.approvedContent && (
                             <CheckCircle2 
-                              className="w-4 h-4 flex-shrink-0" 
+                              className="h-4 w-4 shrink-0" 
                               style={{ color: '#2D6A4F' }}
                               title="Approved Content"
                             />
                           )}
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span 
                             className="text-xs px-2 py-1 rounded"
                             style={{ 
@@ -320,7 +309,7 @@ export function KnowledgeBase() {
                           
                           {/* Severity Indicator */}
                           <span 
-                            className="text-xs px-2 py-1 rounded border flex items-center gap-1"
+                            className="flex items-center gap-1 rounded border px-2 py-1 text-xs"
                             style={{ 
                               backgroundColor: severityStyle.bg,
                               color: severityStyle.text,
@@ -329,13 +318,13 @@ export function KnowledgeBase() {
                               borderRadius: '4px',
                             }}
                           >
-                            <AlertTriangle className="w-3 h-3" />
+                            <AlertTriangle className="h-3 w-3 shrink-0" />
                             {article.severity.toUpperCase()} RISK
                           </span>
 
                           {/* Chemical Gate Status */}
                           <span 
-                            className="text-xs px-2 py-1 rounded border flex items-center gap-1"
+                            className="flex items-center gap-1 rounded border px-2 py-1 text-xs"
                             style={{ 
                               backgroundColor: article.chemicalGate === 'gated' ? '#DC262620' : '#74C69D20',
                               color: article.chemicalGate === 'gated' ? '#DC2626' : '#2D6A4F',
@@ -345,16 +334,16 @@ export function KnowledgeBase() {
                             }}
                           >
                             {article.chemicalGate === 'gated' ? (
-                              <Lock className="w-3 h-3" />
+                              <Lock className="h-3 w-3 shrink-0" />
                             ) : (
-                              <Unlock className="w-3 h-3" />
+                              <Unlock className="h-3 w-3 shrink-0" />
                             )}
                             {article.chemicalGate === 'gated' ? 'GATED' : 'OPEN'}
                           </span>
 
                           {/* IPM Level */}
                           <span 
-                            className="text-xs px-2 py-1 rounded border flex items-center gap-1"
+                            className="flex items-center gap-1 rounded border px-2 py-1 text-xs"
                             style={{ 
                               backgroundColor: '#E0DDD6',
                               color: '#1B4332',
@@ -370,7 +359,7 @@ export function KnowledgeBase() {
                           {/* USSD Code */}
                           {article.ussdCode && (
                             <span 
-                              className="text-xs px-2 py-1 rounded flex items-center gap-1"
+                              className="flex items-center gap-1 rounded px-2 py-1 text-xs"
                               style={{ 
                                 backgroundColor: '#1B4332',
                                 color: '#F7F4EF',
@@ -378,25 +367,31 @@ export function KnowledgeBase() {
                                 borderRadius: '4px',
                               }}
                             >
-                              <Code className="w-3 h-3" />
+                              <Code className="h-3 w-3 shrink-0" />
                               {article.ussdCode}
                             </span>
                           )}
                         </div>
                       </div>
-                      <span className="text-xs ml-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                      <span
+                        className="shrink-0 rounded px-2 py-0.5 text-xs sm:ml-2"
+                        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', backgroundColor: '#F7F4EF' }}
+                      >
                         {article.id}
                       </span>
                     </div>
-                    <p className="mb-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6' }}>
+                    <p
+                      className="mb-3 text-sm leading-relaxed sm:text-base"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
+                    >
                       {article.summary}
                     </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-col gap-3 border-t border-[#E0DDD6] pt-3 sm:flex-row sm:items-start sm:justify-between sm:border-0 sm:pt-0">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
                         {article.tags.map((tag) => (
                           <span 
                             key={tag}
-                            className="text-xs px-2 py-1 rounded border"
+                            className="rounded border px-2 py-1 text-xs"
                             style={{ 
                               borderColor: '#E0DDD6',
                               color: '#1B4332',
@@ -408,21 +403,23 @@ export function KnowledgeBase() {
                           </span>
                         ))}
                       </div>
-                      <div className="flex items-center gap-4 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                        {/* Active Uses Badge */}
+                      <div
+                        className="flex min-w-0 flex-col gap-2 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1"
+                        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
+                      >
                         <span 
-                          className="px-2 py-1 rounded flex items-center gap-1"
+                          className="inline-flex w-fit max-w-full items-center gap-1 rounded px-2 py-1"
                           style={{ 
                             backgroundColor: '#74C69D20',
                             color: '#2D6A4F',
                           }}
                         >
-                          <TrendingUp className="w-3 h-3" />
-                          Used in {article.activeUses} active cases
+                          <TrendingUp className="h-3 w-3 shrink-0" />
+                          <span className="break-words">Used in {article.activeUses} active cases</span>
                         </span>
-                        <span>Updated {article.lastUpdated}</span>
-                        <span>•</span>
-                        <span>{article.views} views</span>
+                        <span className="whitespace-nowrap">Updated {article.lastUpdated}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="whitespace-nowrap">{article.views} views</span>
                       </div>
                     </div>
                   </div>
@@ -431,6 +428,109 @@ export function KnowledgeBase() {
             );
           })}
         </div>
+
+        {/* Filters sidebar — below articles on mobile; left column on lg */}
+        <aside className="order-2 min-w-0 space-y-4 lg:order-1 lg:col-span-1">
+          {/* Mobile: compact horizontal category chips */}
+          <div
+            className="rounded-lg border p-3 lg:hidden"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+          >
+            <h3
+              className="mb-2 text-sm"
+              style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}
+            >
+              Categories
+            </h3>
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 touch-pan-x overscroll-x-contain [-webkit-overflow-scrolling:touch]">
+              {categories.map((category) => (
+                <button
+                  key={category.name}
+                  type="button"
+                  onClick={() => setSelectedCategory(category.name)}
+                  className="shrink-0 whitespace-nowrap rounded-full border px-3 py-2 text-sm transition-colors"
+                  style={{
+                    backgroundColor: selectedCategory === category.name ? '#74C69D40' : '#FFFFFF',
+                    borderColor: selectedCategory === category.name ? '#2D6A4F' : '#E0DDD6',
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    color: selectedCategory === category.name ? '#2D6A4F' : '#1B4332',
+                    fontWeight: selectedCategory === category.name ? 600 : 400,
+                  }}
+                >
+                  {category.name}{' '}
+                  <span style={{ color: '#717182', fontWeight: 400 }}>({category.count})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop: vertical category list + sticky */}
+          <div
+            className="hidden rounded-lg border p-6 lg:block lg:sticky lg:top-8"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+          >
+            <h3 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+              Categories
+            </h3>
+            <div className="space-y-2">
+              {categories.map((category) => (
+                <button
+                  key={category.name}
+                  type="button"
+                  onClick={() => setSelectedCategory(category.name)}
+                  className="w-full rounded-lg px-3 py-2 text-left transition-colors hover:bg-gray-50"
+                  style={{
+                    backgroundColor: selectedCategory === category.name ? '#74C69D20' : 'transparent',
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    color: selectedCategory === category.name ? '#2D6A4F' : '#1B4332',
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm">{category.name}</span>
+                    <span className="text-xs tabular-nums" style={{ color: '#717182' }}>
+                      {category.count}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* USSD lookup — collapsible on mobile */}
+          <details
+            className="rounded-lg border lg:hidden"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+          >
+            <summary
+              className="flex cursor-pointer list-none items-center justify-between gap-2 p-4 [&::-webkit-details-marker]:hidden"
+              style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <Phone className="h-5 w-5 shrink-0" style={{ color: '#2D6A4F' }} />
+                <span className="min-w-0">USSD Code Lookup</span>
+              </span>
+              <span className="shrink-0 text-xs font-normal" style={{ color: '#717182' }}>
+                Show codes
+              </span>
+            </summary>
+            <div className="max-h-64 space-y-2 overflow-y-auto border-t border-[#E0DDD6] px-4 pb-4 pt-2">
+              {ussdCodeRows}
+            </div>
+          </details>
+
+          <div
+            className="hidden rounded-lg border p-6 lg:block"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+          >
+            <div className="mb-4 flex items-center gap-2">
+              <Phone className="h-5 w-5" style={{ color: '#2D6A4F' }} />
+              <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                USSD Code Lookup
+              </h3>
+            </div>
+            <div className="max-h-80 space-y-2 overflow-y-auto">{ussdCodeRows}</div>
+          </div>
+        </aside>
       </div>
     </>
   );
