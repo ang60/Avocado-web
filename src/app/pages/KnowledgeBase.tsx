@@ -1,121 +1,12 @@
 import { BookOpen, Search, CheckCircle2, Lock, Unlock, AlertTriangle, TrendingUp, Code, Leaf, Beaker, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useMemo, useState } from 'react';
-
-const knowledgeArticles = [
-  {
-    id: 'KB-045',
-    title: 'Avocado Thrips: Identification and Management',
-    category: 'Pest Management',
-    tags: ['Thrips', 'IPM', 'Treatment'],
-    summary: 'Comprehensive guide to identifying and managing avocado thrips infestations, including life cycle, damage symptoms, and control strategies.',
-    lastUpdated: 'Mar 10, 2026',
-    views: 1247,
-    severity: 'high',
-    activeUses: 14,
-    approvedContent: true,
-    ussdCode: '102',
-    chemicalGate: 'gated',
-    ipmLevel: 3,
-  },
-  {
-    id: 'KB-044',
-    title: 'Phytophthora Root Rot Prevention and Control',
-    category: 'Disease Management',
-    tags: ['Root Rot', 'Prevention', 'Drainage'],
-    summary: 'Best practices for preventing and controlling Phytophthora root rot, including soil management, irrigation practices, and treatment options.',
-    lastUpdated: 'Mar 8, 2026',
-    views: 982,
-    severity: 'high',
-    activeUses: 22,
-    approvedContent: true,
-    ussdCode: '205',
-    chemicalGate: 'gated',
-    ipmLevel: 3,
-  },
-  {
-    id: 'KB-043',
-    title: 'Integrated Pest Management (IPM) for Avocados',
-    category: 'Best Practices',
-    tags: ['IPM', 'Sustainable', 'Strategy'],
-    summary: 'Overview of integrated pest management principles and how to implement IPM programs in avocado orchards.',
-    lastUpdated: 'Mar 5, 2026',
-    views: 1534,
-    severity: 'low',
-    activeUses: 8,
-    approvedContent: true,
-    ussdCode: null,
-    chemicalGate: 'open',
-    ipmLevel: 1,
-  },
-  {
-    id: 'KB-042',
-    title: 'Scouting Techniques for Early Detection',
-    category: 'Field Operations',
-    tags: ['Scouting', 'Detection', 'Training'],
-    summary: 'Detailed scouting protocols and techniques for early detection of pests and diseases in avocado orchards.',
-    lastUpdated: 'Mar 3, 2026',
-    views: 876,
-    severity: 'low',
-    activeUses: 3,
-    approvedContent: true,
-    ussdCode: null,
-    chemicalGate: 'open',
-    ipmLevel: 1,
-  },
-  {
-    id: 'KB-041',
-    title: 'Understanding Persea Mite Biology and Behavior',
-    category: 'Pest Biology',
-    tags: ['Mites', 'Biology', 'Lifecycle'],
-    summary: 'In-depth look at persea mite biology, lifecycle, and environmental factors affecting population dynamics.',
-    lastUpdated: 'Feb 28, 2026',
-    views: 654,
-    severity: 'medium',
-    activeUses: 11,
-    approvedContent: true,
-    ussdCode: '104',
-    chemicalGate: 'open',
-    ipmLevel: 2,
-  },
-  {
-    id: 'KB-040',
-    title: 'Anthracnose Disease Management',
-    category: 'Disease Management',
-    tags: ['Anthracnose', 'Fungicide', 'Prevention'],
-    summary: 'Guidelines for managing anthracnose in avocados, including cultural practices and chemical control options.',
-    lastUpdated: 'Feb 25, 2026',
-    views: 723,
-    severity: 'medium',
-    activeUses: 17,
-    approvedContent: true,
-    ussdCode: '203',
-    chemicalGate: 'gated',
-    ipmLevel: 3,
-  },
-];
-
-const categories = [
-  { name: 'All Articles', count: 145 },
-  { name: 'Pest Management', count: 42 },
-  { name: 'Disease Management', count: 38 },
-  { name: 'Best Practices', count: 28 },
-  { name: 'Field Operations', count: 21 },
-  { name: 'Pest Biology', count: 16 },
-];
-
-const ussdSymptomCodes = [
-  { code: '101', symptom: 'Wilting Leaves', category: 'General Symptoms' },
-  { code: '102', symptom: 'Yellowing Leaves', category: 'General Symptoms' },
-  { code: '103', symptom: 'Leaf Spots/Lesions', category: 'General Symptoms' },
-  { code: '104', symptom: 'Scarring on Fruit', category: 'Fruit Damage' },
-  { code: '105', symptom: 'Holes in Fruit', category: 'Fruit Damage' },
-  { code: '201', symptom: 'Root Discoloration', category: 'Root Issues' },
-  { code: '202', symptom: 'Trunk Cankers', category: 'Trunk Issues' },
-  { code: '203', symptom: 'Black Spots on Fruit', category: 'Fruit Damage' },
-  { code: '204', symptom: 'Premature Fruit Drop', category: 'Fruit Damage' },
-  { code: '205', symptom: 'Tree Decline', category: 'General Symptoms' },
-];
+import {
+  computeCategoryCounts,
+  knowledgeBaseArticles,
+  knowledgeBaseCategories,
+  ussdSymptomCodesLookup,
+} from '../data/knowledgeBase';
 
 export function KnowledgeBase() {
   const navigate = useNavigate();
@@ -149,7 +40,7 @@ export function KnowledgeBase() {
   };
 
   const filteredArticles = useMemo(() => {
-    return knowledgeArticles.filter((article) => {
+    return knowledgeBaseArticles.filter((article) => {
       const catOk =
         selectedCategory === 'All Articles' || article.category === selectedCategory;
       if (!catOk) return false;
@@ -166,7 +57,7 @@ export function KnowledgeBase() {
 
   const ussdCodeRows = useMemo(
     () =>
-      ussdSymptomCodes.map((item) => (
+      ussdSymptomCodesLookup.map((item) => (
         <div
           key={item.code}
           className="cursor-pointer rounded border p-2 transition-colors hover:bg-gray-50"
@@ -443,7 +334,7 @@ export function KnowledgeBase() {
               Categories
             </h3>
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 touch-pan-x overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-              {categories.map((category) => (
+              {knowledgeBaseCategories.map((category) => (
                 <button
                   key={category.name}
                   type="button"
@@ -458,7 +349,11 @@ export function KnowledgeBase() {
                   }}
                 >
                   {category.name}{' '}
-                  <span style={{ color: '#717182', fontWeight: 400 }}>({category.count})</span>
+                  <span style={{ color: '#717182', fontWeight: 400 }}>
+                    ({category.name === 'All Articles'
+                      ? knowledgeBaseArticles.length
+                      : computeCategoryCounts(knowledgeBaseArticles).get(category.name) ?? 0})
+                  </span>
                 </button>
               ))}
             </div>
@@ -473,7 +368,7 @@ export function KnowledgeBase() {
               Categories
             </h3>
             <div className="space-y-2">
-              {categories.map((category) => (
+              {knowledgeBaseCategories.map((category) => (
                 <button
                   key={category.name}
                   type="button"
@@ -488,7 +383,9 @@ export function KnowledgeBase() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm">{category.name}</span>
                     <span className="text-xs tabular-nums" style={{ color: '#717182' }}>
-                      {category.count}
+                      {category.name === 'All Articles'
+                        ? knowledgeBaseArticles.length
+                        : computeCategoryCounts(knowledgeBaseArticles).get(category.name) ?? 0}
                     </span>
                   </div>
                 </button>

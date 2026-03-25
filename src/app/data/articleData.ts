@@ -139,6 +139,806 @@ export const articleData: Record<string, any> = {
     
     economicImpact: 'Root rot is the most economically devastating avocado disease globally, causing 30-40% tree mortality in susceptible orchards. Infected trees show progressive decline over 2-5 years, resulting in total yield loss. Replanting costs exceed KES 15,000 per tree including removal and establishment.',
   },
+  'KB-PDF-001': {
+    id: 'KB-PDF-001',
+    title: 'Persea Mites (Oligonychus perseae): Identification, Scouting, and IPM',
+    category: 'Pest Management',
+    tags: ['Persea mite', 'Mites', 'IPM', 'Scouting', 'Hass', 'KEPHIS'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'high',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'gated',
+    ipmLevel: 3,
+
+    advisorySnippetEN:
+      'AvoGuard: Scout persea mites every 7–10 days. Start control when 7.5–10% leaf area is damaged or ~70–100 mites/leaf. Prune for airflow, use clean seedlings, and target sprays under leaves.',
+    advisorySnippetSW:
+      'AvoGuard: Kagua persea mites kila siku 7–10. Anza kudhibiti ukiwa na uharibifu wa 7.5–10% ya jani au takriban 70–100 mites kwa jani. Punguza msongamano kwa kupogoa, tumia miche safi, na nyunyiza chini ya majani.',
+
+    fieldPhotos: [
+      { title: 'Leaf spotting (upper surface)', description: 'Circular yellow-to-brown spots visible through upper surface', stage: 'Identification' },
+      { title: 'Webbing on underside', description: 'Silky webbing clusters along veins and midrib', stage: 'Identification' },
+      { title: 'Defoliation and sunburn risk', description: 'Canopy thinning exposes fruits to sunburn', stage: 'Severity Assessment' },
+      { title: 'Mite colony along veins', description: 'Colonies feed on underside near major veins', stage: 'Identification' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Cultural Controls',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Regular scouting', description: 'Inspect both upper and underside of leaves every 7–10 days; confirm with hand lens and by shaking leaves onto white paper.', frequency: 'Every 7–10 days', effectiveness: 'High' },
+          { name: 'Clean planting material', description: 'Procure pest-free seedlings and scions from certified nurseries; perform routine checks to prevent introduction/spread.', frequency: 'At planting + routine checks', effectiveness: 'Very High' },
+          { name: 'Pruning & spacing', description: 'Maintain recommended spacing and prune dense canopies to improve aeration/light and enhance spray penetration.', frequency: 'Seasonal', effectiveness: 'Medium-High' },
+          { name: 'Tool sanitation & movement control', description: 'Clean tools and equipment after working in infested areas; limit movement between orchards to reduce hitchhiking spread.', frequency: 'Every operation', effectiveness: 'Medium' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Biological Controls',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Predatory mites (Neoseiulus californicus)', description: 'Support or release predatory mites where available. Training reference suggests releases may require high numbers per tree for control.', frequency: 'As needed during outbreaks', effectiveness: 'Medium-High', supplier: 'IPM suppliers (where available)' },
+          { name: 'Conserve natural enemies', description: 'Avoid unnecessary broad-spectrum insecticides to preserve predators (e.g., ladybirds, beetles) and other natural enemies.', frequency: 'Ongoing', effectiveness: 'Medium' },
+          { name: 'Neem extracts', description: 'Botanical extracts may help suppress mites; ensure coverage on leaf underside where colonies form.', frequency: 'Per label / guidance', effectiveness: 'Low-Medium' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Products (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Use judiciously. Ensure underside coverage and follow local registration/label guidance.',
+        practices: [
+          { name: 'Targeted acaricide/insecticide use', description: 'Apply only when thresholds are exceeded; prioritize correct timing and coverage (underside). Refer to PCPB/label for approved products.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Rotate modes of action', registrationStatus: 'PCPB / local guidance' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Circular yellow to dark-brown necrotic spots on leaves (often visible from upper surface)',
+      'Colonies and silvery webbing on the underside along midrib and veins',
+      'Leaf yellowing/browning and eventual leaf drop (can be confused with fungal infection)',
+      'Canopy thinning increases fruit/bark sunburn risk',
+    ],
+    identificationSignsSW: [
+      'Madoa ya mviringo ya njano hadi kahawia-tindikali kwenye majani (huonekana pia juu ya jani)',
+      'Makundi ya wadudu na utando wa hariri chini ya jani kando ya mshipa mkuu na mishipa',
+      'Majani kuwa ya njano/kahawia na kuanguka (huweza kuchanganywa na ugonjwa wa kuvu)',
+      'Kupungua kwa taji la mti huongeza hatari ya kuchomwa na jua kwa matunda/ gome',
+    ],
+
+    lifeCycle:
+      'Persea mites develop through egg, larva, protonymph, deutonymph, and adult stages. Development can be ~15 days at 30°C and up to ~40 days at 20°C, with populations increasing in warmer periods.',
+    lifeCycleSW:
+      'Persea mites hupitia hatua za yai, lava, protonymph, deutonymph na mtu mzima. Ukuaji unaweza kuchukua takriban siku 15 kwenye 30°C na hadi siku 40 kwenye 20°C; idadi huongezeka zaidi wakati wa joto.',
+
+    economicImpact:
+      'Feeding reduces photosynthetic capacity and can cause defoliation, exposing fruit to sunburn and lowering market value. Highly susceptible varieties (e.g., Hass) face increased phytosanitary and yield risks.',
+    economicImpactSW:
+      'Kulisha kunapunguza uwezo wa mmea kutengeneza chakula (photosynthesis) na kusababisha kuanguka kwa majani, hivyo matunda kufichuka na kuchomwa na jua na kushuka thamani sokoni. Aina nyeti kama Hass huongeza hatari ya hasara na masuala ya ufuatiliaji wa viwango vya usafi wa mimea.',
+  },
+
+  'KB-PDF-002': {
+    id: 'KB-PDF-002',
+    title: 'Fruit Flies in Avocado: Monitoring, Sanitation, and Trapping',
+    category: 'Pest Management',
+    tags: ['Fruit flies', 'Export', 'Traps', 'Sanitation'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'high',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 2,
+
+    advisorySnippetEN:
+      'AvoGuard: Start monitoring fruit flies when fruit sets. Use traps, remove fallen fruit twice weekly, and destroy infested fruit (burn/solarize/bury ≥50 cm). Act immediately when damage is observed.',
+    advisorySnippetSW:
+      'AvoGuard: Anza kufuatilia fruit flies matunda yanapoanza kuwekwa. Tumia mitego, ondoa matunda yaliyoanguka mara mbili kwa wiki, na haribu matunda yaliyoathirika (choma/weke kwenye mfuko mweusi/bury ≥50 cm). Chukua hatua mapema ukiona dalili.',
+
+    fieldPhotos: [
+      { title: 'Puncture marks on fruit', description: 'Small holes/black lesions and soft spots on the fruit surface', stage: 'Identification' },
+      { title: 'Premature fruit drop', description: 'Fallen fruit that begins rotting can indicate infestation', stage: 'Severity Assessment' },
+      { title: 'Maggots inside fruit', description: 'Cut fruit to confirm rotting and larvae', stage: 'Confirmation' },
+      { title: 'Trap monitoring', description: 'Use traps to detect adult fruit flies early', stage: 'Monitoring' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Cultural Controls',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Orchard sanitation (twice weekly)', description: 'Remove fallen fruits regularly to prevent population build-up throughout the season.', frequency: 'Twice per week', effectiveness: 'Very High' },
+          { name: 'Destroy infested fruits', description: 'Kill larvae by burning, solarizing in black bags, or burying fruits at least 50 cm deep.', frequency: 'Whenever fruit is collected', effectiveness: 'High' },
+          { name: 'Early field scouting', description: 'Inspect fruit surfaces for punctures/lesions/soft spots; cut fruit to check internal rotting and larvae.', frequency: 'Weekly (from fruit set)', effectiveness: 'High' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Monitoring & Trapping',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Attractant traps', description: 'Use specific attractants (e.g., methyl eugenol for certain Bactrocera spp.) and/or food baits (protein hydrolysates/yeast).', frequency: 'Check weekly', effectiveness: 'High' },
+          { name: 'Mass trapping (where applicable)', description: 'Increase trap density to reduce breeding populations when pressure is high.', frequency: 'Seasonal', effectiveness: 'Medium-High' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Chemical Controls (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Only apply approved products as per label/PCPB guidance and export MRL requirements.',
+        practices: [
+          { name: 'Targeted bait sprays / insecticides', description: 'Use only when necessary and compatible with export market residue requirements. Prioritize sanitation and trapping.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Rotate classes', registrationStatus: 'PCPB / local guidance' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Premature fruit drop and rotting fallen fruits',
+      'Small puncture holes, black lesions, and soft spots on fruit surface',
+      'Internal rotting and larvae (maggots) inside fruit',
+      'Adult flies detected in traps from fruit set stage',
+    ],
+    identificationSignsSW: [
+      'Matunda kuanguka mapema na matunda yaliyoanguka kuanza kuoza',
+      'Mashimo madogo ya kuchomwa, madoa meusi na sehemu laini kwenye ganda la tunda',
+      'Kuoza ndani ya tunda na viluwiluwi (maggots) ndani ya tunda',
+      'Nzi watu wazima kuonekana kwenye mitego kuanzia hatua ya matunda kuanza kuwekwa',
+    ],
+
+    lifeCycle:
+      'Fruit flies lay eggs in or on fruit; larvae develop inside fruit and cause internal rot. Adult monitoring with traps helps detect infestation early from fruit set onward.',
+    lifeCycleSW:
+      'Fruit flies huweka mayai ndani au juu ya tunda; viluwiluwi hukua ndani ya tunda na kusababisha kuoza ndani. Ufuatiliaji wa nzi watu wazima kwa mitego husaidia kugundua uvamizi mapema kuanzia tunda linapoanza kuwekwa.',
+
+    economicImpact:
+      'Fruit fly infestation can cause fruit drop, internal rots, and export interceptions, reducing yield and market access. Early sanitation and trapping reduce risk to export markets.',
+    economicImpactSW:
+      'Uvamizi wa fruit flies husababisha matunda kuanguka, kuoza ndani na hatari ya kukamatwa/ kukataliwa kwenye masoko ya nje, hivyo kupunguza mavuno na upatikanaji wa soko. Usafi wa shamba na mitego mapema hupunguza hatari hii.',
+  },
+
+  'KB-PDF-003': {
+    id: 'KB-PDF-003',
+    title: 'False Codling Moth (FCM): Identification and Pheromone Trap Management',
+    category: 'Pest Management',
+    tags: ['FCM', 'Pheromone', 'Traps', 'Sanitation'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'high',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 2,
+
+    advisorySnippetEN:
+      'AvoGuard: Remove infested fruits on-tree and fallen fruits regularly. Use pheromone traps (1/ha for monitoring; 5–10/ha for mass trapping). Replace lures every 4–6 weeks.',
+    advisorySnippetSW:
+      'AvoGuard: Ondoa matunda yaliyoathirika kwenye mti na yaliyoanguka mara kwa mara. Tumia mitego ya pheromone (1/ha kufuatilia; 5–10/ha kwa mass trapping). Badilisha lures kila wiki 4–6.',
+
+    fieldPhotos: [
+      { title: 'Larval entry with frass', description: 'Frass/excrement at entrance of larval tunnels', stage: 'Identification' },
+      { title: 'Internal feeding damage', description: 'Larvae feed inside fruit after tunneling', stage: 'Severity Assessment' },
+      { title: 'Pheromone trap placement', description: 'Hang at fruit height inside canopy, away from direct sunlight', stage: 'Monitoring' },
+      { title: 'Trap maintenance', description: 'Replace lure every 4–6 weeks; change sticky liner when full', stage: 'Monitoring' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Cultural Controls',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Sanitation', description: 'Remove infested fruits from the tree and orchard floor; dispose appropriately to break the cycle.', frequency: 'Weekly (or more)', effectiveness: 'High' },
+          { name: 'Host management', description: 'Manage FCM in other host crops mentioned (e.g., coffee, guava) to reduce nearby reservoirs.', frequency: 'Seasonal', effectiveness: 'Medium' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Pheromone Traps',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Monitoring traps', description: 'Place 1 trap per hectare to detect presence early; check weekly.', frequency: 'Weekly', effectiveness: 'High' },
+          { name: 'Mass trapping', description: 'Use 5–10 traps per hectare to reduce male population and reproduction.', frequency: 'Seasonal', effectiveness: 'Medium-High' },
+          { name: 'Lure maintenance', description: 'Replace lures every 4–6 weeks; change sticky liners when full.', frequency: 'Every 4–6 weeks', effectiveness: 'High' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Chemical Controls (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Use only approved products per label/PCPB guidance and export requirements.',
+        practices: [
+          { name: 'Targeted insecticides', description: 'Apply only when monitoring indicates high pressure; follow PHI/MRL requirements.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Rotate classes', registrationStatus: 'PCPB / local guidance' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Adult: small brownish night-flying moth',
+      'Eggs laid singly mostly on fruit',
+      'Larvae tunnel into fruit soon after hatching',
+      'Frass at the entrance of larval tunnels',
+    ],
+    identificationSignsSW: [
+      'Mtu mzima: nondo mdogo wa kahawia anaruka usiku',
+      'Mayai huwekwa moja moja mara nyingi kwenye tunda',
+      'Viluwiluwi hutoboa na kuingia ndani ya tunda mara tu baada ya kuanguliwa',
+      'Kinyesi (frass) huonekana kwenye mlango wa tundu la viluwiluwi',
+    ],
+
+    lifeCycle:
+      'FCM females lay eggs on fruit; larvae hatch and tunnel into fruit where they feed and develop. Monitoring with pheromone traps helps detect populations early and guide control.',
+    lifeCycleSW:
+      'Jike wa FCM huweka mayai kwenye tunda; viluwiluwi huanguliwa na kutoboa kuingia ndani ya tunda ambako hulisha na kukua. Ufuatiliaji kwa mitego ya pheromone husaidia kugundua idadi mapema na kuongoza udhibiti.',
+
+    economicImpact:
+      'Internal feeding damage makes fruit unmarketable and increases export rejection risk. Effective sanitation and trapping reduce infestation and protect market access.',
+    economicImpactSW:
+      'Uharibifu wa kula ndani ya tunda hufanya tunda lisifae sokoni na huongeza hatari ya kukataliwa kwenye masoko ya nje. Usafi wa shamba na mitego kwa ufanisi hupunguza uvamizi na kulinda upatikanaji wa soko.',
+  },
+
+  'KB-PDF-004': {
+    id: 'KB-PDF-004',
+    title: 'Scale Insects: Monitoring, Ant Control, and Targeted Treatments',
+    category: 'Pest Management',
+    tags: ['Scales', 'Ants', 'Beneficials', 'Oils'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'medium',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 2,
+
+    advisorySnippetEN:
+      'AvoGuard: Inspect undersides of leaves, stems, and fruit for scales and sooty mold. Reduce tree stress, prune to open canopy, and control ants. Treat during crawler stage if thresholds are exceeded.',
+    advisorySnippetSW:
+      'AvoGuard: Kagua chini ya majani, shina, na matunda kuona scales na sooty mold. Punguza msongo wa mti, pogoa kufungua taji, na dhibiti mchwa. Tibu wakati wa crawler stage ikiwa viwango vimezidi.',
+
+    fieldPhotos: [
+      { title: 'Sooty mold', description: 'Black sooty growth linked to honeydew production', stage: 'Identification' },
+      { title: 'Ant activity', description: 'Ants protect scales from predators; manage ants to restore biological control', stage: 'Risk factor' },
+      { title: 'Crawler stage timing', description: 'Young scales are mobile and most vulnerable', stage: 'Treatment timing' },
+      { title: 'Canopy opening', description: 'Pruning improves spray penetration and reduces outbreaks on stressed trees', stage: 'Cultural control' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Cultural Controls',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Reduce plant stress', description: 'Ensure proper irrigation and balanced fertilization; excess nitrogen can boost scale populations.', frequency: 'Ongoing', effectiveness: 'Medium' },
+          { name: 'Prune canopy', description: 'Open the canopy to improve air circulation and spray penetration; remove heavily infested branches.', frequency: 'Seasonal', effectiveness: 'Medium-High' },
+          { name: 'Equipment hygiene', description: 'Clean harvest equipment and avoid moving infested bins/tools between blocks.', frequency: 'Every operation', effectiveness: 'Medium' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Biological Controls',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Control ants', description: 'Use sticky barriers or bait stations to reduce ant protection of scales.', frequency: 'Ongoing', effectiveness: 'High' },
+          { name: 'Conserve beneficials', description: 'Encourage lady beetles, lacewings, predatory mites, and parasitic wasps; avoid broad-spectrum insecticides that cause flare-ups.', frequency: 'Ongoing', effectiveness: 'High' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Chemical Controls (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Use only when infestations exceed thresholds; timing at crawler stage is critical.',
+        practices: [
+          { name: 'Horticultural oils', description: 'Smother scales at crawler stage; apply at correct timing.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Low', registrationStatus: 'PCPB / local guidance' },
+          { name: 'IGRs / systemics (when necessary)', description: 'IGRs (e.g., pyriproxyfen/buprofezin) or systemics (e.g., imidacloprid/spirotetramat) may be used carefully to protect beneficials.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Rotate', registrationStatus: 'PCPB / local guidance' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Small, immobile bumps on leaves (especially undersides), stems, or fruit',
+      'Sooty mold development due to honeydew',
+      'Yellowing leaves and reduced vigor',
+      'Increased ant activity (ants protect scales)',
+    ],
+    identificationSignsSW: [
+      'Vivinje vidogo visivyotembea kwenye majani (hasa chini), shina au tunda',
+      'Sooty mold (ukungu mweusi) kutokana na honeydew',
+      'Majani kuwa ya njano na mti kudhoofika',
+      'Kuongezeka kwa mchwa (mchwa hulinda scales dhidi ya wadudu wanaowala)',
+    ],
+
+    lifeCycle:
+      'Scales have a vulnerable crawler stage when young scales are mobile. Timing treatments and preserving natural enemies is key to control.',
+    lifeCycleSW:
+      'Scales huwa na hatua dhaifu iitwayo “crawler stage” ambapo wadogo hutembea na huwa rahisi kudhibitiwa. Udhibiti mzuri unategemea wakati sahihi wa matibabu na kulinda maadui asilia.',
+
+    economicImpact:
+      'Scale infestations reduce tree vigor and can mark fruit with sooty mold/honeydew-related quality issues. Outbreaks are worse on stressed trees and can flare when beneficials are disrupted.',
+    economicImpactSW:
+      'Uvamizi wa scales hupunguza nguvu ya mti na huacha uchafu/sooty mold kwenye matunda, hivyo kushusha ubora. Milipuko huwa mibaya zaidi kwenye miti yenye msongo na huongezeka zaidi maadui asilia wanapouawa na viuatilifu visivyolengwa.',
+  },
+
+  'KB-PDF-005': {
+    id: 'KB-PDF-005',
+    title: 'Thrips: Symptoms, Monitoring, and Management',
+    category: 'Pest Management',
+    tags: ['Thrips', 'Sticky traps', 'Monitoring'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'medium',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 2,
+
+    advisorySnippetEN:
+      'AvoGuard: Monitor thrips using scouting and sticky traps. Conserve natural enemies and manage canopy through feeding and pruning. Use pesticides only when necessary.',
+    advisorySnippetSW:
+      'AvoGuard: Fuatilia thrips kwa scouting na sticky traps. Linda maadui asilia na simamia taji kwa lishe na kupogoa. Tumia viuatilifu pale tu inapohitajika.',
+
+    fieldPhotos: [
+      { title: 'Fruit scarring near calyx', description: 'Feeding begins near calyx and can scar the entire fruit', stage: 'Identification' },
+      { title: 'Leathery brown skin', description: 'Attacked fruits develop leathery brown skin', stage: 'Severity Assessment' },
+      { title: 'Sticky traps', description: 'Colored sticky traps assist monitoring', stage: 'Monitoring' },
+      { title: 'Natural enemies', description: 'Predatory thrips, lacewings, and predatory bugs help suppress thrips', stage: 'Biological control' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Cultural Controls',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Tree management', description: 'Maintain good nutrition and prune to improve airflow and reduce thrips-friendly microclimates.', frequency: 'Seasonal', effectiveness: 'Medium' },
+          { name: 'Regular scouting', description: 'Inspect tissues and developing fruits for early symptoms; track trends.', frequency: 'Weekly', effectiveness: 'High' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Monitoring & Biological',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Sticky traps', description: 'Use sticky traps to monitor population dynamics alongside scouting.', frequency: 'Weekly checks', effectiveness: 'Medium' },
+          { name: 'Conserve natural enemies', description: 'Encourage predatory thrips, lacewings, and predatory bugs; avoid unnecessary broad-spectrum sprays.', frequency: 'Ongoing', effectiveness: 'High' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Chemical Controls (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Use appropriate pesticides only when monitoring indicates need; follow label/PHI.',
+        practices: [
+          { name: 'Targeted pesticide use', description: 'Select appropriate pesticides compatible with beneficials; apply based on scouting/trap data.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Rotate', registrationStatus: 'PCPB / local guidance' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Infested tissues turn brown and dry up under severe damage',
+      'Fruit scarring begins near calyx and can cover the whole fruit',
+      'Attacked fruits develop a leathery brown skin',
+    ],
+    identificationSignsSW: [
+      'Sehemu zilizoathirika huwa kahawia na hukauka endapo uharibifu ni mkubwa',
+      'Mikwaruzo/kovu la tunda huanza karibu na calyx na linaweza kuenea kwenye tunda lote',
+      'Matunda yaliyoathiriwa hupata ngozi ngumu ya kahawia',
+    ],
+
+    lifeCycle:
+      'Thrips populations increase under favorable conditions; regular scouting and trap monitoring support timely interventions and conservation of natural enemies.',
+    lifeCycleSW:
+      'Idadi ya thrips huongezeka mazingira yanapofaa. Ukaguzi wa mara kwa mara na ufuatiliaji kwa mitego husaidia kuchukua hatua kwa wakati na kulinda maadui asilia.',
+
+    economicImpact:
+      'Thrips fruit scarring reduces market value and can lead to downgrades in export markets. Severe damage can reduce overall fruit quality and yield value.',
+    economicImpactSW:
+      'Mikwaruzo kwenye matunda kutokana na thrips hupunguza thamani sokoni na inaweza kusababisha kupunguzwa daraja kwenye masoko ya nje. Uharibifu mkubwa hupunguza ubora wa matunda na thamani ya mavuno.',
+  },
+
+  'KB-PDF-007': {
+    id: 'KB-PDF-007',
+    title: 'Avocado Sunblotch Viroid (ASBVd): Identification and Biosecurity',
+    category: 'Disease Management',
+    tags: ['Sunblotch', 'ASBVd', 'Biosecurity', 'Propagation'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'high',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 3,
+
+    advisorySnippetEN:
+      'AvoGuard: Prevent sunblotch by using certified viroid-free scions and seed. Disinfect pruning/harvesting tools between trees and remove infected trees promptly. Monitor and test mother blocks.',
+    advisorySnippetSW:
+      'AvoGuard: Zuia sunblotch kwa kutumia scions na mbegu zilizoidhinishwa bila viroid. Safisha/ua vijidudu kwenye zana kati ya miti na ondoa miti iliyoambukizwa mapema. Fuatilia na pima mother blocks.',
+
+    fieldPhotos: [
+      { title: 'Leaf streaking', description: 'Yellow streaks and discolored foliage', stage: 'Identification' },
+      { title: 'Fruit marks', description: 'Bleached/sunken marks on fruit surface', stage: 'Identification' },
+      { title: 'Bark cracking', description: 'Cracked bark on infected trees', stage: 'Advanced Stage' },
+      { title: 'Tool hygiene', description: 'Disinfect pruning and harvesting tools between trees', stage: 'Prevention' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Prevention',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Certified propagation material', description: 'Use viroid-free certified scions and seeds; test and index mother block trees.', frequency: 'At propagation / ongoing', effectiveness: 'Very High' },
+          { name: 'Screen imported planting material', description: 'Ensure incoming planting material is screened to prevent introduction.', frequency: 'Every receipt', effectiveness: 'High' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Biosecurity Practices',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Disinfect tools', description: 'Clean and disinfect pruning, harvesting, and injection tools between each tree.', frequency: 'Every tree', effectiveness: 'High' },
+          { name: 'Monitoring', description: 'Monitor for symptoms; note that symptom expression can be delayed and some trees remain symptomless.', frequency: 'Routine', effectiveness: 'Medium' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Eradication Actions (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Remove and destroy infected trees to prevent spread.',
+        practices: [
+          { name: 'Remove infected trees', description: 'Promptly remove and destroy infected trees and high-risk symptomless carriers identified by testing.', phi: 'N/A', applicationRate: 'N/A', maxApplications: 'N/A', resistance: 'N/A', registrationStatus: 'Operational practice' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Yellow streaks on leaves; discolored and deformed foliage',
+      'Bleached collar and canopy decline',
+      'Bleached/sunken marks on fruits',
+      'Cracked bark on affected trees',
+    ],
+    identificationSignsSW: [
+      'Mistari ya njano kwenye majani; majani kubadilika rangi na kupinda',
+      'Sehemu ya shina (collar) kupauka na taji kudhoofika',
+      'Alama zilizopauka/zilizozama kwenye matunda',
+      'Gome kupasuka kwenye miti iliyoathirika',
+    ],
+
+    lifeCycle:
+      'Sunblotch is caused by a viroid (ASBVd). Symptoms may appear long after grafting (training reference notes up to ~36 months), and some trees can remain symptomless.',
+    lifeCycleSW:
+      'Sunblotch husababishwa na viroid (ASBVd). Dalili zinaweza kuonekana baada ya muda mrefu tangu kuchanja (hadi takriban miezi 36), na baadhi ya miti inaweza kubaki bila dalili.',
+
+    economicImpact:
+      'Sunblotch can reduce yield (training reference: 15–80%) and fruit quality and restrict market access. Prevention through clean propagation and strict tool hygiene is critical.',
+    economicImpactSW:
+      'Sunblotch inaweza kupunguza mavuno (takriban 15–80%) na ubora wa matunda na kuzuia upatikanaji wa soko. Kuzuia kupitia miche/scions safi na usafi mkali wa zana ni muhimu sana.',
+  },
+
+  'KB-PDF-008': {
+    id: 'KB-PDF-008',
+    title: 'Anthracnose: Post-harvest Fruit Disease Management',
+    category: 'Disease Management',
+    tags: ['Anthracnose', 'Post-harvest', 'Copper fungicides'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'high',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 2,
+
+    advisorySnippetEN:
+      'AvoGuard: Reduce anthracnose by sanitation and pruning, and apply copper-based fungicides as recommended. Maintain good drainage and balanced fertilization (avoid excess N; ensure adequate P and K).',
+    advisorySnippetSW:
+      'AvoGuard: Punguza anthracnose kwa usafi wa shamba na kupogoa, na tumia copper-based fungicides kama inavyoshauriwa. Dumisha mifereji mizuri na mbolea yenye uwiano (epuka N nyingi; hakikisha P na K zinatosha).',
+
+    fieldPhotos: [
+      { title: 'Fruit lesions', description: 'Dry dark-brown spots on fruit skin', stage: 'Identification' },
+      { title: 'Internal rot', description: 'Rot penetrates deep into flesh in hemispherical pattern', stage: 'Post-harvest' },
+      { title: 'Fruit drop', description: 'Severe attack can cause young fruit drop', stage: 'Severity Assessment' },
+      { title: 'Canopy management', description: 'Pruning improves airflow and reduces humidity favorable to fungi', stage: 'Prevention' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Cultural Controls',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Sanitation', description: 'Remove fallen/rotting fruits and infected material to reduce inoculum.', frequency: 'Weekly', effectiveness: 'High' },
+          { name: 'Pruning', description: 'Improve aeration and light penetration; reduce disease-favorable canopy humidity.', frequency: 'Seasonal', effectiveness: 'Medium' },
+          { name: 'Nutrition & irrigation', description: 'Avoid excess nitrogen; maintain adequate P and K; ensure proper irrigation and drainage.', frequency: 'Ongoing', effectiveness: 'Medium-High' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Preventive Sprays',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Copper-based fungicides', description: 'Copper products are commonly used as part of control programs alongside sanitation and canopy management.', frequency: 'Per program timing', effectiveness: 'Medium-High', supplier: 'Certified agro-dealers' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Chemical Controls (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Follow label and PHI requirements; ensure export compliance where applicable.',
+        practices: [
+          { name: 'Additional fungicides', description: 'Use other approved fungicides only under guidance; avoid resistance by rotating modes of action.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Rotate', registrationStatus: 'PCPB / local guidance' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Dry dark-brown spots on fruit skin and abnormal development',
+      'Young fruits may drop under severe attack',
+      'Internal rot penetrates into flesh; often most severe post-harvest as fruit matures',
+    ],
+    identificationSignsSW: [
+      'Madoa makavu ya kahawia-kiza kwenye ganda la tunda na ukuaji usio wa kawaida',
+      'Matunda machanga yanaweza kuanguka endapo shambulio ni kubwa',
+      'Kuoza huingia ndani ya nyama ya tunda; mara nyingi huwa mbaya zaidi baada ya kuvuna tunda linapokomaa',
+    ],
+
+    lifeCycle:
+      'Anthracnose is a fungal disease primarily affecting fruit. Symptoms may become more apparent as fruit matures and during post-harvest handling.',
+    lifeCycleSW:
+      'Anthracnose ni ugonjwa wa kuvu unaoathiri zaidi matunda. Dalili huonekana zaidi tunda linapokomaa na wakati wa kuhifadhi/kushughulikia baada ya kuvuna.',
+
+    economicImpact:
+      'Anthracnose reduces fruit quality and shelf-life and can cause significant post-harvest losses. Integrated sanitation, canopy management, and appropriate sprays reduce risk.',
+    economicImpactSW:
+      'Anthracnose hupunguza ubora wa tunda na muda wa kuhifadhi na inaweza kusababisha hasara kubwa baada ya kuvuna. Usafi wa shamba, usimamizi wa taji na dawa sahihi hupunguza hatari.',
+  },
+
+  'KB-PDF-009': {
+    id: 'KB-PDF-009',
+    title: 'Cercospora Fruit Spot: Symptoms and Control Timing',
+    category: 'Disease Management',
+    tags: ['Cercospora', 'Fruit spot', 'Copper fungicides'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'medium',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 2,
+
+    advisorySnippetEN:
+      'AvoGuard: Cercospora is favored by humid, hot conditions. Sanitation and timely copper sprays (before flowering and at fruit formation) reduce losses and secondary decay.',
+    advisorySnippetSW:
+      'AvoGuard: Cercospora hupendelea unyevunyevu na joto. Usafi wa shamba na nyunyizo za copper kwa wakati (kabla ya maua na wakati wa kuunda matunda) hupunguza hasara na kuoza kwa ziada.',
+
+    fieldPhotos: [
+      { title: 'Fruit lesions', description: 'Small light-yellow spots turning reddish-brown', stage: 'Identification' },
+      { title: 'Cracking lesions', description: 'Hard spots can crack and allow entry of other organisms', stage: 'Severity Assessment' },
+      { title: 'Humidity risk', description: 'Disease development is favored by humid conditions and high temperatures', stage: 'Risk factor' },
+      { title: 'Spray timing', description: 'Copper sprays recommended before flowering and at fruit formation', stage: 'Control' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Cultural Controls',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Sanitation', description: 'Remove diseased plant material where feasible to reduce inoculum.', frequency: 'Routine', effectiveness: 'Medium' },
+          { name: 'Canopy management', description: 'Improve airflow and reduce long periods of wetness in humid areas.', frequency: 'Seasonal', effectiveness: 'Medium' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Preventive Sprays',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Copper-based fungicides', description: 'Apply at key timings (before flowering and at fruit formation) to reduce severity.', frequency: 'Per season program', effectiveness: 'Medium-High', supplier: 'Certified agro-dealers' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Chemical Controls (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Follow label and export requirements where applicable.',
+        practices: [
+          { name: 'Additional approved fungicides', description: 'Use other approved products only when needed and rotate modes of action.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Rotate', registrationStatus: 'PCPB / local guidance' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Small, light-yellow spots on fruits and leaves later turning reddish-brown',
+      'Lesions can become hard and crack, creating entry points for decay organisms',
+      'Disease favored by humid conditions and high temperatures; spread via water splash and wind',
+    ],
+    identificationSignsSW: [
+      'Madoa madogo ya njano hafifu kwenye matunda na majani baadaye kuwa kahawia-nyekundu',
+      'Madoa yanaweza kuwa magumu na kupasuka, yakitoa njia ya viumbe vya kuoza',
+      'Ugonjwa hupendelea unyevunyevu na joto; huenea kwa manyunyu ya maji na upepo',
+    ],
+
+    lifeCycle:
+      'Cercospora spreads through spores moved by water splash and wind, with faster development in humid and warm conditions. Preventive control aims to protect young fruit/tissue.',
+    lifeCycleSW:
+      'Cercospora huenea kwa spores zinazosafirishwa na manyunyu ya maji na upepo, na hukua haraka kwenye unyevunyevu na joto. Udhibiti wa kinga hulenga kulinda tishu changa na matunda machanga.',
+
+    economicImpact:
+      'Cercospora can impair fruit quality and cause significant seasonal losses (training reference notes up to 60% under severe conditions).',
+    economicImpactSW:
+      'Cercospora hupunguza ubora wa matunda na inaweza kusababisha hasara kubwa msimu fulani (hadi takriban 60% katika hali mbaya).',
+  },
+
+  'KB-PDF-010': {
+    id: 'KB-PDF-010',
+    title: 'Avocado Scab: Identification and Orchard Sanitation',
+    category: 'Disease Management',
+    tags: ['Scab', 'Humid areas', 'Copper fungicides'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'medium',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 2,
+
+    advisorySnippetEN:
+      'AvoGuard: Scab infects young leaves, twigs, and fruit in humid areas. Remove dead branches/twigs and rotten fallen fruits. Apply copper sprays at pre-flowering and fruit formation.',
+    advisorySnippetSW:
+      'AvoGuard: Scab huambukiza tishu changa (majani, vijiti, na matunda) kwenye maeneo yenye unyevunyevu. Ondoa matawi yaliyokufa na matunda yaliyooza. Tumia copper sprays kabla ya maua na wakati wa kuunda matunda.',
+
+    fieldPhotos: [
+      { title: 'Raised lesions', description: 'Small dark raised oval/elongated lesions', stage: 'Identification' },
+      { title: 'Corky fruit surface', description: 'Lesions coalesce and give a corky appearance on fruit surface', stage: 'Severity Assessment' },
+      { title: 'Sanitation', description: 'Remove dead twigs/branches and fallen rotten fruits', stage: 'Control' },
+      { title: 'Spray timing', description: 'Copper sprays at pre-flowering and fruit formation', stage: 'Control' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Cultural Controls',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Sanitation', description: 'Remove dead branches and twigs that harbor the fungus; remove fallen rotten fruits.', frequency: 'Routine', effectiveness: 'High' },
+          { name: 'Canopy management', description: 'Prune to reduce humidity and protect young tissues during susceptible stages.', frequency: 'Seasonal', effectiveness: 'Medium' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: Preventive Sprays',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Copper-based fungicides', description: 'Apply at pre-flowering and fruit formation to protect young tissues.', frequency: 'Per season program', effectiveness: 'Medium-High', supplier: 'Certified agro-dealers' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Chemical Controls (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Follow label and export requirements where applicable.',
+        practices: [
+          { name: 'Other approved fungicides', description: 'Use other approved products only if needed and rotate modes of action to reduce resistance risk.', phi: 'Per label', applicationRate: 'Per label', maxApplications: 'Per label', resistance: 'Rotate', registrationStatus: 'PCPB / local guidance' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Small dark spots slightly raised on young tissues; oval to elongated lesions',
+      'Lesions coalesce to a corky fruit surface (appearance affected more than internal quality)',
+      'Common in humid areas; young succulent tissues most susceptible',
+    ],
+    identificationSignsSW: [
+      'Madoa madogo meusi yaliyoinuka kidogo kwenye tishu changa; huwa duara au yamevutika',
+      'Madoa huungana na kufanya uso wa tunda kuwa wa “corky” (muonekano huathirika zaidi kuliko ndani ya tunda)',
+      'Hutokea sana maeneo yenye unyevunyevu; tishu changa ndizo huathirika zaidi',
+    ],
+
+    lifeCycle:
+      'Scab fungi readily infect young succulent tissues in humid conditions. Control focuses on sanitation and protecting young tissues with timely preventive sprays.',
+    lifeCycleSW:
+      'Kuvu wa scab huambukiza kwa urahisi tishu changa kwenye unyevunyevu. Udhibiti hulenga usafi wa shamba na kulinda tishu changa kwa nyunyizo za kinga kwa wakati.',
+
+    economicImpact:
+      'Scab reduces fruit appearance and market value, although internal fruit quality may remain acceptable. Prevention reduces grading losses.',
+    economicImpactSW:
+      'Scab hupunguza muonekano wa tunda na thamani sokoni ingawa ubora wa ndani unaweza kubaki sawa. Kuzuia hupunguza hasara za kupunguzwa daraja.',
+  },
+
+  'KB-PDF-011': {
+    id: 'KB-PDF-011',
+    title: 'Orchard Biosecurity: A Practical Checklist',
+    category: 'Best Practices',
+    tags: ['Biosecurity', 'Visitors', 'Tools', 'Vehicles', 'Records'],
+    lastUpdated: 'Mar 18, 2026',
+    views: 0,
+    severity: 'low',
+    activeUses: 0,
+    approvedContent: true,
+    ussdCode: null,
+    chemicalGate: 'open',
+    ipmLevel: 1,
+
+    advisorySnippetEN:
+      'AvoGuard: Adopt a farm biosecurity plan. Train staff, scout and record findings, check propagation material sources, keep tools/footwear clean, and disinfect equipment/vehicles to prevent pest spread.',
+    advisorySnippetSW:
+      'AvoGuard: Tumia mpango wa biosecurity shambani. Fundisha wafanyakazi, kagua na rekodi matokeo, hakiki chanzo cha miche, safisha zana/viatu, na ua vijidudu kwenye vifaa/magari kuzuia kuenea kwa wadudu.',
+
+    fieldPhotos: [
+      { title: 'Scouting records', description: 'Record scouting activities even when nothing is found', stage: 'Practice' },
+      { title: 'Propagation material checks', description: 'Check planting materials upon receipt and keep source records', stage: 'Practice' },
+      { title: 'Footbaths and brushes', description: 'Provide scrubbing brushes/footbaths for visitors and staff', stage: 'Practice' },
+      { title: 'Disinfection of tools', description: 'Disinfect pruning and grafting knives between seedlings or trees', stage: 'Practice' },
+    ],
+
+    ipmLadder: {
+      level1: {
+        title: 'Level 1: Core Biosecurity Practices',
+        icon: 'cultural',
+        status: 'open',
+        practices: [
+          { name: 'Pest awareness & training', description: 'Ensure orchard staff are familiar with common pests/diseases and how to detect/identify them.', frequency: 'Ongoing', effectiveness: 'High' },
+          { name: 'Scouting + records', description: 'Conduct regular scouting and record results even when nothing is found.', frequency: 'Routine', effectiveness: 'High' },
+          { name: 'Propagation material control', description: 'Thoroughly check propagation material on receipt and maintain records of planting material sources.', frequency: 'Every receipt', effectiveness: 'Very High' },
+          { name: 'Waste disposal', description: 'Dispose fallen/waste fruit and trimmings away from production and irrigation sources.', frequency: 'Routine', effectiveness: 'Medium-High' },
+        ],
+      },
+      level2: {
+        title: 'Level 2: People & Movement Controls',
+        icon: 'biological',
+        status: 'open',
+        practices: [
+          { name: 'Visitor hygiene', description: 'Ensure visitor/staff clothing, footwear, and tools are free of soil/plant matter before entering/leaving orchards.', frequency: 'Every visit', effectiveness: 'High' },
+          { name: 'Footbaths & scrubbing', description: 'Provide footbaths and scrubbing brushes to reduce pest movement via footwear.', frequency: 'Always available', effectiveness: 'Medium' },
+          { name: 'Designated parking', description: 'Use designated visitor parking and minimize vehicle movement in production areas.', frequency: 'Ongoing', effectiveness: 'Medium' },
+        ],
+      },
+      level3: {
+        title: 'Level 3: Equipment & Vehicle Disinfection (GATED)',
+        icon: 'chemical',
+        status: 'gated',
+        warning: 'Use disinfectant systems correctly; inspect equipment before entry.',
+        practices: [
+          { name: 'Vehicle disinfection', description: 'Use disinfectant troughs for vehicles and inspect machinery for pests/soil/plant material before entering production areas.', phi: 'N/A', applicationRate: 'N/A', maxApplications: 'N/A', resistance: 'N/A', registrationStatus: 'Operational practice' },
+          { name: 'Knife disinfection', description: 'Disinfect pruning/budding/grafting knives between seedlings or trees to prevent spread of pests/pathogens.', phi: 'N/A', applicationRate: 'N/A', maxApplications: 'N/A', resistance: 'N/A', registrationStatus: 'Operational practice' },
+        ],
+      },
+    },
+
+    identificationSigns: [
+      'Biosecurity is about preventing introduction and spread of pests in orchards',
+      'Critical areas: pests, product management, people, equipment/vehicles',
+      'Record scouting even when nothing is found',
+      'Keep tools/footwear/equipment free of soil and plant debris; disinfect between blocks/trees',
+    ],
+    identificationSignsSW: [
+      'Biosecurity ni hatua za kuzuia kuingia na kuenea kwa wadudu/magonjwa shambani',
+      'Maeneo muhimu: wadudu, usimamizi wa bidhaa/miche, watu, vifaa/magari',
+      'Rekodi ukaguzi (scouting) hata kama hakuna kilichopatikana',
+      'Hakikisha zana/viatu/vifaa havina udongo au mabaki ya mimea; ua vijidudu kati ya vitalu/miti',
+    ],
+
+    lifeCycle:
+      'Biosecurity is a continuous set of practices applied across orchard operations (people, product movement, tools, and vehicles) to prevent pest establishment and spread.',
+    lifeCycleSW:
+      'Biosecurity ni seti ya taratibu zinazoendelea kutekelezwa katika shughuli zote za shamba (watu, uhamishaji wa miche/mazao, zana, na magari) ili kuzuia wadudu kuanzishwa na kuenea.',
+
+    economicImpact:
+      'Strong biosecurity reduces pest spread, improves compliance, and lowers the risk of export interceptions/rejection by limiting pest introduction and movement between orchards.',
+    economicImpactSW:
+      'Biosecurity imara hupunguza kuenea kwa wadudu, huongeza ufuataji wa taratibu, na hupunguza hatari ya kukamatwa/kukataliwa kwenye masoko ya nje kwa kuzuia kuingizwa na kusambazwa kwa wadudu kati ya mashamba.',
+  },
   'KB-040': {
     id: 'KB-040',
     title: 'Anthracnose Disease Management',

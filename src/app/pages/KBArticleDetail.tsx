@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router';
 import { useState } from 'react';
 import { UseInAdvisoryButton } from '../components/UseInAdvisoryButton';
 import { articleData } from '../data/articleData';
+import { knowledgeBaseArticles, pdfMediaByArticleId } from '../data/knowledgeBase';
+import { OptimizedImage } from '../components/OptimizedImage';
 
 export function KBArticleDetail() {
   const navigate = useNavigate();
@@ -11,7 +13,24 @@ export function KBArticleDetail() {
   const [showChemicalGate, setShowChemicalGate] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   
-  const article = articleData[articleId || 'KB-045'];
+  const defaultId = knowledgeBaseArticles[0]?.id ?? 'KB-045';
+  const article = articleData[articleId || defaultId];
+  const pdfMedia = pdfMediaByArticleId[articleId || ''] ?? [];
+
+  const identificationSigns =
+    selectedLanguage === 'sw' && Array.isArray(article.identificationSignsSW)
+      ? article.identificationSignsSW
+      : article.identificationSigns;
+  const lifeCycle =
+    selectedLanguage === 'sw' && typeof article.lifeCycleSW === 'string'
+      ? article.lifeCycleSW
+      : article.lifeCycle;
+  const economicImpact =
+    selectedLanguage === 'sw' && typeof article.economicImpactSW === 'string'
+      ? article.economicImpactSW
+      : article.economicImpact;
+  const ipmLadder =
+    selectedLanguage === 'sw' && article.ipmLadderSW ? article.ipmLadderSW : article.ipmLadder;
   
   if (!article) {
     return (
@@ -81,7 +100,6 @@ export function KBArticleDetail() {
               <CheckCircle2 
                 className="w-6 h-6 flex-shrink-0" 
                 style={{ color: '#2D6A4F' }}
-                title="Approved Content"
               />
             )}
           </div>
@@ -150,6 +168,58 @@ export function KBArticleDetail() {
       <div className="grid grid-cols-1 gap-6 min-w-0 md:grid-cols-3 md:gap-8">
         {/* Left Column: Content */}
         <div className="col-span-2 space-y-6">
+          {/* Extracted PDF Slides */}
+          {pdfMedia.length > 0 && (
+            <div
+              className="rounded-lg border p-6"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <h2
+                className="mb-4"
+                style={{
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  color: '#1B4332',
+                  fontSize: '20px',
+                  fontWeight: 600,
+                }}
+              >
+                Reference slides (PDF)
+              </h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {pdfMedia.map((m) => (
+                  <div
+                    key={m.src}
+                    className="overflow-hidden rounded-lg border"
+                    style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF' }}
+                  >
+                    <OptimizedImage
+                      src={m.src}
+                      alt={m.title}
+                      width={1200}
+                      height={800}
+                      className="w-full"
+                      style={{ borderBottom: '1px solid #E0DDD6' }}
+                    />
+                    <div className="p-3">
+                      <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                        {m.title}
+                      </p>
+                      {m.pdfPage ? (
+                        <p className="mt-1 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                          PDF page {m.pdfPage}
+                        </p>
+                      ) : null}
+                      {m.caption ? (
+                        <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                          {m.caption}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Identification Section */}
           <div 
             className="p-6 rounded-lg border"
@@ -159,7 +229,7 @@ export function KBArticleDetail() {
               Identification Signs
             </h2>
             <ul className="space-y-2">
-              {article.identificationSigns.map((sign: string, index: number) => (
+              {identificationSigns.map((sign: string, index: number) => (
                 <li 
                   key={index}
                   className="flex items-start gap-3"
@@ -181,7 +251,7 @@ export function KBArticleDetail() {
               Life Cycle & Biology
             </h2>
             <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.8' }}>
-              {article.lifeCycle}
+              {lifeCycle}
             </p>
           </div>
 
@@ -194,7 +264,7 @@ export function KBArticleDetail() {
               Economic Impact
             </h2>
             <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.8' }}>
-              {article.economicImpact}
+              {economicImpact}
             </p>
           </div>
 
@@ -218,7 +288,7 @@ export function KBArticleDetail() {
                 </div>
                 <div className="flex-1">
                   <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '18px', fontWeight: 600 }}>
-                    {article.ipmLadder.level1.title}
+                    {ipmLadder.level1.title}
                   </h3>
                   <span 
                     className="text-xs px-2 py-1 rounded inline-flex items-center gap-1"
@@ -234,7 +304,7 @@ export function KBArticleDetail() {
                 </div>
               </div>
               <div className="space-y-4">
-                {article.ipmLadder.level1.practices.map((practice: any, index: number) => (
+                {ipmLadder.level1.practices.map((practice: any, index: number) => (
                   <div key={index} className="p-4 rounded border" style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF' }}>
                     <h4 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600, marginBottom: '8px' }}>
                       {practice.name}
@@ -244,11 +314,17 @@ export function KBArticleDetail() {
                     </p>
                     <div className="flex items-center gap-4 text-sm">
                       <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                        <strong style={{ color: '#1B4332' }}>Frequency:</strong> {practice.frequency}
+                        <strong style={{ color: '#1B4332' }}>
+                          {selectedLanguage === 'sw' ? 'Mara ngapi:' : 'Frequency:'}
+                        </strong>{' '}
+                        {practice.frequency}
                       </span>
                       <span style={{ color: '#E0DDD6' }}>•</span>
                       <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                        <strong style={{ color: '#1B4332' }}>Effectiveness:</strong> {practice.effectiveness}
+                        <strong style={{ color: '#1B4332' }}>
+                          {selectedLanguage === 'sw' ? 'Ufanisi:' : 'Effectiveness:'}
+                        </strong>{' '}
+                        {practice.effectiveness}
                       </span>
                     </div>
                   </div>
@@ -270,7 +346,7 @@ export function KBArticleDetail() {
                 </div>
                 <div className="flex-1">
                   <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '18px', fontWeight: 600 }}>
-                    {article.ipmLadder.level2.title}
+                    {ipmLadder.level2.title}
                   </h3>
                   <span 
                     className="text-xs px-2 py-1 rounded inline-flex items-center gap-1"
@@ -286,7 +362,7 @@ export function KBArticleDetail() {
                 </div>
               </div>
               <div className="space-y-4">
-                {article.ipmLadder.level2.practices.map((practice: any, index: number) => (
+                {ipmLadder.level2.practices.map((practice: any, index: number) => (
                   <div key={index} className="p-4 rounded border" style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF' }}>
                     <h4 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600, marginBottom: '8px' }}>
                       {practice.name}
@@ -296,17 +372,26 @@ export function KBArticleDetail() {
                     </p>
                     <div className="flex items-center gap-4 text-sm flex-wrap">
                       <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                        <strong style={{ color: '#1B4332' }}>Frequency:</strong> {practice.frequency}
+                        <strong style={{ color: '#1B4332' }}>
+                          {selectedLanguage === 'sw' ? 'Mara ngapi:' : 'Frequency:'}
+                        </strong>{' '}
+                        {practice.frequency}
                       </span>
                       <span style={{ color: '#E0DDD6' }}>•</span>
                       <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                        <strong style={{ color: '#1B4332' }}>Effectiveness:</strong> {practice.effectiveness}
+                        <strong style={{ color: '#1B4332' }}>
+                          {selectedLanguage === 'sw' ? 'Ufanisi:' : 'Effectiveness:'}
+                        </strong>{' '}
+                        {practice.effectiveness}
                       </span>
                       {practice.supplier && (
                         <>
                           <span style={{ color: '#E0DDD6' }}>•</span>
                           <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                            <strong style={{ color: '#1B4332' }}>Supplier:</strong> {practice.supplier}
+                            <strong style={{ color: '#1B4332' }}>
+                              {selectedLanguage === 'sw' ? 'Msambazaji:' : 'Supplier:'}
+                            </strong>{' '}
+                            {practice.supplier}
                           </span>
                         </>
                       )}
@@ -330,7 +415,7 @@ export function KBArticleDetail() {
                 </div>
                 <div className="flex-1">
                   <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '18px', fontWeight: 600 }}>
-                    {article.ipmLadder.level3.title}
+                    {ipmLadder.level3.title}
                   </h3>
                   <span 
                     className="text-xs px-2 py-1 rounded inline-flex items-center gap-1"

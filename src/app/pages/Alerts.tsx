@@ -1,6 +1,7 @@
 import { Bell, AlertTriangle, Info, CheckCircle, Clock, Map, FileText, Users, Settings, X, MapPin, TrendingUp, Eye, Radio, CheckCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { staticAlertRules } from '../data/alertRules';
 
 const alerts = [
   {
@@ -410,6 +411,68 @@ export function Alerts() {
           <p className="text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
             {complianceCount}
           </p>
+        </div>
+      </div>
+
+      {/* Static rules (documentation / guidance) */}
+      <div
+        className="mb-5 rounded-lg border p-4 sm:p-5"
+        style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2
+              className="text-lg"
+              style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}
+            >
+              Alert rules (static)
+            </h2>
+            <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              Reference thresholds from agronomy guidance (for UI only; can be wired to real-time triggers later).
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {staticAlertRules.map((r) => (
+            <div
+              key={r.id}
+              className="rounded-lg border p-4"
+              style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF', borderRadius: '8px' }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                  {r.title}
+                </p>
+                <span
+                  className="shrink-0 rounded px-2 py-1 text-xs"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    backgroundColor:
+                      r.severity === 'critical' ? '#DC262620' : r.severity === 'warning' ? '#D9770620' : '#DBEAFE',
+                    color:
+                      r.severity === 'critical' ? '#DC2626' : r.severity === 'warning' ? '#D97706' : '#1E40AF',
+                  }}
+                >
+                  {r.severity.toUpperCase()}
+                </span>
+              </div>
+              <ul className="mt-2 space-y-2">
+                {r.details.map((d, idx) => (
+                  <li
+                    key={idx}
+                    className="text-sm"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6' }}
+                  >
+                    - {d}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                Source: {r.source}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 

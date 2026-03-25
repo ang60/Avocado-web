@@ -2,6 +2,7 @@ import { ArrowLeft, Edit3, Phone, AlertTriangle, ExternalLink, Search, Download,
 import { useNavigate } from 'react-router';
 import { TableScroll } from '../components/TableScroll';
 import { useState } from 'react';
+import { internalSymptomCodes } from '../data/internalSymptomCodes';
 
 const ussdSymptomCodes = [
   {
@@ -126,6 +127,17 @@ const ussdSymptomCodes = [
   },
 ];
 
+const draftInternalCodes = internalSymptomCodes.map((c) => ({
+  code: c.code,
+  promptKiswahili: c.promptKiswahili,
+  promptEnglish: c.promptEnglish,
+  physicalSymptom: c.physicalSymptom,
+  linkedArticle: c.linkedArticle,
+  articleTitle: c.articleTitle,
+  severity: c.severity,
+  menuPath: c.menuPath ?? 'Draft',
+}));
+
 export function SymptomCodebook() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -173,7 +185,7 @@ export function SymptomCodebook() {
     }
   };
 
-  const filteredCodes = ussdSymptomCodes.filter(item => {
+  const filteredCodes = [...ussdSymptomCodes, ...draftInternalCodes].filter(item => {
     const matchesSearch = 
       item.code.includes(searchTerm) ||
       item.promptKiswahili.toLowerCase().includes(searchTerm.toLowerCase()) ||
