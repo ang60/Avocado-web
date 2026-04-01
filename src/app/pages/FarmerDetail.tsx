@@ -5,6 +5,7 @@ import {
   AlertCircle, CheckCircle, FileText, ArrowLeft, Download,
   Leaf, Users, Package, Clock, MessageSquare, FileCheck
 } from 'lucide-react';
+import { getApiErrorMessage } from '../api/errors';
 import { fetchFarmerDetail } from '../api/realApi';
 import type { FarmerDetailPayload } from '../api/types';
 
@@ -24,8 +25,8 @@ export function FarmerDetail() {
       .then((d) => {
         if (!cancelled) setData(d);
       })
-      .catch(() => {
-        if (!cancelled) setError('Could not load farmer details.');
+      .catch((e: unknown) => {
+        if (!cancelled) setError(getApiErrorMessage(e, 'Could not load farmer details.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

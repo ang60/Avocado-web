@@ -1,0 +1,18 @@
+DEBUG=0
+DATABASE_URL=postgresql://neondb_owner:npg_ykBW42zPfZqr@ep-lively-tree-amn1zhuj-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+DATABASE_URL_LOCAL=postgres://postgres:123Sampler!@localhost:5432/avo_guard
+
+ALLOWED_HOSTS=*
+SECRET_KEY=-4f9w736)v29picopg_b2cc*mw1nez8_u4y1d7l2&q0p(i_
+# Advanta SMS Settings
+ADVANTA_API_KEY=b34872f7e1657c7b12acd9c156f4b409
+ADVANTA_PARTNER_ID=12718
+ADVANTA_SHORT_CODE=COGNITRON
+
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(',')
+
+AWS_S3_ACCESS_KEY_ID=tid_qibJzYfJQLyKUEEUqvlFGVeJVlWkavcCGNwPoBHfohwBGRahfE
+AWS_S3_SECRET_ACCESS_KEY=tsec_YBmgDMj0Tg7sWY1vsP6d_KEB07+JuK5zhAJKfa0z8ri_Ty4N-whls8L6ja6vzXB_NMQyVf
+AWS_S3_REGION_NAME=auto
+AWS_STORAGE_BUCKET_NAME=functional-stand-5ckofx7u
+AWS_S3_ENDPOINT_URL=https://storage.railway.app

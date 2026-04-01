@@ -6,6 +6,10 @@ export type ReviewStatus = 'new' | 'under-review' | 'reviewed';
 
 export interface ScoutingFeedItem {
   id: string;
+  /** Farmer profile UUID from API — required to create a case from this row. */
+  farmerId?: string;
+  /** Farm block UUID when the submission is tied to a block. */
+  blockUuid?: string | null;
   farmName: string;
   blockId: string;
   farmerName: string;

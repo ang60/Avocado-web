@@ -1,7 +1,8 @@
 import { Search, ChevronRight, Bell, Settings, Menu } from 'lucide-react';
 import { useLocation } from 'react-router';
 import { AppLink } from './AppLink';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { getAuthUser } from '../auth';
 import { useSidebar } from '../context/SidebarContext';
 
 const routeNames: Record<string, string> = {
@@ -90,11 +91,18 @@ export function TopBar() {
   };
 
   const breadcrumbs = getBreadcrumbs();
-  const currentUser = {
-    name: 'Alice Omondi',
-    initials: 'AO',
-    role: 'Agronomist',
-  };
+  const currentUser = useMemo(() => {
+    const u = getAuthUser();
+    if (!u) {
+      return { name: 'User', initials: '—', role: '—' };
+    }
+    const name =
+      [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.phone_number || 'User';
+    const ri = `${u.first_name?.[0] ?? ''}${u.last_name?.[0] ?? ''}`.trim();
+    const initials = (ri || u.phone_number?.slice(-2) || '?').toUpperCase();
+    const role = u.role_details?.role_name?.trim() || 'User';
+    return { name, initials: initials.slice(0, 2), role };
+  }, [location.pathname]);
 
   return (
     <div 

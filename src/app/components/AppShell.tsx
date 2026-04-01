@@ -6,6 +6,7 @@ import { PageLoader } from './PageLoader';
 /**
  * Root shell: sidebar/topbar/footer stay mounted; only the outlet swaps on navigation
  * (client-side, no full document reload).
+ * Authenticated routes are gated by `requireAuthLoader` in routes.tsx.
  */
 export function AppShell() {
   return (

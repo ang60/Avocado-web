@@ -4,6 +4,7 @@ import {
   AlertTriangle, CheckCircle, Clock, MessageSquare, FileText, Send, Shield
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router';
+import { getApiErrorMessage } from '../api/errors';
 import { fetchCaseDetail } from '../api/realApi';
 import type { CaseDetailPayload } from '../api/types';
 
@@ -29,8 +30,8 @@ export function CaseDetail() {
       .then((d) => {
         if (!cancelled) setData(d);
       })
-      .catch(() => {
-        if (!cancelled) setError('Could not load case details.');
+      .catch((e: unknown) => {
+        if (!cancelled) setError(getApiErrorMessage(e, 'Could not load case details.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

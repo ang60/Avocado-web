@@ -1,6 +1,21 @@
 import { lazy, type ComponentType } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
+import { isAuthenticated } from './auth';
 import { AppShell } from './components/AppShell';
+
+function requireAuthLoader() {
+  if (!isAuthenticated()) {
+    return redirect('/login');
+  }
+  return null;
+}
+
+function loginLoader() {
+  if (isAuthenticated()) {
+    return redirect('/dashboard');
+  }
+  return null;
+}
 
 function lazyRoute<T extends Record<string, ComponentType<object>>>(
   importer: () => Promise<T>,
@@ -17,10 +32,12 @@ function lazyRoute<T extends Record<string, ComponentType<object>>>(
 export const router = createBrowserRouter([
   {
     path: '/login',
+    loader: loginLoader,
     Component: lazyRoute(() => import('./pages/Login'), 'Login'),
   },
   {
     path: '/',
+    loader: requireAuthLoader,
     Component: AppShell,
     children: [
       {

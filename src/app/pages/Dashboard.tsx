@@ -4,6 +4,7 @@ import { KenyaHeatMap } from '../components/KenyaHeatMap';
 import { TriageCaseModal } from '../components/TriageCaseModal';
 import { ScoutingRecordModal } from '../components/ScoutingRecordModal';
 import { useState, useEffect } from 'react';
+import { getApiErrorMessage } from '../api/errors';
 import { fetchDashboard } from '../api/realApi';
 import { useIsNarrowPhone } from '../hooks/useMediaQuery';
 import { TableScroll } from '../components/TableScroll';
@@ -32,8 +33,8 @@ export function Dashboard() {
       .then((d) => {
         if (!cancelled) setData(d);
       })
-      .catch(() => {
-        if (!cancelled) setLoadError('Could not load dashboard data.');
+      .catch((e: unknown) => {
+        if (!cancelled) setLoadError(getApiErrorMessage(e, 'Could not load dashboard data.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -49,7 +50,7 @@ export function Dashboard() {
         <div className="p-8 rounded-lg border text-center" style={{ borderColor: '#E0DDD6' }}>
           <p style={{ color: '#b45309', fontFamily: 'IBM Plex Sans, sans-serif' }}>{loadError}</p>
           <p className="text-sm mt-2" style={{ color: '#717182' }}>
-            Using placeholder API — check console or run again.
+            Ensure the backend is running, you are signed in, and VITE_API_BASE_URL points to your API.
           </p>
         </div>
       </>

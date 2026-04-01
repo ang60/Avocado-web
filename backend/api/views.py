@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.db.models import Count, Q
 from django.db.models.functions import TruncWeek
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,6 +19,7 @@ from .serializers import (
     AlertRuleSerializer,
     AppPermissionSerializer,
     AuthUserSerializer,
+    CaseCreateSerializer,
     CaseDetailSerializer,
     CaseManagementRowSerializer,
     EntitySerializer,
@@ -450,8 +451,13 @@ class FarmerViewSet(viewsets.ReadOnlyModelViewSet):
         return FarmerListSerializer
 
 
-class CaseViewSet(viewsets.ReadOnlyModelViewSet):
+class CaseViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Case.objects.select_related('farmer', 'farmer__user', 'block').all()
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [CanManageScoutingReview()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -467,9 +473,18 @@ class CaseViewSet(viewsets.ReadOnlyModelViewSet):
         return qs.none()
 
     def get_serializer_class(self):
+        if self.action == 'create':
+            return CaseCreateSerializer
         if self.action == 'retrieve':
             return CaseDetailSerializer
         return CaseManagementRowSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        case = serializer.save()
+        out = CaseManagementRowSerializer(case, context=self.get_serializer_context())
+        return Response(out.data, status=status.HTTP_201_CREATED)
 
 
 class CaseManagementView(APIView):

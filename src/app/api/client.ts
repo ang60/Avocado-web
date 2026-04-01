@@ -1,4 +1,4 @@
-import { getAccessToken } from '../auth';
+import { clearAuthSession, getAccessToken } from '../auth';
 
 export const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
 
@@ -39,6 +39,12 @@ export async function apiRequest<T>(
 
   const res = await fetch(buildUrl(path), { ...init, headers });
   if (!res.ok) {
+    if (auth && res.status === 401) {
+      clearAuthSession();
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login');
+      }
+    }
     const bodyText = await res.text().catch(() => '');
     throw new ApiError(`Request failed (${res.status}) ${res.statusText}`, res.status, bodyText);
   }

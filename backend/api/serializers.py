@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import AlertRule, AppPermission, Case, Entity, FarmBlock, FarmerProfile, Role, ScoutingReport, User
-from .rbac import ROLE_FARMER, is_admin_like, role_name
+from .rbac import ROLE_AGRONOMIST, ROLE_FARMER, is_admin_like, role_name
 
 
 class AppPermissionSerializer(serializers.ModelSerializer):
@@ -362,6 +362,107 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
         ]
 
 
+class CaseCreateSerializer(serializers.ModelSerializer):
+    """Create a case from the scouting feed (or manually). Links optional scouting_report → related_case."""
+
+    scouting_report = serializers.PrimaryKeyRelatedField(
+        queryset=ScoutingReport.objects.all(), write_only=True, required=False, allow_null=True
+    )
+
+    class Meta:
+        model = Case
+        fields = (
+            'farmer',
+            'block',
+            'scouting_report',
+            'pest_disease',
+            'pest_disease_kiswahili',
+            'severity',
+            'notes',
+            'assigned_agronomist',
+            'affected_trees',
+            'scout_name',
+            'scout_phone',
+            'submission_channel',
+        )
+        extra_kwargs = {
+            'farmer': {'required': True},
+            'block': {'required': False, 'allow_null': True},
+            'pest_disease': {'required': False, 'allow_blank': True},
+            'pest_disease_kiswahili': {'required': False, 'allow_blank': True},
+            'severity': {'required': False},
+            'notes': {'required': False, 'allow_blank': True},
+            'assigned_agronomist': {'required': False, 'allow_null': True},
+            'affected_trees': {'required': False},
+            'scout_name': {'required': False, 'allow_blank': True},
+            'scout_phone': {'required': False, 'allow_blank': True},
+            'submission_channel': {'required': False, 'allow_blank': True},
+        }
+
+    def validate(self, attrs):
+        farmer = attrs.get('farmer')
+        block = attrs.get('block')
+        report = attrs.get('scouting_report')
+        if block and farmer and block.farmer_id != farmer.id:
+            raise serializers.ValidationError({'block': 'Block does not belong to this farmer.'})
+        if report:
+            if report.related_case_id:
+                raise serializers.ValidationError(
+                    {'scouting_report': 'This scouting submission already has a linked case.'}
+                )
+            if farmer and report.farmer_id != farmer.id:
+                raise serializers.ValidationError({'scouting_report': 'Report does not match farmer.'})
+            if block and report.block_id and report.block_id != block.id:
+                raise serializers.ValidationError({'block': 'Block does not match scouting report.'})
+        if not report and not (attrs.get('pest_disease') or '').strip():
+            raise serializers.ValidationError(
+                {'pest_disease': 'Provide a case title/issue or link a scouting report.'}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        from django.utils import timezone as dj_tz
+
+        report = validated_data.pop('scouting_report', None)
+        request = self.context.get('request')
+
+        if report:
+            if not (validated_data.get('pest_disease') or '').strip():
+                validated_data['pest_disease'] = (report.finding or '').strip() or 'Scouting follow-up'
+            sev = validated_data.get('severity')
+            if not sev or sev == Case.Severity.UNKNOWN:
+                if report.severity in (Case.Severity.HIGH, Case.Severity.MEDIUM, Case.Severity.LOW):
+                    validated_data['severity'] = report.severity
+                else:
+                    validated_data['severity'] = Case.Severity.MEDIUM
+            if not (validated_data.get('submission_channel') or '').strip():
+                validated_data['submission_channel'] = (
+                    'ussd' if report.source == ScoutingReport.Source.USSD else 'smartphone'
+                )
+            if not (validated_data.get('scout_name') or '').strip():
+                validated_data['scout_name'] = (report.scout_name or '').strip() or (report.farmer.name or '')
+            if not validated_data.get('block') and report.block_id:
+                validated_data['block'] = report.block
+
+        validated_data.setdefault('date_submitted', dj_tz.now())
+        validated_data.setdefault('status', 'new')
+        if not validated_data.get('severity'):
+            validated_data['severity'] = Case.Severity.UNKNOWN
+
+        if 'assigned_agronomist' not in validated_data:
+            if request and request.user.is_authenticated and role_name(request.user) == ROLE_AGRONOMIST:
+                validated_data['assigned_agronomist'] = request.user
+
+        case = Case.objects.create(**validated_data)
+
+        if report:
+            report.related_case = case
+            report.reviewed = ScoutingReport.ReviewStatus.UNDER_REVIEW
+            report.save(update_fields=['related_case', 'reviewed'])
+
+        return case
+
+
 class CaseManagementRowSerializer(serializers.ModelSerializer):
     farm = serializers.CharField(source='farmer.farm_name')
     block = serializers.SerializerMethodField()
@@ -480,7 +581,10 @@ class CaseDetailSerializer(serializers.ModelSerializer):
 
 
 class ScoutingFeedItemSerializer(serializers.ModelSerializer):
+    # Orchard / holding trade name (optional in UI; feed leads with farmer.name).
     farmName = serializers.CharField(source='farmer.farm_name')
+    farmerId = serializers.UUIDField(source='farmer_id', read_only=True)
+    blockUuid = serializers.UUIDField(source='block_id', read_only=True, allow_null=True)
     blockId = serializers.SerializerMethodField()
     farmerName = serializers.CharField(source='farmer.name')
     mediaPreview = serializers.CharField(source='media_preview', allow_blank=True)
@@ -493,6 +597,8 @@ class ScoutingFeedItemSerializer(serializers.ModelSerializer):
         model = ScoutingReport
         fields = (
             'id',
+            'farmerId',
+            'blockUuid',
             'farmName',
             'blockId',
             'farmerName',

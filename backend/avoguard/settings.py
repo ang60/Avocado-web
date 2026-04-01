@@ -85,6 +85,10 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ]
+# Comma-separated extra origins for production, e.g. https://avoguard.example.com
+_cors_extra = os.environ.get('DJANGO_CORS_ORIGINS', '').strip()
+if _cors_extra:
+    CORS_ALLOWED_ORIGINS.extend([o.strip() for o in _cors_extra.split(',') if o.strip()])
 CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {

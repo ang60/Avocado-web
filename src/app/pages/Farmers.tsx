@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getApiErrorMessage } from '../api/errors';
 import { fetchFarmersList } from '../api/realApi';
 import type { FarmerListRow } from '../api/types';
 import { 
@@ -135,8 +136,8 @@ export function Farmers() {
           setFarmersError(null);
         }
       })
-      .catch(() => {
-        if (!cancelled) setFarmersError('Could not load farmers.');
+      .catch((e: unknown) => {
+        if (!cancelled) setFarmersError(getApiErrorMessage(e, 'Could not load farmers.'));
       })
       .finally(() => {
         if (!cancelled) setFarmersLoading(false);

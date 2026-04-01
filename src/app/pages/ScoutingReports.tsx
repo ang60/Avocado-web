@@ -1,13 +1,35 @@
 import { Search, Smartphone, Phone, CheckCircle, AlertCircle, Image as ImageIcon, Plus, Eye, X } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { OptimizedImage } from '../components/OptimizedImage';
 
-import type { ScoutingFeedItem } from '../api/types';
-import { fetchScoutingFeed } from '../api/realApi';
+import type { ScoutingFeedItem, SeverityLevel } from '../api/types';
+import { getApiErrorMessage } from '../api/errors';
+import { createCaseFromScouting, fetchScoutingFeed } from '../api/realApi';
 import { getAuthUser } from '../auth';
 
 type FilterType = 'all' | 'needs-review' | 'my-assigned' | 'ussd';
+
+/** Feed emphasizes the registered farmer (person), not the orchard/holding trade name. */
+function scoutingPrimaryName(item: ScoutingFeedItem): string {
+  return item.farmerName?.trim() || 'Farmer';
+}
+
+function scoutingBlockAndCounty(item: ScoutingFeedItem): string {
+  const block = item.blockId?.trim();
+  const county = item.county?.trim();
+  const parts: string[] = [];
+  if (block) parts.push(`Block ${block}`);
+  if (county) parts.push(county);
+  return parts.join(' • ') || '—';
+}
+
+/** Optional orchard/holding label — only when it adds detail beyond the farmer name. */
+function scoutingHoldingNote(item: ScoutingFeedItem): string | null {
+  const h = item.farmName?.trim();
+  if (!h || h === item.farmerName?.trim()) return null;
+  return h;
+}
 
 export function ScoutingReports() {
   const navigate = useNavigate();
@@ -20,6 +42,70 @@ export function ScoutingReports() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [reviewModalItem, setReviewModalItem] = useState<ScoutingFeedItem | null>(null);
   const [createCaseModalItem, setCreateCaseModalItem] = useState<ScoutingFeedItem | null>(null);
+  const [createCaseTitle, setCreateCaseTitle] = useState('');
+  const [createCaseSeverity, setCreateCaseSeverity] = useState<SeverityLevel>('medium');
+  const [createCaseNotes, setCreateCaseNotes] = useState('');
+  const [assignCaseToMe, setAssignCaseToMe] = useState(true);
+  const [createCaseError, setCreateCaseError] = useState<string | null>(null);
+  const [createCaseSubmitting, setCreateCaseSubmitting] = useState(false);
+
+  const isAgronomistUser = getAuthUser()?.role_details?.role_name === 'Agronomist';
+
+  useEffect(() => {
+    if (!createCaseModalItem) {
+      setCreateCaseError(null);
+      setCreateCaseSubmitting(false);
+      return;
+    }
+    setCreateCaseTitle(
+      `${createCaseModalItem.finding} — ${scoutingPrimaryName(createCaseModalItem)}`.trim()
+    );
+    const sev = createCaseModalItem.severity;
+    setCreateCaseSeverity(sev === 'high' || sev === 'low' || sev === 'medium' ? sev : 'medium');
+    setCreateCaseNotes('');
+    setAssignCaseToMe(true);
+  }, [createCaseModalItem]);
+
+  const submitCreateCase = useCallback(async () => {
+    const item = createCaseModalItem;
+    if (!item) return;
+    if (!item.farmerId) {
+      setCreateCaseError('This row has no farmer id. Refresh the scouting feed and try again.');
+      return;
+    }
+    const title = createCaseTitle.trim();
+    if (!title) {
+      setCreateCaseError('Enter a case title (pest / issue).');
+      return;
+    }
+    setCreateCaseSubmitting(true);
+    setCreateCaseError(null);
+    try {
+      const row = await createCaseFromScouting({
+        farmer: item.farmerId,
+        scouting_report: item.id,
+        pest_disease: title,
+        severity: createCaseSeverity,
+        notes: createCaseNotes.trim() || undefined,
+        block: item.blockUuid || undefined,
+        assigned_agronomist: isAgronomistUser ? (assignCaseToMe ? undefined : null) : undefined,
+      });
+      setCreateCaseModalItem(null);
+      navigate(`/case-management/${row.id}`);
+    } catch (e: unknown) {
+      setCreateCaseError(getApiErrorMessage(e, 'Could not create case.'));
+    } finally {
+      setCreateCaseSubmitting(false);
+    }
+  }, [
+    createCaseModalItem,
+    createCaseTitle,
+    createCaseSeverity,
+    createCaseNotes,
+    assignCaseToMe,
+    isAgronomistUser,
+    navigate,
+  ]);
 
   const currentUser = useMemo(() => {
     const u = getAuthUser();
@@ -36,8 +122,8 @@ export function ScoutingReports() {
       .then((rows) => {
         if (!cancelled) setScoutingFeed(rows);
       })
-      .catch(() => {
-        if (!cancelled) setLoadError('Could not load scouting feed.');
+      .catch((e: unknown) => {
+        if (!cancelled) setLoadError(getApiErrorMessage(e, 'Could not load scouting feed.'));
       })
       .finally(() => {
         if (!cancelled) setLoadingFeed(false);
@@ -599,7 +685,7 @@ export function ScoutingReports() {
                       fontWeight: '600',
                     }}
                   >
-                    {item.farmName} - {item.blockId}
+                    {scoutingPrimaryName(item)}
                   </p>
                   <p
                     className="mt-0.5 text-xs break-words"
@@ -608,7 +694,12 @@ export function ScoutingReports() {
                       color: '#717182',
                     }}
                   >
-                    {item.farmerName} • {item.county}
+                    {scoutingBlockAndCounty(item)}
+                    {scoutingHoldingNote(item) ? (
+                      <span className="block text-[11px] text-[#9ca3af] mt-0.5">
+                        Holding: {scoutingHoldingNote(item)}
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <p
@@ -693,7 +784,7 @@ export function ScoutingReports() {
                         fontWeight: '600',
                       }}
                     >
-                      {item.farmName} - {item.blockId}
+                      {scoutingPrimaryName(item)}
                     </p>
                   </div>
                   <p
@@ -703,8 +794,19 @@ export function ScoutingReports() {
                       color: '#717182',
                     }}
                   >
-                    {item.farmerName} • {item.county}
+                    {scoutingBlockAndCounty(item)}
                   </p>
+                  {scoutingHoldingNote(item) ? (
+                    <p
+                      className="text-[11px] mt-0.5"
+                      style={{
+                        fontFamily: 'IBM Plex Sans, sans-serif',
+                        color: '#9ca3af',
+                      }}
+                    >
+                      Holding: {scoutingHoldingNote(item)}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="px-3 py-2 sm:px-4">
                   <p
@@ -795,7 +897,8 @@ export function ScoutingReports() {
                   Review Submission
                 </h2>
                 <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  {reviewModalItem.farmName} - {reviewModalItem.blockId}
+                  {scoutingPrimaryName(reviewModalItem)} · {scoutingBlockAndCounty(reviewModalItem)}
+                  {scoutingHoldingNote(reviewModalItem) ? ` · ${scoutingHoldingNote(reviewModalItem)}` : ''}
                 </p>
               </div>
               <button
@@ -1083,11 +1186,16 @@ export function ScoutingReports() {
                   </div>
                   <div>
                     <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                      Location:
+                      Block and county:
                     </p>
                     <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                      {createCaseModalItem.farmName} - {createCaseModalItem.blockId}
+                      {scoutingBlockAndCounty(createCaseModalItem)}
                     </p>
+                    {scoutingHoldingNote(createCaseModalItem) ? (
+                      <p className="text-xs mt-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#9ca3af' }}>
+                        Holding: {scoutingHoldingNote(createCaseModalItem)}
+                      </p>
+                    ) : null}
                   </div>
                   <div>
                     <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -1115,11 +1223,12 @@ export function ScoutingReports() {
                     className="block text-xs uppercase tracking-wider mb-2"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
                   >
-                    Case Title
+                    Case title (pest / issue)
                   </label>
                   <input
                     type="text"
-                    defaultValue={`${createCaseModalItem.finding} - ${createCaseModalItem.farmName}`}
+                    value={createCaseTitle}
+                    onChange={(e) => setCreateCaseTitle(e.target.value)}
                     className="w-full px-4 py-2 rounded-lg border outline-none focus:ring-2 transition-all"
                     style={{
                       fontFamily: 'IBM Plex Sans, sans-serif',
@@ -1130,38 +1239,30 @@ export function ScoutingReports() {
                   />
                 </div>
 
-                <div>
-                  <label 
-                    className="block text-xs uppercase tracking-wider mb-2"
-                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
-                  >
-                    Assign To
+                {isAgronomistUser ? (
+                  <label className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={assignCaseToMe}
+                      onChange={(e) => setAssignCaseToMe(e.target.checked)}
+                      style={{ accentColor: '#2D6A4F' }}
+                    />
+                    <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}>
+                      Assign this case to me
+                    </span>
                   </label>
-                  <select
-                    defaultValue="Dr. James Kariuki"
-                    className="w-full px-4 py-2 rounded-lg border outline-none focus:ring-2 transition-all"
-                    style={{
-                      fontFamily: 'IBM Plex Sans, sans-serif',
-                      borderColor: '#E0DDD6',
-                      borderRadius: '8px',
-                      color: '#1B4332',
-                    }}
-                  >
-                    <option>Dr. James Kariuki</option>
-                    <option>Dr. Sarah Mwangi</option>
-                    <option>Dr. John Maina</option>
-                  </select>
-                </div>
+                ) : null}
 
                 <div>
                   <label 
                     className="block text-xs uppercase tracking-wider mb-2"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
                   >
-                    Priority
+                    Severity
                   </label>
                   <select
-                    defaultValue={createCaseModalItem.severity}
+                    value={createCaseSeverity}
+                    onChange={(e) => setCreateCaseSeverity(e.target.value as SeverityLevel)}
                     className="w-full px-4 py-2 rounded-lg border outline-none focus:ring-2 transition-all"
                     style={{
                       fontFamily: 'IBM Plex Sans, sans-serif',
@@ -1181,10 +1282,12 @@ export function ScoutingReports() {
                     className="block text-xs uppercase tracking-wider mb-2"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
                   >
-                    Initial Notes
+                    Initial notes
                   </label>
                   <textarea
                     rows={4}
+                    value={createCaseNotes}
+                    onChange={(e) => setCreateCaseNotes(e.target.value)}
                     placeholder="Add initial observations or recommendations..."
                     className="w-full px-4 py-3 rounded-lg border outline-none focus:ring-2 transition-all"
                     style={{
@@ -1200,12 +1303,20 @@ export function ScoutingReports() {
 
             {/* Modal Footer */}
             <div 
-              className="p-6 border-t flex items-center justify-between"
+              className="p-6 border-t flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
               style={{ borderColor: '#E0DDD6' }}
             >
+              {createCaseError ? (
+                <p className="text-sm sm:order-first sm:flex-1" style={{ color: '#b45309', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                  {createCaseError}
+                </p>
+              ) : null}
+              <div className="flex w-full justify-end gap-2 sm:w-auto">
               <button
+                type="button"
+                disabled={createCaseSubmitting}
                 onClick={() => setCreateCaseModalItem(null)}
-                className="px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
                 style={{
                   borderColor: '#E0DDD6',
                   color: '#717182',
@@ -1217,14 +1328,10 @@ export function ScoutingReports() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  const caseTitle = `${createCaseModalItem.finding} - ${createCaseModalItem.farmName}`;
-                  console.log('Creating case:', caseTitle);
-                  alert(`Case created: ${caseTitle}\n\nRedirecting to Case Management...`);
-                  setCreateCaseModalItem(null);
-                  navigate('/case-management');
-                }}
-                className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center gap-2"
+                type="button"
+                disabled={createCaseSubmitting || !createCaseTitle.trim()}
+                onClick={() => void submitCreateCase()}
+                className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center gap-2 disabled:opacity-50"
                 style={{
                   backgroundColor: '#2D6A4F',
                   color: '#FFFFFF',
@@ -1234,8 +1341,9 @@ export function ScoutingReports() {
                 }}
               >
                 <Plus className="w-4 h-4" />
-                Create Case
+                {createCaseSubmitting ? 'Creating…' : 'Create Case'}
               </button>
+              </div>
             </div>
           </div>
         </div>

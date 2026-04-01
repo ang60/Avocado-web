@@ -1,6 +1,8 @@
+import { AppLink } from '../components/AppLink';
 import { KPICards } from '../components/KPICards';
 import { CaseTableEnhanced } from '../components/CaseTableEnhanced';
 import { useEffect, useState } from 'react';
+import { getApiErrorMessage } from '../api/errors';
 import { fetchCaseManagement } from '../api/realApi';
 import type { CaseManagementPayload } from '../api/types';
 
@@ -18,8 +20,8 @@ export function CaseManagement() {
           setError(null);
         }
       })
-      .catch(() => {
-        if (!cancelled) setError('Could not load case management data.');
+      .catch((e: unknown) => {
+        if (!cancelled) setError(getApiErrorMessage(e, 'Could not load case management data.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -64,7 +66,7 @@ export function CaseManagement() {
             {error ?? 'No data available.'}
           </p>
           <p className="text-sm mt-2" style={{ color: '#717182' }}>
-            Using placeholder API — check the network tab or try again.
+            Check that the API is running and you are signed in with a role that can view cases.
           </p>
         </div>
       </>
@@ -88,6 +90,37 @@ export function CaseManagement() {
         </p>
       </header>
       <KPICards kpis={data.kpis} />
+      <div
+        className="mb-4 rounded-lg border p-4"
+        style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF' }}
+      >
+        <p
+          className="mb-2 text-sm font-semibold"
+          style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
+        >
+          What to do next
+        </p>
+        <ol
+          className="list-inside list-decimal space-y-1.5 text-sm"
+          style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+        >
+          <li>
+            Click a case row to open <strong>case detail</strong>: review symptoms, confirm diagnosis, and record
+            advisories or follow-up.
+          </li>
+          <li>
+            Use the <AppLink to="/dashboard" className="underline" style={{ color: '#2D6A4F' }}>Dashboard</AppLink>{' '}
+            triage list for the newest open cases.
+          </li>
+          <li>
+            New field submissions live under{' '}
+            <AppLink to="/scouting-reports" className="underline" style={{ color: '#2D6A4F' }}>
+              Scouting Reports
+            </AppLink>
+            — escalate to a case when a finding needs agronomist action.
+          </li>
+        </ol>
+      </div>
       <CaseTableEnhanced cases={data.cases} />
     </>
   );
