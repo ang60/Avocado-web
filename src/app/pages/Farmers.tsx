@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchFarmersList } from '../api/placeholderApi';
+import { fetchFarmersList } from '../api/realApi';
 import type { FarmerListRow } from '../api/types';
 import { 
   ArrowUpDown, Filter, Smartphone, Phone, 

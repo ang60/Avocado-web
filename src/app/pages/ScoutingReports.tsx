@@ -1,209 +1,19 @@
 import { Search, Smartphone, Phone, CheckCircle, AlertCircle, Image as ImageIcon, Plus, Eye, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { OptimizedImage } from '../components/OptimizedImage';
 
-type SubmissionSource = 'app' | 'ussd';
-type SeverityLevel = 'high' | 'medium' | 'low';
-type ReviewStatus = 'new' | 'under-review' | 'reviewed';
-
-interface ScoutingFeedItem {
-  id: string;
-  farmName: string;
-  blockId: string;
-  farmerName: string;
-  severity: SeverityLevel;
-  source: SubmissionSource;
-  finding: string;
-  status: 'clean' | 'detected';
-  mediaPreview?: string; // Image URL for app submissions
-  ussdCode?: string; // USSD code for USSD submissions
-  timestamp: string;
-  reviewed: ReviewStatus;
-  county: string;
-  assignedTo?: string; // Agronomist assigned to
-}
-
-const scoutingFeed: ScoutingFeedItem[] = [
-  {
-    id: 'SF-2145',
-    farmName: 'Wanjiru Farm',
-    blockId: 'Block B',
-    farmerName: 'Grace Wanjiru',
-    severity: 'high',
-    source: 'app',
-    finding: 'False Codling Moth',
-    status: 'detected',
-    mediaPreview: 'https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?w=100&h=100&fit=crop',
-    timestamp: '14 Mar, 08:30',
-    reviewed: 'new',
-    county: 'Murang\'a',
-    assignedTo: 'Dr. James Kariuki',
-  },
-  {
-    id: 'SF-2144',
-    farmName: 'Kipchirchir Estates',
-    blockId: 'Block A-12',
-    farmerName: 'David Kipchirchir',
-    severity: 'low',
-    source: 'app',
-    finding: 'No Pests Found',
-    status: 'clean',
-    mediaPreview: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=100&h=100&fit=crop',
-    timestamp: '14 Mar, 08:15',
-    reviewed: 'reviewed',
-    county: 'Kiambu',
-  },
-  {
-    id: 'SF-2143',
-    farmName: 'Mwangi Holdings',
-    blockId: 'Block C',
-    farmerName: 'Peter Mwangi',
-    severity: 'high',
-    source: 'ussd',
-    finding: 'Root Rot Suspected',
-    status: 'detected',
-    ussdCode: '*104',
-    timestamp: '14 Mar, 07:45',
-    reviewed: 'new',
-    county: 'Murang\'a',
-    assignedTo: 'Dr. James Kariuki',
-  },
-  {
-    id: 'SF-2142',
-    farmName: 'Njeri Orchards',
-    blockId: 'Block D-05',
-    farmerName: 'Faith Njeri',
-    severity: 'low',
-    source: 'app',
-    finding: 'No Pests Found',
-    status: 'clean',
-    mediaPreview: 'https://images.unsplash.com/photo-1590411806458-57ad1f1e8c4e?w=100&h=100&fit=crop',
-    timestamp: '13 Mar, 16:20',
-    reviewed: 'reviewed',
-    county: 'Meru',
-  },
-  {
-    id: 'SF-2141',
-    farmName: 'Kimani Avocado Co.',
-    blockId: 'Block F-03',
-    farmerName: 'John Kimani',
-    severity: 'medium',
-    source: 'ussd',
-    finding: 'Thrips Detected',
-    status: 'detected',
-    ussdCode: '*105',
-    timestamp: '13 Mar, 14:10',
-    reviewed: 'under-review',
-    county: 'Kiambu',
-    assignedTo: 'Dr. Sarah Mwangi',
-  },
-  {
-    id: 'SF-2140',
-    farmName: 'Wambui Valley Farm',
-    blockId: 'Block E-02',
-    farmerName: 'Mary Wambui',
-    severity: 'low',
-    source: 'app',
-    finding: 'No Pests Found',
-    status: 'clean',
-    mediaPreview: 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=100&h=100&fit=crop',
-    timestamp: '13 Mar, 11:45',
-    reviewed: 'reviewed',
-    county: 'Nyeri',
-  },
-  {
-    id: 'SF-2139',
-    farmName: 'Omondi Green Valley',
-    blockId: 'Block G',
-    farmerName: 'Samuel Omondi',
-    severity: 'high',
-    source: 'ussd',
-    finding: 'Fruit Fly Infestation',
-    status: 'detected',
-    ussdCode: '*102',
-    timestamp: '13 Mar, 09:30',
-    reviewed: 'new',
-    county: 'Bungoma',
-  },
-  {
-    id: 'SF-2138',
-    farmName: 'Kariuki Farms',
-    blockId: 'Block H-08',
-    farmerName: 'Joseph Kariuki',
-    severity: 'medium',
-    source: 'app',
-    finding: 'Scale Insects',
-    status: 'detected',
-    mediaPreview: 'https://images.unsplash.com/photo-1587735243615-c03f25aaff15?w=100&h=100&fit=crop',
-    timestamp: '12 Mar, 15:50',
-    reviewed: 'new',
-    county: 'Kiambu',
-  },
-  {
-    id: 'SF-2137',
-    farmName: 'Wanjiru Estates',
-    blockId: 'Block K-01',
-    farmerName: 'Lucy Wanjiru',
-    severity: 'low',
-    source: 'app',
-    finding: 'No Pests Found',
-    status: 'clean',
-    mediaPreview: 'https://images.unsplash.com/photo-1587735243615-c03f25aaff15?w=100&h=100&fit=crop',
-    timestamp: '12 Mar, 13:20',
-    reviewed: 'reviewed',
-    county: 'Embu',
-  },
-  {
-    id: 'SF-2136',
-    farmName: 'Mutua Orchards',
-    blockId: 'Block J',
-    farmerName: 'Daniel Mutua',
-    severity: 'medium',
-    source: 'ussd',
-    finding: 'Leaf Miner Detected',
-    status: 'detected',
-    ussdCode: '*108',
-    timestamp: '12 Mar, 10:15',
-    reviewed: 'under-review',
-    county: 'Machakos',
-    assignedTo: 'Dr. John Maina',
-  },
-  {
-    id: 'SF-2135',
-    farmName: 'Kamau Farm',
-    blockId: 'Block C',
-    farmerName: 'James Kamau',
-    severity: 'high',
-    source: 'app',
-    finding: 'False Codling Moth Detected',
-    status: 'detected',
-    mediaPreview: 'https://images.unsplash.com/photo-1516253593875-bd7ba052fbc5?w=100&h=100&fit=crop',
-    timestamp: '12 Mar, 09:05',
-    reviewed: 'new',
-    county: 'Kiambu',
-    assignedTo: 'Dr. James Kariuki',
-  },
-  {
-    id: 'SF-2134',
-    farmName: 'Njoroge Orchards',
-    blockId: 'Block M-07',
-    farmerName: 'Anne Njoroge',
-    severity: 'medium',
-    source: 'ussd',
-    finding: 'Anthracnose Detected',
-    status: 'detected',
-    ussdCode: '*103',
-    timestamp: '11 Mar, 16:40',
-    reviewed: 'new',
-    county: 'Nyeri',
-  },
-];
+import type { ScoutingFeedItem } from '../api/types';
+import { fetchScoutingFeed } from '../api/realApi';
+import { getAuthUser } from '../auth';
 
 type FilterType = 'all' | 'needs-review' | 'my-assigned' | 'ussd';
 
 export function ScoutingReports() {
   const navigate = useNavigate();
+  const [scoutingFeed, setScoutingFeed] = useState<ScoutingFeedItem[]>([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -211,8 +21,68 @@ export function ScoutingReports() {
   const [reviewModalItem, setReviewModalItem] = useState<ScoutingFeedItem | null>(null);
   const [createCaseModalItem, setCreateCaseModalItem] = useState<ScoutingFeedItem | null>(null);
 
-  // Current user (for "My Assigned" filter)
-  const currentUser = 'Dr. James Kariuki';
+  const currentUser = useMemo(() => {
+    const u = getAuthUser();
+    if (!u) return '';
+    const name = `${u.first_name} ${u.last_name}`.trim();
+    return name || u.phone_number || '';
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingFeed(true);
+    setLoadError(null);
+    fetchScoutingFeed()
+      .then((rows) => {
+        if (!cancelled) setScoutingFeed(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError('Could not load scouting feed.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingFeed(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredFeed = useMemo(() => {
+    return scoutingFeed.filter((item) => {
+      if (activeFilter === 'needs-review' && item.reviewed !== 'new') return false;
+      if (activeFilter === 'my-assigned') {
+        const a = (item.assignedTo || '').trim();
+        const me = currentUser.trim();
+        if (!me || a !== me) return false;
+      }
+      if (activeFilter === 'ussd' && item.source !== 'ussd') return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          item.farmerName.toLowerCase().includes(query) ||
+          item.blockId.toLowerCase().includes(query) ||
+          item.farmName.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+  }, [scoutingFeed, activeFilter, searchQuery, currentUser]);
+
+  const allCount = scoutingFeed.length;
+  const needsReviewCount = useMemo(
+    () => scoutingFeed.filter((item) => item.reviewed === 'new').length,
+    [scoutingFeed]
+  );
+  const myAssignedCount = useMemo(
+    () =>
+      scoutingFeed.filter((item) => (item.assignedTo || '').trim() === currentUser.trim() && currentUser.trim() !== '')
+        .length,
+    [scoutingFeed, currentUser]
+  );
+  const ussdCount = useMemo(
+    () => scoutingFeed.filter((item) => item.source === 'ussd').length,
+    [scoutingFeed]
+  );
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
@@ -231,9 +101,7 @@ export function ScoutingReports() {
   };
 
   const handleMarkAsReviewed = () => {
-    const needsReviewCount = scoutingFeed.filter(item => item.reviewed === 'new').length;
-    console.log('Marking items as reviewed');
-    alert(`Marked ${needsReviewCount} submission(s) as reviewed`);
+    alert(`Marked ${selectedItems.length} submission(s) as reviewed (API batch review not wired yet).`);
   };
 
   const handleCreateCase = (itemId: string) => {
@@ -246,30 +114,22 @@ export function ScoutingReports() {
     alert(`Opening review for submission ${itemId}...`);
   };
 
-  // Apply filters
-  const filteredFeed = scoutingFeed.filter((item) => {
-    // Filter by status/source/assignment
-    if (activeFilter === 'needs-review' && item.reviewed !== 'new') return false;
-    if (activeFilter === 'my-assigned' && item.assignedTo !== currentUser) return false;
-    if (activeFilter === 'ussd' && item.source !== 'ussd') return false;
+  if (loadError) {
+    return (
+      <div className="p-8 rounded-lg border text-center" style={{ borderColor: '#E0DDD6' }}>
+        <p style={{ color: '#b45309', fontFamily: 'IBM Plex Sans, sans-serif' }}>{loadError}</p>
+      </div>
+    );
+  }
 
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        item.farmerName.toLowerCase().includes(query) ||
-        item.blockId.toLowerCase().includes(query) ||
-        item.farmName.toLowerCase().includes(query)
-      );
-    }
-
-    return true;
-  });
-
-  const allCount = scoutingFeed.length;
-  const needsReviewCount = scoutingFeed.filter(item => item.reviewed === 'new').length;
-  const myAssignedCount = scoutingFeed.filter(item => item.assignedTo === currentUser).length;
-  const ussdCount = scoutingFeed.filter(item => item.source === 'ussd').length;
+  if (loadingFeed) {
+    return (
+      <div className="animate-pulse space-y-4 p-4">
+        <div className="h-10 bg-slate-200 rounded w-64" />
+        <div className="h-64 bg-slate-200 rounded-lg" />
+      </div>
+    );
+  }
 
   return (
     <>

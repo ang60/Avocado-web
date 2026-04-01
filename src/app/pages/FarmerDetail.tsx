@@ -1,70 +1,73 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { 
   MapPin, Phone, Mail, Calendar, Smartphone, TrendingUp, 
   AlertCircle, CheckCircle, FileText, ArrowLeft, Download,
   Leaf, Users, Package, Clock, MessageSquare, FileCheck
 } from 'lucide-react';
+import { fetchFarmerDetail } from '../api/realApi';
+import type { FarmerDetailPayload } from '../api/types';
 
 export function FarmerDetail() {
   const { farmerId } = useParams();
   const navigate = useNavigate();
   const [showComplianceReport, setShowComplianceReport] = useState(false);
+  const [data, setData] = useState<FarmerDetailPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock farmer data - in real app, fetch based on farmerId
-  const farmerData = {
-    id: 'FRM-1024',
-    name: 'Peter Mwangi',
-    farmName: 'Kangema Avocado Growers',
-    location: 'Kangema',
-    county: 'Murang\'a',
-    ward: 'Kangema',
-    subCounty: 'Kangema',
-    phone: '+254 722 345 678',
-    email: 'pmwangi@kangemaavocado.co.ke',
-    hcdaRegNumber: 'HCDA-NYR-2024-0089',
-    primaryChannel: 'smartphone',
-    registrationDate: 'Jan 15, 2024',
-    totalAcres: 245,
-    blocksManaged: 12,
-    treesCount: 3240,
-    exportEligibility: 'at-risk',
-    lastScoutingResult: {
-      status: 'high-risk',
-      finding: 'False Codling Moth',
-      date: 'Mar 14, 2026',
-      scoutName: 'Jane Wambui',
-    },
-    weeklyScoutingLogs: [
-      { week: 'Week 1 (Mar 1-7)', completed: true, date: 'Mar 5, 2026', scout: 'Jane Wambui' },
-      { week: 'Week 2 (Mar 8-14)', completed: true, date: 'Mar 12, 2026', scout: 'Jane Wambui' },
-      { week: 'Week 3 (Feb 22-28)', completed: true, date: 'Feb 26, 2026', scout: 'Jane Wambui' },
-      { week: 'Week 4 (Feb 15-21)', completed: true, date: 'Feb 19, 2026', scout: 'Samuel Omondi' },
-    ],
-    complianceScore: 100,
-    activeCases: [
-      { id: 'CSE-1024', issue: 'False Codling Moth', severity: 'high', status: 'new', date: 'Mar 14, 2026' },
-      { id: 'CSE-1018', issue: 'Avocado Thrips', severity: 'medium', status: 'under-review', date: 'Mar 10, 2026' },
-    ],
-    recentActivities: [
-      { type: 'scouting', description: 'Weekly scouting completed - High risk detected', date: 'Mar 14, 2026 14:32', user: 'Jane Wambui' },
-      { type: 'advisory', description: 'IPM advisory issued for False Codling Moth', date: 'Mar 14, 2026 16:45', user: 'Dr. James Kariuki' },
-      { type: 'scouting', description: 'Weekly scouting completed - No issues', date: 'Mar 12, 2026 11:20', user: 'Jane Wambui' },
-      { type: 'sms', description: 'SMS reminder sent: Complete weekly scouting', date: 'Mar 8, 2026 08:00', user: 'System' },
-    ],
-    blocks: [
-      { id: 'A-12', name: 'Block A-12', acres: 25, trees: 340, status: 'at-risk', lastInspection: 'Mar 14, 2026' },
-      { id: 'B-08', name: 'Block B-08', acres: 18, trees: 245, status: 'healthy', lastInspection: 'Mar 12, 2026' },
-      { id: 'C-05', name: 'Block C-05', acres: 22, trees: 298, status: 'healthy', lastInspection: 'Mar 12, 2026' },
-      { id: 'D-03', name: 'Block D-03', acres: 15, trees: 203, status: 'healthy', lastInspection: 'Mar 10, 2026' },
-    ],
-  };
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchFarmerDetail(farmerId)
+      .then((d) => {
+        if (!cancelled) setData(d);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Could not load farmer details.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [farmerId]);
 
   const handleViewComplianceReport = () => {
     setShowComplianceReport(true);
     // In real app, this would generate/download a PDF report
     console.log('Generating compliance report for:', farmerId);
   };
+
+  if (loading) {
+    return (
+      <>
+        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading farmer…</p>
+      </>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <>
+        <button
+          onClick={() => navigate('/farmers')}
+          className="flex items-center gap-2 mb-6 hover:opacity-70 transition-opacity"
+          style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Farmer Registry
+        </button>
+        <div className="p-6 rounded-lg border" style={{ borderColor: '#E0DDD6', backgroundColor: '#FFFFFF' }}>
+          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#b45309' }}>{error ?? 'No data available.'}</p>
+        </div>
+      </>
+    );
+  }
+
+  const farmerData = data;
 
   return (
     <>
@@ -144,7 +147,7 @@ export function FarmerDetail() {
                   </p>
                 </div>
                 <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                  {farmerData.hcdaRegNumber}
+                  —
                 </p>
               </div>
 

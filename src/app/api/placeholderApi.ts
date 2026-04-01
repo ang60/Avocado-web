@@ -1,6 +1,9 @@
 
 import type {
   AdminPayload,
+  AdminEntityRow,
+  AdminRoleRow,
+  AdminUserRow,
   CaseDetailPayload,
   CaseManagementPayload,
   DashboardPayload,
@@ -16,6 +19,7 @@ import type {
   FarmerListRow,
   ComplianceFarmerRow,
 } from './types';
+import { apiRequest, type PaginatedResults } from './client';
 import { PLACEHOLDER_ALERTS } from './placeholderData/alertsData';
 import { PLACEHOLDER_ADMIN } from './placeholderData/adminData';
 import { getPlaceholderCaseDetail } from './placeholderData/caseDetailData';
@@ -47,6 +51,60 @@ function sleep(ms: number): Promise<void> {
 async function mock<T>(data: T): Promise<T> {
   await sleep(DELAY_MS);
   return JSON.parse(JSON.stringify(data)) as T;
+}
+
+function entityTypeToUiSlug(entityType: string): string {
+  const v = entityType?.toLowerCase() ?? '';
+  if (v.includes('k ephis') || v.includes('kephis')) return 'kephis';
+  if (v.includes('hcda')) return 'hcda';
+  if (v.includes('partner')) return 'partner';
+  return 'exporter';
+}
+
+export async function fetchUsers(): Promise<AdminUserRow[]> {
+  const data = await apiRequest<PaginatedResults<any>>('/api/users/?page_size=1000');
+  return data.results.map((u) => {
+    const first = u.first_name ?? '';
+    const last = u.last_name ?? '';
+    return {
+      id: u.id,
+      name: `${first} ${last}`.trim() || u.email || u.phone_number || u.id,
+      role: u.role_details?.role_name ?? u.role_details?.id ?? 'Unknown',
+      email: u.email ?? '',
+      phone: u.phone_number ?? '',
+      county: u.county ?? '',
+      status: u.is_active ? 'active' : 'inactive',
+      lastLogin: u.last_login ?? 'Never',
+    };
+  });
+}
+
+export async function fetchRoles(): Promise<AdminRoleRow[]> {
+  const data = await apiRequest<PaginatedResults<any>>('/api/roles/?page_size=1000');
+  return data.results.map((r) => ({
+    id: r.id,
+    name: r.role_name ?? '',
+    description: r.description ?? '',
+    users: r.users ?? 0,
+    permissions: r.permissions_count ?? 0,
+  }));
+}
+
+export async function fetchEntities(): Promise<AdminEntityRow[]> {
+  const data = await apiRequest<PaginatedResults<any>>('/api/entities/?page_size=1000');
+  return data.results.map((e) => ({
+    id: e.id,
+    companyName: e.company_name ?? '',
+    hcdaLicense: e.HCDA_license ?? '',
+    licenseExpiry: e.license_expiry_date ?? 'N/A',
+    headAgronomist: e.head_agronomist ?? '',
+    linkedFarmers: e.linked_farmers ?? 0,
+    status: Boolean(e.is_active),
+    email: e.company_email ?? '',
+    phone: e.phone_number ?? '',
+    county: e.primary_county ?? '',
+    entityType: entityTypeToUiSlug(e.entity_type ?? ''),
+  }));
 }
 
 export async function fetchDashboard(): Promise<DashboardPayload> {
@@ -114,7 +172,25 @@ export async function fetchKnowledgeBaseList(): Promise<KnowledgeBaseListPayload
 }
 
 export async function fetchAdmin(): Promise<AdminPayload> {
-  return mock(PLACEHOLDER_ADMIN);
+  // Admin user management endpoints are real; alert rules/system stats remain placeholder until endpoints exist.
+  try {
+    const [users, roles] = await Promise.all([fetchUsers(), fetchRoles()]);
+    const activeUsers = users.filter((u) => u.status === 'active').length;
+    const systemStats: AdminPayload['systemStats'] = [
+      { label: 'Active Users', value: String(activeUsers), icon: 'users', color: '#2D6A4F' },
+      ...PLACEHOLDER_ADMIN.systemStats.filter((s) => s.label !== 'Active Users'),
+    ];
+
+    return {
+      ...PLACEHOLDER_ADMIN,
+      users,
+      roles,
+      systemStats,
+    };
+  } catch {
+    // If auth/baseUrl aren’t configured, keep the UI working with demo data.
+    return mock(PLACEHOLDER_ADMIN);
+  }
 }
 
 export async function fetchFarmerDetail(farmerId: string | undefined): Promise<FarmerDetailPayload> {

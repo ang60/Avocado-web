@@ -1,13 +1,25 @@
 import { X, Building2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface AddEntityModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (entity: any) => void;
+  initialEntity?: {
+    id: string;
+    companyName: string;
+    hcdaLicense: string;
+    headAgronomist: string;
+    email: string;
+    phone: string;
+    county: string;
+    entityType: string;
+    licenseExpiry: string;
+    status: boolean;
+  } | null;
 }
 
-export function AddEntityModal({ isOpen, onClose, onSave }: AddEntityModalProps) {
+export function AddEntityModal({ isOpen, onClose, onSave, initialEntity }: AddEntityModalProps) {
   const [companyName, setCompanyName] = useState('');
   const [hcdaLicense, setHcdaLicense] = useState('');
   const [headAgronomist, setHeadAgronomist] = useState('');
@@ -16,10 +28,37 @@ export function AddEntityModal({ isOpen, onClose, onSave }: AddEntityModalProps)
   const [county, setCounty] = useState('');
   const [entityType, setEntityType] = useState('exporter');
   const [licenseExpiry, setLicenseExpiry] = useState('');
+  const [status, setStatus] = useState(true);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialEntity) {
+      setCompanyName(initialEntity.companyName ?? '');
+      setHcdaLicense(initialEntity.hcdaLicense ?? '');
+      setHeadAgronomist(initialEntity.headAgronomist ?? '');
+      setEmail(initialEntity.email ?? '');
+      setPhone(initialEntity.phone ?? '');
+      setCounty(initialEntity.county ?? '');
+      setEntityType(initialEntity.entityType ?? 'exporter');
+      setLicenseExpiry(initialEntity.licenseExpiry ?? '');
+      setStatus(Boolean(initialEntity.status));
+    } else {
+      setCompanyName('');
+      setHcdaLicense('');
+      setHeadAgronomist('');
+      setEmail('');
+      setPhone('');
+      setCounty('');
+      setEntityType('exporter');
+      setLicenseExpiry('');
+      setStatus(true);
+    }
+  }, [initialEntity, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
+      id: initialEntity?.id,
       companyName,
       hcdaLicense,
       headAgronomist,
@@ -29,7 +68,7 @@ export function AddEntityModal({ isOpen, onClose, onSave }: AddEntityModalProps)
       entityType,
       licenseExpiry,
       linkedFarmers: 0,
-      status: true,
+      status,
     });
     // Reset form
     setCompanyName('');
@@ -40,6 +79,7 @@ export function AddEntityModal({ isOpen, onClose, onSave }: AddEntityModalProps)
     setCounty('');
     setEntityType('exporter');
     setLicenseExpiry('');
+      setStatus(true);
     onClose();
   };
 
@@ -72,7 +112,7 @@ export function AddEntityModal({ isOpen, onClose, onSave }: AddEntityModalProps)
                 className="text-xl font-bold"
                 style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
               >
-                Add Entity
+                {initialEntity ? 'Edit Entity' : 'Add Entity'}
               </h2>
               <p className="text-sm" style={{ color: '#717182' }}>
                 Register a new organization in AvoGuard
@@ -106,6 +146,21 @@ export function AddEntityModal({ isOpen, onClose, onSave }: AddEntityModalProps)
                 <option value="kephis">Government - KEPHIS</option>
                 <option value="hcda">Government - HCDA</option>
                 <option value="partner">Partner Organization</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#1B4332' }}>
+                Status
+              </label>
+              <select
+                value={status ? 'active' : 'inactive'}
+                onChange={(e) => setStatus(e.target.value === 'active')}
+                className="w-full px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                style={{ borderColor: '#E0DDD6', backgroundColor: '#FFFFFF' }}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
 
@@ -264,7 +319,7 @@ export function AddEntityModal({ isOpen, onClose, onSave }: AddEntityModalProps)
               style={{ backgroundColor: '#2D6A4F', color: '#FFFFFF' }}
             >
               <Building2 className="w-5 h-5" />
-              Add Entity
+              {initialEntity ? 'Save Changes' : 'Add Entity'}
             </button>
           </div>
         </form>

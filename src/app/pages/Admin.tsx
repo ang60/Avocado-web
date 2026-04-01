@@ -1,17 +1,55 @@
-import { Users, Settings, Shield, Activity, Database, Bell, Edit, Trash2, Plus, Building2, FileCheck, Calendar } from 'lucide-react';
-import { useState } from 'react';
+import { Users, Settings, Shield, Database, Bell, Edit, Trash2, Plus, Building2, FileCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { AddUserModal } from '../components/AddUserModal';
 import { AddRoleModal } from '../components/AddRoleModal';
 import { AddAlertRuleModal } from '../components/AddAlertRuleModal';
 import { AddEntityModal } from '../components/AddEntityModal';
 import { TableScroll } from '../components/TableScroll';
+import {
+  listEntities,
+  listPermissions,
+  listRoles,
+  listUsers,
+  createUser,
+  createRole,
+  createEntity,
+  deleteUser,
+  deleteRole,
+  deleteEntity,
+  updateRole,
+  updateUser,
+  updateEntity,
+  retrieveRole,
+  listAlertRules,
+  createAlertRule,
+  updateAlertRule,
+  deleteAlertRule,
+  fetchAdminSummary,
+  type AppPermissionDto,
+  type AdminAlertRuleApiRow,
+} from '../api/adminApi';
 
-const systemStats = [
-  { label: 'Active Users', value: '42', icon: Users, color: '#2D6A4F' },
-  { label: 'System Uptime', value: '99.8%', icon: Activity, color: '#74C69D' },
-  { label: 'Database Size', value: '12.4 GB', icon: Database, color: '#2D6A4F' },
-  { label: 'API Calls Today', value: '18,542', icon: Settings, color: '#74C69D' },
+const FALLBACK_SYSTEM_STATS = [
+  { label: 'Active Users', value: '—', icon: Users, color: '#2D6A4F' },
+  { label: 'Roles', value: '—', icon: Shield, color: '#74C69D' },
+  { label: 'Entities', value: '—', icon: Database, color: '#2D6A4F' },
+  { label: 'Permissions', value: '—', icon: Settings, color: '#74C69D' },
 ];
+
+const ALERT_CONDITION_LABELS: Record<string, string> = {
+  outbreak_threshold: 'Cases exceed threshold',
+  new_pest: 'New pest detected',
+  compliance_drop: 'Scouting compliance drops below',
+  severity_high: 'High severity case reported',
+  geographic_cluster: 'Geographic cluster detected',
+};
+
+const ALERT_ACTION_LABELS: Record<string, string> = {
+  email: 'Send Email',
+  sms: 'Send SMS',
+  both: 'Send Email & SMS',
+  dashboard: 'Dashboard Notification Only',
+};
 
 const initialUsers = [
   { id: '1', name: 'Jane Wambui', role: 'System Administrator', email: 'jane.wambui@avoguard.ke', phone: '+254 712 345 678', county: 'Murang\'a', status: 'active', lastLogin: '2 hours ago' },
@@ -29,13 +67,6 @@ const initialRoles = [
   { id: '5', name: 'Regional Coordinator', description: 'Coordinate regional activities and monitor compliance', users: 2, permissions: 12 },
 ];
 
-const initialAlertRules = [
-  { id: '1', name: 'High Thrips Outbreak - Murang\'a', condition: 'Cases exceed threshold', threshold: '10', county: 'Murang\'a', pest: 'Avocado Thrips', action: 'Email & SMS', status: 'active', triggered: 3, lastTriggered: '2 days ago' },
-  { id: '2', name: 'New Pest Detection Alert', condition: 'New pest detected', threshold: '1', county: 'All Counties', pest: 'All Pests', action: 'Email', status: 'active', triggered: 1, lastTriggered: '1 week ago' },
-  { id: '3', name: 'Compliance Drop Alert', condition: 'Scouting compliance drops below', threshold: '90%', county: 'All Counties', pest: 'All Pests', action: 'Dashboard', status: 'active', triggered: 0, lastTriggered: 'Never' },
-  { id: '4', name: 'Geographic Cluster - Kiambu', condition: 'Geographic cluster detected', threshold: '5', county: 'Kiambu', pest: 'Phytophthora Root Rot', action: 'Email & SMS', status: 'inactive', triggered: 2, lastTriggered: '3 weeks ago' },
-];
-
 const initialEntities = [
   { id: '1', companyName: 'Vegpro Kenya Ltd', hcdaLicense: 'HCDA/EX/2024/1287', headAgronomist: 'Dr. James Kamau', linkedFarmers: 142, status: true, email: 'info@vegpro.co.ke', phone: '+254 720 123 456', county: 'Kiambu', entityType: 'exporter', licenseExpiry: '2026-12-31' },
   { id: '2', companyName: 'FreshPack Exporters', hcdaLicense: 'HCDA/EX/2023/0892', headAgronomist: 'Mary Wanjiku', linkedFarmers: 98, status: true, email: 'contact@freshpack.co.ke', phone: '+254 733 456 789', county: 'Murang\'a', entityType: 'exporter', licenseExpiry: '2026-08-15' },
@@ -48,70 +79,273 @@ const initialEntities = [
 export function Admin() {
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'entities' | 'alerts' | 'settings'>('users');
   const [activeEntitySubTab, setActiveEntitySubTab] = useState<'all' | 'exporters' | 'government' | 'partners'>('all');
+  const [adminLoading, setAdminLoading] = useState(true);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<AppPermissionDto[]>([]);
+
+  const [statsCards, setStatsCards] = useState(FALLBACK_SYSTEM_STATS);
   const [users, setUsers] = useState(initialUsers);
   const [roles, setRoles] = useState(initialRoles);
-  const [alertRules, setAlertRules] = useState(initialAlertRules);
+  const [alertRules, setAlertRules] = useState<AdminAlertRuleApiRow[]>([]);
   const [entities, setEntities] = useState(initialEntities);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
   const [isAddAlertRuleModalOpen, setIsAddAlertRuleModalOpen] = useState(false);
   const [isAddEntityModalOpen, setIsAddEntityModalOpen] = useState(false);
   const [licenseExpiryFilter, setLicenseExpiryFilter] = useState<'all' | '30days' | '60days' | '90days'>('all');
+  const [editingRole, setEditingRole] = useState<{ id: string; name: string; description: string; permissionIds: string[] } | null>(null);
+  const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; phone: string; role: string; county: string } | null>(null);
+  const [editingEntity, setEditingEntity] = useState<{
+    id: string;
+    companyName: string;
+    hcdaLicense: string;
+    headAgronomist: string;
+    email: string;
+    phone: string;
+    county: string;
+    entityType: string;
+    licenseExpiry: string;
+    status: boolean;
+  } | null>(null);
+  const [editingAlertRule, setEditingAlertRule] = useState<AdminAlertRuleApiRow | null>(null);
 
-  const handleAddUser = (user: any) => {
-    setUsers([...users, { ...user, id: String(users.length + 1) }]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setAdminLoading(true);
+      setAdminError(null);
+      try {
+        const [u, r, e, p, alerts, summary] = await Promise.all([
+          listUsers(),
+          listRoles(),
+          listEntities(),
+          listPermissions(),
+          listAlertRules().catch(() => [] as AdminAlertRuleApiRow[]),
+          fetchAdminSummary().catch(() => null),
+        ]);
+        if (cancelled) return;
+        setUsers(u);
+        setRoles(r);
+        setEntities(e);
+        setPermissions(p);
+        setAlertRules(alerts);
+        if (summary) {
+          setStatsCards([
+            { label: 'Active Users', value: String(summary.active_users), icon: Users, color: '#2D6A4F' },
+            { label: 'Roles', value: String(summary.roles_count), icon: Shield, color: '#74C69D' },
+            { label: 'Entities', value: String(summary.entities_count), icon: Database, color: '#2D6A4F' },
+            { label: 'Permissions', value: String(summary.permissions_count), icon: Settings, color: '#74C69D' },
+          ]);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setAdminError('Could not load admin data. Using demo lists.');
+      } finally {
+        if (cancelled) return;
+        setAdminLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleAddUser = async (user: { id?: string; name: string; email: string; phone: string; role: string; county: string }) => {
+    // Modal provides UI-shape user. Map to backend schema.
+    try {
+      setAdminError(null);
+      const fullName = String(user.name ?? '').trim();
+      const [firstName, ...rest] = fullName.split(/\s+/);
+      const lastName = rest.join(' ');
+      const roleId = roles.find((r) => r.name === user.role)?.id ?? null;
+      if (user.id) {
+        await updateUser(user.id, {
+          phone_number: String(user.phone ?? '').trim(),
+          email: String(user.email ?? '').trim() || null,
+          first_name: firstName || fullName || 'User',
+          last_name: lastName || ' ',
+          role: roleId,
+          county: String(user.county ?? '').trim() || null,
+        });
+      } else {
+        await createUser({
+          phone_number: String(user.phone ?? '').trim(),
+          email: String(user.email ?? '').trim() || null,
+          first_name: firstName || fullName || 'User',
+          last_name: lastName || ' ',
+          role: roleId,
+          entity: null,
+          county: String(user.county ?? '').trim() || null,
+        });
+      }
+      const fresh = await listUsers();
+      setUsers(fresh);
+    } catch {
+      setAdminError(user.id ? 'Could not update user. Check required fields and your permissions.' : 'Could not create user. Check required fields and your permissions.');
+    }
+  };
+
+  const handleToggleUserStatus = async (id: string) => {
+    const row = users.find((u) => u.id === id);
+    if (!row) return;
+    const nextActive = row.status !== 'active';
+    try {
+      setAdminError(null);
+      await updateUser(id, { is_active: nextActive });
+      setUsers(await listUsers());
+    } catch {
+      setAdminError('Could not update user status.');
+    }
   };
 
   const handleDeleteUser = (id: string) => {
-    if (confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(u => u.id !== id));
-    }
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    deleteUser(id)
+      .then(() => setUsers(users.filter((u) => u.id !== id)))
+      .catch(() => setAdminError('Delete failed. Check your permissions and try again.'));
   };
 
-  const handleAddRole = (role: any) => {
-    setRoles([...roles, { ...role, id: String(roles.length + 1) }]);
+  const handleAddRole = async (role: { id?: string; name: string; description: string; permissionIds: string[] }) => {
+    try {
+      setAdminError(null);
+      if (role.id) {
+        await updateRole(role.id, {
+          role_name: role.name.trim(),
+          description: role.description.trim() || null,
+          permissions_input: role.permissionIds,
+        });
+      } else {
+        await createRole({
+          role_name: role.name.trim(),
+          description: role.description.trim() || null,
+          permissions_input: role.permissionIds,
+        });
+      }
+      const fresh = await listRoles();
+      setRoles(fresh);
+    } catch {
+      setAdminError(
+        role.id ? 'Could not update role. Check required fields and your permissions.' : 'Could not create role. Check required fields and your permissions.'
+      );
+    }
   };
 
   const handleDeleteRole = (id: string) => {
-    if (confirm('Are you sure you want to delete this role?')) {
-      setRoles(roles.filter(r => r.id !== id));
-    }
+    if (!confirm('Are you sure you want to delete this role?')) return;
+    deleteRole(id)
+      .then(() => setRoles(roles.filter((r) => r.id !== id)))
+      .catch(() => setAdminError('Delete failed. Check your permissions and try again.'));
   };
 
-  const handleAddAlertRule = (rule: any) => {
-    setAlertRules([...alertRules, { ...rule, id: String(alertRules.length + 1) }]);
+  const handleSaveAlertRule = async (rule: {
+    id?: string;
+    name: string;
+    condition: string;
+    threshold: string;
+    county: string;
+    pest: string;
+    action: string;
+    recipients: string;
+    status?: string;
+  }) => {
+    try {
+      setAdminError(null);
+      if (rule.id) {
+        await updateAlertRule(rule.id, {
+          name: rule.name.trim(),
+          condition: rule.condition,
+          threshold: String(rule.threshold).trim(),
+          county: rule.county,
+          pest: rule.pest,
+          action: rule.action,
+          recipients: rule.recipients.trim(),
+          ...(rule.status ? { status: rule.status } : {}),
+        });
+      } else {
+        await createAlertRule({
+          name: rule.name.trim(),
+          condition: rule.condition,
+          threshold: String(rule.threshold).trim(),
+          county: rule.county,
+          pest: rule.pest,
+          action: rule.action,
+          recipients: rule.recipients.trim(),
+          status: rule.status ?? 'active',
+        });
+      }
+      setAlertRules(await listAlertRules());
+    } catch {
+      setAdminError(rule.id ? 'Could not update alert rule.' : 'Could not create alert rule.');
+      throw new Error('save failed');
+    }
   };
 
   const handleDeleteAlertRule = (id: string) => {
-    if (confirm('Are you sure you want to delete this alert rule?')) {
-      setAlertRules(alertRules.filter(r => r.id !== id));
-    }
+    if (!confirm('Are you sure you want to delete this alert rule?')) return;
+    deleteAlertRule(id)
+      .then(() => setAlertRules((prev) => prev.filter((r) => r.id !== id)))
+      .catch(() => setAdminError('Delete failed. Check your permissions and try again.'));
   };
 
   const handleToggleAlertRule = (id: string) => {
-    setAlertRules(alertRules.map(rule => 
-      rule.id === id 
-        ? { ...rule, status: rule.status === 'active' ? 'inactive' : 'active' }
-        : rule
-    ));
+    const rule = alertRules.find((r) => r.id === id);
+    if (!rule) return;
+    const next = rule.status === 'active' ? 'inactive' : 'active';
+    updateAlertRule(id, { status: next })
+      .then(() => setAlertRules((prev) => prev.map((r) => (r.id === id ? { ...r, status: next } : r))))
+      .catch(() => setAdminError('Could not update alert rule status.'));
   };
 
-  const handleAddEntity = (entity: any) => {
-    setEntities([...entities, { ...entity, id: String(entities.length + 1) }]);
-  };
+  const handleAddEntity = async (entity: any) => {
+    try {
+      setAdminError(null);
+      const typeMap: Record<string, any> = {
+        exporter: 'Exporter',
+        kephis: 'Government - KEPHIS',
+        hcda: 'Government - HCDA',
+        partner: 'Partner Organization',
+      };
+      const payload = {
+        entity_type: typeMap[String(entity.entityType ?? 'exporter')] ?? 'Exporter',
+        company_name: String(entity.companyName ?? '').trim(),
+        HCDA_license: String(entity.hcdaLicense ?? '').trim(),
+        license_expiry_date: String(entity.licenseExpiry ?? '').trim(),
+        head_agronomist: String(entity.headAgronomist ?? '').trim(),
+        primary_county: String(entity.county ?? '').trim(),
+        company_email: String(entity.email ?? '').trim(),
+        phone_number: String(entity.phone ?? '').trim(),
+        is_active: Boolean(entity.status ?? true),
+      };
 
-  const handleDeleteEntity = (id: string) => {
-    if (confirm('Are you sure you want to delete this entity?')) {
-      setEntities(entities.filter(e => e.id !== id));
+      if (entity.id) {
+        await updateEntity(String(entity.id), payload);
+      } else {
+        await createEntity(payload);
+      }
+      const fresh = await listEntities();
+      setEntities(fresh);
+    } catch {
+      setAdminError(entity?.id ? 'Could not update entity. Check required fields and your permissions.' : 'Could not create entity. Check required fields and your permissions.');
     }
   };
 
+  const handleDeleteEntity = (id: string) => {
+    if (!confirm('Are you sure you want to delete this entity?')) return;
+    deleteEntity(id)
+      .then(() => setEntities(entities.filter((e) => e.id !== id)))
+      .catch(() => setAdminError('Delete failed. Check your permissions and try again.'));
+  };
+
   const handleToggleEntityStatus = (id: string) => {
-    setEntities(entities.map(entity => 
-      entity.id === id 
-        ? { ...entity, status: !entity.status }
-        : entity
-    ));
+    const entity = entities.find((x) => x.id === id);
+    if (!entity) return;
+    const next = !entity.status;
+    updateEntity(id, { is_active: next })
+      .then(() => setEntities((prev) => prev.map((e) => (e.id === id ? { ...e, status: next } : e))))
+      .catch(() => setAdminError('Could not update entity status.'));
   };
 
   const filteredEntities = entities.filter(entity => {
@@ -139,9 +373,27 @@ export function Admin() {
         </p>
       </header>
 
+      {adminLoading && (
+        <div
+          className="mb-4 p-4 rounded-lg border text-center"
+          style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6', fontFamily: 'IBM Plex Sans, sans-serif' }}
+        >
+          Loading admin data...
+        </div>
+      )}
+
+      {adminError && (
+        <div
+          className="mb-4 p-4 rounded-lg border text-center"
+          style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', fontFamily: 'IBM Plex Sans, sans-serif', color: '#991B1B' }}
+        >
+          {adminError}
+        </div>
+      )}
+
       {/* System Stats */}
       <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-        {systemStats.map((stat, index) => {
+        {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <div 
@@ -235,7 +487,10 @@ export function Admin() {
               User Management
             </h3>
             <button 
-              onClick={() => setIsAddUserModalOpen(true)}
+              onClick={() => {
+                setEditingUser(null);
+                setIsAddUserModalOpen(true);
+              }}
               className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
               style={{
                 backgroundColor: '#2D6A4F',
@@ -296,8 +551,10 @@ export function Admin() {
                     {user.county}
                   </td>
                   <td className="px-6 py-4">
-                    <span
-                      className="px-3 py-1 rounded-full text-xs"
+                    <button
+                      type="button"
+                      onClick={() => handleToggleUserStatus(user.id)}
+                      className="px-3 py-1 rounded-full text-xs cursor-pointer hover:opacity-80 transition-opacity"
                       style={{
                         backgroundColor: user.status === 'active' ? '#74C69D20' : '#E0DDD6',
                         color: user.status === 'active' ? '#2D6A4F' : '#717182',
@@ -306,7 +563,7 @@ export function Admin() {
                       }}
                     >
                       {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                    </span>
+                    </button>
                   </td>
                   <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                     {user.lastLogin}
@@ -316,6 +573,17 @@ export function Admin() {
                       <button
                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                         title="Edit user"
+                        onClick={() => {
+                          setEditingUser({
+                            id: user.id,
+                            name: user.name,
+                            email: user.email,
+                            phone: user.phone ?? '',
+                            role: user.role,
+                            county: user.county,
+                          });
+                          setIsAddUserModalOpen(true);
+                        }}
                       >
                         <Edit className="w-4 h-4" style={{ color: '#2D6A4F' }} />
                       </button>
@@ -347,7 +615,10 @@ export function Admin() {
               Role Management
             </h3>
             <button 
-              onClick={() => setIsAddRoleModalOpen(true)}
+              onClick={() => {
+                setEditingRole(null);
+                setIsAddRoleModalOpen(true);
+              }}
               className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
               style={{
                 backgroundColor: '#2D6A4F',
@@ -405,6 +676,36 @@ export function Admin() {
                       <button
                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                         title="Edit role"
+                        onClick={() => {
+                          (async () => {
+                            try {
+                              const detail = await retrieveRole(role.id);
+                              const raw = Array.isArray(detail.permissions) ? detail.permissions : [];
+                              const byId = new Set(permissions.map((p) => p.id));
+                              const selected =
+                                raw.filter((x) => byId.has(x)).length > 0
+                                  ? raw.filter((x) => byId.has(x))
+                                  : raw
+                                      .map((x) => permissions.find((p) => p.name === x)?.id)
+                                      .filter(Boolean) as string[];
+                              setEditingRole({
+                                id: role.id,
+                                name: detail.role_name ?? role.name,
+                                description: detail.description ?? role.description,
+                                permissionIds: selected,
+                              });
+                              setIsAddRoleModalOpen(true);
+                            } catch {
+                              setEditingRole({
+                                id: role.id,
+                                name: role.name,
+                                description: role.description,
+                                permissionIds: [],
+                              });
+                              setIsAddRoleModalOpen(true);
+                            }
+                          })();
+                        }}
                       >
                         <Edit className="w-4 h-4" style={{ color: '#2D6A4F' }} />
                       </button>
@@ -436,7 +737,10 @@ export function Admin() {
               Entity Management
             </h3>
             <button 
-              onClick={() => setIsAddEntityModalOpen(true)}
+              onClick={() => {
+                setEditingEntity(null);
+                setIsAddEntityModalOpen(true);
+              }}
               className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
               style={{
                 backgroundColor: '#2D6A4F',
@@ -579,6 +883,21 @@ export function Admin() {
                       <button
                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                         title="Edit entity"
+                        onClick={() => {
+                          setEditingEntity({
+                            id: entity.id,
+                            companyName: entity.companyName,
+                            hcdaLicense: entity.hcdaLicense,
+                            headAgronomist: entity.headAgronomist,
+                            email: entity.email,
+                            phone: entity.phone,
+                            county: entity.county,
+                            entityType: entity.entityType,
+                            licenseExpiry: entity.licenseExpiry,
+                            status: Boolean(entity.status),
+                          });
+                          setIsAddEntityModalOpen(true);
+                        }}
                       >
                         <Edit className="w-4 h-4" style={{ color: '#2D6A4F' }} />
                       </button>
@@ -773,7 +1092,10 @@ export function Admin() {
               Alert Rules Management
             </h3>
             <button 
-              onClick={() => setIsAddAlertRuleModalOpen(true)}
+              onClick={() => {
+                setEditingAlertRule(null);
+                setIsAddAlertRuleModalOpen(true);
+              }}
               className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
               style={{
                 backgroundColor: '#2D6A4F',
@@ -823,12 +1145,12 @@ export function Admin() {
                         {rule.name}
                       </div>
                       <div className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                        {rule.action}
+                        {ALERT_ACTION_LABELS[rule.action] ?? rule.action}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                    {rule.condition}
+                    {ALERT_CONDITION_LABELS[rule.condition] ?? rule.condition}
                   </td>
                   <td className="px-6 py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                     {rule.county}
@@ -862,6 +1184,10 @@ export function Admin() {
                       <button
                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                         title="Edit alert rule"
+                        onClick={() => {
+                          setEditingAlertRule(rule);
+                          setIsAddAlertRuleModalOpen(true);
+                        }}
                       >
                         <Edit className="w-4 h-4" style={{ color: '#2D6A4F' }} />
                       </button>
@@ -950,23 +1276,41 @@ export function Admin() {
       {/* Modals */}
       <AddUserModal 
         isOpen={isAddUserModalOpen}
-        onClose={() => setIsAddUserModalOpen(false)}
+        onClose={() => {
+          setIsAddUserModalOpen(false);
+          setEditingUser(null);
+        }}
         onSave={handleAddUser}
+        initialUser={editingUser}
+        roleOptions={roles.map((r) => r.name)}
       />
       <AddRoleModal 
         isOpen={isAddRoleModalOpen}
-        onClose={() => setIsAddRoleModalOpen(false)}
+        onClose={() => {
+          setIsAddRoleModalOpen(false);
+          setEditingRole(null);
+        }}
         onSave={handleAddRole}
+        permissions={permissions}
+        initialRole={editingRole}
       />
       <AddAlertRuleModal 
         isOpen={isAddAlertRuleModalOpen}
-        onClose={() => setIsAddAlertRuleModalOpen(false)}
-        onSave={handleAddAlertRule}
+        onClose={() => {
+          setIsAddAlertRuleModalOpen(false);
+          setEditingAlertRule(null);
+        }}
+        onSave={handleSaveAlertRule}
+        initialRule={editingAlertRule}
       />
       <AddEntityModal 
         isOpen={isAddEntityModalOpen}
-        onClose={() => setIsAddEntityModalOpen(false)}
+        onClose={() => {
+          setIsAddEntityModalOpen(false);
+          setEditingEntity(null);
+        }}
         onSave={handleAddEntity}
+        initialEntity={editingEntity}
       />
     </>
   );

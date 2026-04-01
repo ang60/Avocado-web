@@ -4,7 +4,7 @@ import { KenyaHeatMap } from '../components/KenyaHeatMap';
 import { TriageCaseModal } from '../components/TriageCaseModal';
 import { ScoutingRecordModal } from '../components/ScoutingRecordModal';
 import { useState, useEffect } from 'react';
-import { fetchDashboard } from '../api/placeholderApi';
+import { fetchDashboard } from '../api/realApi';
 import { useIsNarrowPhone } from '../hooks/useMediaQuery';
 import { TableScroll } from '../components/TableScroll';
 import type { DashboardPayload } from '../api/types';

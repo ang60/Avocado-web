@@ -309,6 +309,22 @@ export interface AdminPayload {
   alertRules: AdminAlertRuleRow[];
 }
 
+/** Admin: entity (exporter/government/partner organization) rows */
+export interface AdminEntityRow {
+  id: string;
+  companyName: string;
+  hcdaLicense: string;
+  licenseExpiry: string;
+  headAgronomist: string;
+  linkedFarmers: number;
+  status: boolean;
+  email: string;
+  phone: string;
+  county: string;
+  /** UI-friendly entity type slug (exporter/kephis/hcda/partner) */
+  entityType: string;
+}
+
 /** Farmer detail — extends list row with rich profile */
 export interface FarmerDetailPayload {
   id: string;

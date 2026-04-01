@@ -4,64 +4,43 @@ import { useState } from 'react';
 interface AddRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (role: any) => void;
+  onSave: (role: { id?: string; name: string; description: string; permissionIds: string[] }) => void;
+  permissions: Array<{ id: string; name: string }>;
+  initialRole?: { id: string; name: string; description: string; permissionIds: string[] } | null;
 }
 
-export function AddRoleModal({ isOpen, onClose, onSave }: AddRoleModalProps) {
+export function AddRoleModal({ isOpen, onClose, onSave, permissions, initialRole }: AddRoleModalProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    permissions: {
-      viewCases: false,
-      createCases: false,
-      editCases: false,
-      deleteCases: false,
-      viewReports: false,
-      createReports: false,
-      manageUsers: false,
-      manageSettings: false,
-      viewKnowledgeBase: false,
-      editKnowledgeBase: false,
-    },
+    name: initialRole?.name ?? '',
+    description: initialRole?.description ?? '',
+    permissionIds: initialRole?.permissionIds ?? ([] as string[]),
   });
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const permissionCount = Object.values(formData.permissions).filter(Boolean).length;
     onSave({
-      ...formData,
-      users: 0,
-      permissions: permissionCount,
+      id: initialRole?.id,
+      name: formData.name,
+      description: formData.description,
+      permissionIds: formData.permissionIds,
     });
     setFormData({
       name: '',
       description: '',
-      permissions: {
-        viewCases: false,
-        createCases: false,
-        editCases: false,
-        deleteCases: false,
-        viewReports: false,
-        createReports: false,
-        manageUsers: false,
-        manageSettings: false,
-        viewKnowledgeBase: false,
-        editKnowledgeBase: false,
-      },
+      permissionIds: [],
     });
     onClose();
   };
 
-  const togglePermission = (key: keyof typeof formData.permissions) => {
-    setFormData({
-      ...formData,
-      permissions: {
-        ...formData.permissions,
-        [key]: !formData.permissions[key],
-      },
-    });
+  const togglePermission = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      permissionIds: prev.permissionIds.includes(id)
+        ? prev.permissionIds.filter((p) => p !== id)
+        : [...prev.permissionIds, id],
+    }));
   };
 
   return (
@@ -84,7 +63,7 @@ export function AddRoleModal({ isOpen, onClose, onSave }: AddRoleModalProps) {
             className="text-xl"
             style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
           >
-            Create New Role
+            {initialRole ? 'Edit Role' : 'Create New Role'}
           </h2>
           <button
             onClick={onClose}
@@ -150,25 +129,31 @@ export function AddRoleModal({ isOpen, onClose, onSave }: AddRoleModalProps) {
               >
                 Permissions
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                {Object.entries(formData.permissions).map(([key, value]) => (
-                  <label
-                    key={key}
-                    className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50/50 transition-colors"
-                    style={{ borderColor: value ? '#2D6A4F' : '#E0DDD6', backgroundColor: value ? '#74C69D10' : '#FFFFFF' }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={() => togglePermission(key as keyof typeof formData.permissions)}
-                      className="w-4 h-4"
-                      style={{ accentColor: '#2D6A4F' }}
-                    />
-                    <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '14px' }}>
-                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                    </span>
-                  </label>
-                ))}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {permissions.map((p) => {
+                  const selected = formData.permissionIds.includes(p.id);
+                  return (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50/50 transition-colors"
+                      style={{
+                        borderColor: selected ? '#2D6A4F' : '#E0DDD6',
+                        backgroundColor: selected ? '#74C69D10' : '#FFFFFF',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => togglePermission(p.id)}
+                        className="w-4 h-4"
+                        style={{ accentColor: '#2D6A4F' }}
+                      />
+                      <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '14px' }}>
+                        {p.name}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -197,7 +182,7 @@ export function AddRoleModal({ isOpen, onClose, onSave }: AddRoleModalProps) {
                 color: '#FFFFFF',
               }}
             >
-              Create Role
+              {initialRole ? 'Save Changes' : 'Create Role'}
             </button>
           </div>
         </form>

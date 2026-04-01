@@ -1,39 +1,54 @@
-const AUTH_TOKEN_KEY = 'avoguard.auth.jwt';
+const ACCESS_TOKEN_KEY = 'avoguard.auth.access';
+const REFRESH_TOKEN_KEY = 'avoguard.auth.refresh';
+const USER_KEY = 'avoguard.auth.user';
 
-function base64UrlEncode(input: string): string {
-  return btoa(input).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
+export type AuthUser = {
+  id: string;
+  phone_number: string;
+  email?: string | null;
+  first_name: string;
+  last_name: string;
+  county?: string | null;
+  role_details?: { id: string; role_name: string } | null;
+  entity_details?: { id: string; company_name: string } | null;
+};
 
-export function createMockJwt(email: string): string {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const payload = {
-    sub: email.toLowerCase(),
-    role: 'operator',
-    iat: nowSec,
-    exp: nowSec + 60 * 60 * 8,
-  };
-  return `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(
-    JSON.stringify(payload),
-  )}.frontend-signature`;
-}
-
-export function getAuthToken(): string | null {
+export function getAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(AUTH_TOKEN_KEY);
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
-export function setAuthToken(token: string) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+export function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
-export function clearAuthToken() {
+export function getAuthUser(): AuthUser | null {
+  if (typeof window === 'undefined') return null;
+  const raw = window.localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthSession(params: { access: string; refresh: string; user: AuthUser }) {
   if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, params.access);
+  window.localStorage.setItem(REFRESH_TOKEN_KEY, params.refresh);
+  window.localStorage.setItem(USER_KEY, JSON.stringify(params.user));
+}
+
+export function clearAuthSession() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+  window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+  window.localStorage.removeItem(USER_KEY);
 }
 
 export function isAuthenticated(): boolean {
-  const token = getAuthToken();
+  const token = getAccessToken();
   return Boolean(token && token.trim().length > 0);
 }

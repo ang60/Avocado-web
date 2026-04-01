@@ -1,84 +1,103 @@
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+import type { AdminAlertRuleApiRow } from '../api/adminApi';
+
+const defaultForm = {
+  name: '',
+  condition: 'outbreak_threshold',
+  threshold: '',
+  county: 'All Counties',
+  pest: 'All Pests',
+  action: 'email',
+  recipients: '',
+};
 
 interface AddAlertRuleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (rule: any) => void;
+  onSave: (rule: {
+    id?: string;
+    name: string;
+    condition: string;
+    threshold: string;
+    county: string;
+    pest: string;
+    action: string;
+    recipients: string;
+    status?: string;
+  }) => void | Promise<void>;
+  initialRule?: AdminAlertRuleApiRow | null;
 }
 
-export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModalProps) {
-  const [formData, setFormData] = useState({
-    name: '',
-    condition: 'outbreak_threshold',
-    threshold: '',
-    county: 'All Counties',
-    pest: 'All Pests',
-    action: 'email',
-    recipients: '',
-  });
+export function AddAlertRuleModal({ isOpen, onClose, onSave, initialRule }: AddAlertRuleModalProps) {
+  const [formData, setFormData] = useState(defaultForm);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialRule) {
+      setFormData({
+        name: initialRule.name ?? '',
+        condition: initialRule.condition ?? 'outbreak_threshold',
+        threshold: initialRule.threshold ?? '',
+        county: initialRule.county || 'All Counties',
+        pest: initialRule.pest || 'All Pests',
+        action: initialRule.action ?? 'email',
+        recipients: initialRule.recipients ?? '',
+      });
+    } else {
+      setFormData(defaultForm);
+    }
+  }, [initialRule, isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      ...formData,
-      status: 'active',
-      triggered: 0,
-      lastTriggered: 'Never',
-    });
-    setFormData({
-      name: '',
-      condition: 'outbreak_threshold',
-      threshold: '',
-      county: 'All Counties',
-      pest: 'All Pests',
-      action: 'email',
-      recipients: '',
-    });
-    onClose();
+    setSaving(true);
+    try {
+      await onSave({
+        id: initialRule?.id,
+        ...formData,
+        status: initialRule?.status ?? 'active',
+      });
+      setFormData(defaultForm);
+      onClose();
+    } catch {
+      /* parent sets adminError */
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
-      <div 
+      <div
         className="w-full max-w-3xl rounded-lg border overflow-hidden"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', maxHeight: '90vh' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div 
+        <div
           className="px-6 py-4 border-b flex items-center justify-between"
           style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}
         >
-          <h2 
-            className="text-xl"
-            style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
-          >
-            Create Alert Rule
+          <h2 className="text-xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+            {initialRule ? 'Edit Alert Rule' : 'Create Alert Rule'}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/50 transition-colors"
-          >
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-white/50 transition-colors">
             <X className="w-5 h-5" style={{ color: '#717182' }} />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 150px)' }}>
           <div className="space-y-4">
-            {/* Name */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Rule Name *
               </label>
               <input
@@ -96,12 +115,8 @@ export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModal
               />
             </div>
 
-            {/* Condition */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Trigger Condition *
               </label>
               <select
@@ -123,16 +138,12 @@ export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModal
               </select>
             </div>
 
-            {/* Threshold */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Threshold Value *
               </label>
               <input
-                type="number"
+                type="text"
                 required
                 value={formData.threshold}
                 onChange={(e) => setFormData({ ...formData, threshold: e.target.value })}
@@ -142,19 +153,15 @@ export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModal
                   borderColor: '#E0DDD6',
                   backgroundColor: '#FFFFFF',
                 }}
-                placeholder="e.g., 10"
+                placeholder="e.g., 10 or 90%"
               />
               <p className="text-xs mt-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                 Number of cases or percentage based on selected condition
               </p>
             </div>
 
-            {/* County Filter */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 County Filter
               </label>
               <select
@@ -178,12 +185,8 @@ export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModal
               </select>
             </div>
 
-            {/* Pest Filter */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Pest/Disease Filter
               </label>
               <select
@@ -205,12 +208,8 @@ export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModal
               </select>
             </div>
 
-            {/* Action */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Alert Action *
               </label>
               <select
@@ -231,12 +230,8 @@ export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModal
               </select>
             </div>
 
-            {/* Recipients */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Recipients *
               </label>
               <input
@@ -258,7 +253,6 @@ export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModal
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3 mt-6 pt-6 border-t" style={{ borderColor: '#E0DDD6' }}>
             <button
               type="button"
@@ -270,19 +264,21 @@ export function AddAlertRuleModal({ isOpen, onClose, onSave }: AddAlertRuleModal
                 color: '#717182',
                 backgroundColor: '#FFFFFF',
               }}
+              disabled={saving}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 rounded-lg transition-colors"
+              disabled={saving}
+              className="flex-1 px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
               style={{
                 fontFamily: 'IBM Plex Sans, sans-serif',
                 backgroundColor: '#2D6A4F',
                 color: '#FFFFFF',
               }}
             >
-              Create Rule
+              {saving ? 'Saving…' : initialRule ? 'Save Changes' : 'Create Rule'}
             </button>
           </div>
         </form>

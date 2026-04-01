@@ -1,7 +1,7 @@
 import { KPICards } from '../components/KPICards';
 import { CaseTableEnhanced } from '../components/CaseTableEnhanced';
 import { useEffect, useState } from 'react';
-import { fetchCaseManagement } from '../api/placeholderApi';
+import { fetchCaseManagement } from '../api/realApi';
 import type { CaseManagementPayload } from '../api/types';
 
 export function CaseManagement() {

@@ -1,13 +1,15 @@
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (user: any) => void;
+  onSave: (user: { id?: string; name: string; email: string; phone: string; role: string; county: string }) => void;
+  initialUser?: { id: string; name: string; email: string; phone: string; role: string; county: string } | null;
+  roleOptions: string[];
 }
 
-export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
+export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions }: AddUserModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,11 +18,33 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
     county: 'Murang\'a',
   });
 
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialUser) {
+      setFormData({
+        name: initialUser.name ?? '',
+        email: initialUser.email ?? '',
+        phone: initialUser.phone ?? '',
+        role: initialUser.role ?? 'Field Scout',
+        county: initialUser.county ?? "Murang'a",
+      });
+    } else {
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        role: roleOptions[0] ?? 'Field Scout',
+        county: "Murang'a",
+      });
+    }
+  }, [initialUser, isOpen, roleOptions]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
+      id: initialUser?.id,
       ...formData,
       status: 'active',
       lastLogin: 'Never',
@@ -55,7 +79,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
             className="text-xl"
             style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
           >
-            Add New User
+            {initialUser ? 'Edit User' : 'Add New User'}
           </h2>
           <button
             onClick={onClose}
@@ -156,11 +180,21 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
                   backgroundColor: '#FFFFFF',
                 }}
               >
-                <option value="Field Scout">Field Scout</option>
-                <option value="Agronomist">Agronomist</option>
-                <option value="Farm Manager">Farm Manager</option>
-                <option value="System Administrator">System Administrator</option>
-                <option value="Regional Coordinator">Regional Coordinator</option>
+                {roleOptions.length > 0 ? (
+                  roleOptions.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Field Scout">Field Scout</option>
+                    <option value="Agronomist">Agronomist</option>
+                    <option value="Farm Manager">Farm Manager</option>
+                    <option value="System Administrator">System Administrator</option>
+                    <option value="Regional Coordinator">Regional Coordinator</option>
+                  </>
+                )}
               </select>
             </div>
 
@@ -218,7 +252,7 @@ export function AddUserModal({ isOpen, onClose, onSave }: AddUserModalProps) {
                 color: '#FFFFFF',
               }}
             >
-              Add User
+              {initialUser ? 'Save Changes' : 'Add User'}
             </button>
           </div>
         </form>

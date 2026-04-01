@@ -1,46 +1,51 @@
-import { Mail, Lock, Eye, ArrowRight, ShieldCheck, BarChart3, ClipboardList, Map } from 'lucide-react';
+import { Phone, KeyRound, ArrowRight, ShieldCheck, BarChart3, ClipboardList, Map } from 'lucide-react';
 import { FormEvent, ReactNode, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import avocadoLogo from '../../imports/avocado_logo.svg';
-import { createMockJwt, setAuthToken } from '../auth';
+import { registerAndRequestOtp, requestOtp, verifyOtp } from '../api/authApi';
 
 export function Login() {
   const navigate = useNavigate();
+  const [step, setStep] = useState<'request' | 'verify'>('request');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [phoneNumber, setPhoneNumber] = useState('+254798208346');
+  const [otpCode, setOtpCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const canSubmit = useMemo(
-    () => email.trim().length > 0 && password.trim().length > 0,
-    [email, password],
+    () =>
+      step === 'request'
+        ? phoneNumber.trim().length > 0 && fullName.trim().length > 0 && email.trim().length > 0
+        : phoneNumber.trim().length > 0 && otpCode.trim().length > 0,
+    [email, fullName, phoneNumber, otpCode, step],
   );
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!canSubmit || submitting) return;
 
     setSubmitting(true);
     setError(null);
+    setInfo(null);
 
-    window.setTimeout(() => {
-      try {
-        const token = createMockJwt(email.trim());
-        setAuthToken(token);
-        if (!rememberMe) {
-          // Frontend-only behavior: no persistent session hint for future backend wiring.
-          window.sessionStorage.setItem('avoguard.auth.sessionOnly', '1');
-        } else {
-          window.sessionStorage.removeItem('avoguard.auth.sessionOnly');
-        }
+    try {
+      const phone = phoneNumber.trim();
+      if (step === 'request') {
+        await registerAndRequestOtp({ name: fullName.trim(), email: email.trim(), phone_number: phone });
+        setStep('verify');
+        setInfo('OTP sent. Enter the 6-digit code to continue.');
+      } else {
+        await verifyOtp(phone, otpCode.trim());
         navigate('/dashboard');
-      } catch {
-        setError('Unable to sign in. Please try again.');
-      } finally {
-        setSubmitting(false);
       }
-    }, 450);
+    } catch {
+      setError(step === 'request' ? 'Unable to send OTP. Check the phone number and try again.' : 'Invalid OTP. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -64,62 +69,123 @@ export function Login() {
           </div>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
+            {step === 'request' ? (
+              <>
+                <div>
+                  <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                    Full Name
+                  </label>
+                  <div className="mt-2 relative">
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="e.g. Jane Wambui"
+                      className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 px-4"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+                      autoComplete="name"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                    Email
+                  </label>
+                  <div className="mt-2 relative">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="e.g. name@example.com"
+                      className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 px-4"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            ) : null}
             <div>
-              <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                Email Address
-              </label>
+              <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>Phone Number</label>
               <div className="mt-2 relative">
-                <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                <Phone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="e.g. +2547XXXXXXXX"
                   className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-10 pr-10"
                   style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-                  autoComplete="email"
+                  autoComplete="tel"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                Password
-              </label>
-              <div className="mt-2 relative">
-                <Lock className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-10 pr-10"
-                  style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-                  autoComplete="current-password"
-                />
-                <Eye className="absolute right-3 top-3.5 w-4 h-4 text-gray-400 cursor-pointer" />
+            {step === 'verify' ? (
+              <div>
+                <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                  One-Time Password (OTP)
+                </label>
+                <div className="mt-2 relative">
+                  <KeyRound className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                  <input
+                    inputMode="numeric"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    placeholder="6-digit code"
+                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-10 pr-10"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                  />
+                </div>
+                <div className="mt-2 flex items-center justify-between text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                  <button
+                    type="button"
+                    className="text-green-700 hover:underline"
+                    onClick={() => {
+                      setStep('request');
+                      setOtpCode('');
+                      setError(null);
+                      setInfo(null);
+                    }}
+                  >
+                    Change phone number
+                  </button>
+                  <button
+                    type="button"
+                    className="text-green-700 hover:underline"
+                    onClick={async () => {
+                      if (submitting) return;
+                      setSubmitting(true);
+                      setError(null);
+                      setInfo(null);
+                      try {
+                        await requestOtp(phoneNumber.trim());
+                        setInfo('OTP resent.');
+                      } catch {
+                        setError('Unable to resend OTP. Please try again.');
+                      } finally {
+                        setSubmitting(false);
+                      }
+                    }}
+                  >
+                    Resend OTP
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
 
-            <div className="flex items-center justify-between text-sm">
-              <label
-                className="flex items-center gap-2 text-gray-600"
+            {info ? (
+              <p
+                className="rounded-md border border-[#1D4ED8] bg-[#DBEAFE] px-3 py-2 text-xs text-[#1E40AF]"
                 style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
               >
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                Remember me
-              </label>
-              <a
-                className="text-green-600 hover:underline cursor-pointer"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-              >
-                Forgot Password?
-              </a>
-            </div>
+                {info}
+              </p>
+            ) : null}
 
             {error ? (
               <p
@@ -136,7 +202,7 @@ export function Login() {
               className="w-full bg-gradient-to-r from-[#4fa36c] to-[#3c8f5a] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
             >
-              {submitting ? 'Signing In...' : 'Sign In'}
+              {submitting ? (step === 'request' ? 'Sending OTP...' : 'Verifying...') : step === 'request' ? 'Send OTP' : 'Verify & Sign In'}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
