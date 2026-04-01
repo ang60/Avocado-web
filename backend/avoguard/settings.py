@@ -1,9 +1,24 @@
+import environ
 import os
 from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load .env
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+DATABASES = {
+    'default': {
+        'ENGINE': env('DB_ENGINE', default='django.db.backends.postgresql'),
+        'NAME': env('DB_NAME', default='avoguard'),
+        'USER': env('DB_USER', default='avoguard_user'),
+        'PASSWORD': env('DB_PASSWORD', default='Password123'),
+        'HOST': env('DB_HOST', default='localhost'),
+        'PORT': env('DB_PORT', default='5432'),
+    }
+}
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
     'dev-insecure-change-me-please-set-DJANGO_SECRET_KEY-to-a-long-random-string',
@@ -11,7 +26,7 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = os.environ.get('DJANGO_DEBUG', '1') == '1'
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['localhost','127.0.0.1', '35.238.147.105', 'avoguard.cognitron.co.ke']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
