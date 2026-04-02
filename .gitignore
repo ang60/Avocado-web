@@ -23,3 +23,8 @@ backend/**/__pycache__/
 Thumbs.db
 *.swp
 .idea/
+
+# Markdown docs (keep repo readme only)
+*.md
+!README.md
+!readme.md
