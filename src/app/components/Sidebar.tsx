@@ -16,31 +16,36 @@ import {
   Package,
 } from 'lucide-react';
 import { useLocation } from 'react-router';
+import { useEffect, useMemo, useState } from 'react';
 import { AppLink } from './AppLink';
 import avocadoLogo from '../../imports/avocado_logo.svg';
 import { useSidebar } from '../context/SidebarContext';
 import { OptimizedImage } from './OptimizedImage';
+import { getAuthUser, subscribeAuth } from '../auth';
+import { hasAppAccess } from '../rbac';
 
 interface NavItem {
   name: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
+  /** accounts.AppPermission.name — see backend migration 0012 */
+  permission: string;
 }
 
 const navItems: NavItem[] = [
-  { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  { name: 'Scouting Reports', icon: FileText, path: '/scouting-reports' },
-  { name: 'Case Management', icon: FolderOpen, path: '/case-management' },
-  { name: 'Outbreak Monitoring', icon: Activity, path: '/outbreak-monitoring' },
-  { name: 'KEPHIS', icon: Shield, path: '/kephis-quarantine' },
-  { name: 'HCDA', icon: Building2, path: '/hcda-registry' },
-  { name: 'Exporter', icon: Package, path: '/exporter' },
-  { name: 'Alerts', icon: Bell, path: '/alerts' },
-  { name: 'Knowledge Base', icon: BookOpen, path: '/knowledge-base' },
-  { name: 'Symptom Codebook', icon: Phone, path: '/symptom-codebook' },
-  { name: 'Farmers', icon: Users, path: '/farmers' },
-  { name: 'Reports', icon: ClipboardCheck, path: '/compliance-hub' },
-  { name: 'Admin', icon: Settings, path: '/admin' },
+  { name: 'Dashboard', icon: LayoutDashboard, path: '/', permission: 'nav.dashboard' },
+  { name: 'Scouting Reports', icon: FileText, path: '/scouting-reports', permission: 'nav.scouting' },
+  { name: 'Case Management', icon: FolderOpen, path: '/case-management', permission: 'nav.cases' },
+  { name: 'Outbreak Monitoring', icon: Activity, path: '/outbreak-monitoring', permission: 'nav.outbreak' },
+  { name: 'KEPHIS', icon: Shield, path: '/kephis-quarantine', permission: 'nav.kephis' },
+  { name: 'HCDA', icon: Building2, path: '/hcda-registry', permission: 'nav.hcda' },
+  { name: 'Exporter', icon: Package, path: '/exporter', permission: 'nav.exporter' },
+  { name: 'Alerts', icon: Bell, path: '/alerts', permission: 'nav.alerts' },
+  { name: 'Knowledge Base', icon: BookOpen, path: '/knowledge-base', permission: 'nav.knowledge' },
+  { name: 'Symptom Codebook', icon: Phone, path: '/symptom-codebook', permission: 'nav.symptom_codebook' },
+  { name: 'Farmers', icon: Users, path: '/farmers', permission: 'nav.farmers' },
+  { name: 'Reports', icon: ClipboardCheck, path: '/compliance-hub', permission: 'nav.reports' },
+  { name: 'Admin', icon: Settings, path: '/admin', permission: 'nav.admin' },
 ];
 
 function SidebarNavLinks({
@@ -51,11 +56,18 @@ function SidebarNavLinks({
   onNavigate?: () => void;
 }) {
   const location = useLocation();
+  const [authEpoch, setAuthEpoch] = useState(0);
+  useEffect(() => subscribeAuth(() => setAuthEpoch((e) => e + 1)), []);
+
+  const visibleItems = useMemo(() => {
+    const user = getAuthUser();
+    return navItems.filter((item) => hasAppAccess(user, item.permission));
+  }, [authEpoch]);
 
   return (
     <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3">
       <ul className="space-y-1 pb-4">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive =
             item.path === '/'

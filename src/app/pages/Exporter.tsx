@@ -2,6 +2,9 @@
 import { Package, TrendingUp, AlertTriangle, Plus, Truck, CheckCircle, Clock, Eye, Calendar, X, MapPin, Phone, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TableScroll } from '../components/TableScroll';
+import { fetchFarmersList } from '../api/realApi';
+import type { FarmerListRow } from '../api/types';
+import { getApiErrorMessage } from '../api/errors';
 
 interface ConsignmentBlock {
   id: string;
@@ -29,6 +32,33 @@ interface Batch {
   blockIds: string[];
   stage: 'scouting' | 'kephis' | 'packed' | 'shipped';
   totalVolume: number;
+}
+
+function mapFarmerToConsignmentBlock(r: FarmerListRow): ConsignmentBlock {
+  const kephis: ConsignmentBlock['kephisStatus'] =
+    r.exportEligibility === 'ready' ? 'cleared' : r.exportEligibility === 'at-risk' ? 'pending' : 'blocked';
+  const shortId = String(r.id).replace(/-/g, '').slice(0, 8);
+  return {
+    id: r.id,
+    blockId: `BLK-${shortId}`,
+    farmerName: r.name,
+    county: r.county || '—',
+    acreage: r.totalAcres,
+    estimatedVolume: Math.round(r.totalAcres * 1.2 * 10) / 10,
+    pestPressure:
+      r.lastScoutingResult?.status === 'high-risk'
+        ? 16
+        : r.lastScoutingResult?.status === 'medium-risk'
+          ? 9
+          : r.lastScoutingResult?.status === 'low-risk'
+            ? 5
+            : 3,
+    phiExpiryDate: new Date(Date.now() + 86400000 * 21).toISOString().slice(0, 10),
+    kephisStatus: kephis,
+    lastSprayDate: r.lastInspection || '—',
+    phoneNumber: r.phone,
+    location: r.location,
+  };
 }
 
 const mockConsignmentData: ConsignmentBlock[] = [
@@ -159,7 +189,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
 ];
 
 export function Exporter() {
-  const [blocks, setBlocks] = useState<ConsignmentBlock[]>(mockConsignmentData);
+  const [blocks, setBlocks] = useState<ConsignmentBlock[]>([]);
+  const [exporterLoading, setExporterLoading] = useState(true);
+  const [exporterError, setExporterError] = useState<string | null>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -188,6 +220,33 @@ export function Exporter() {
       setCurrentTime(new Date());
     }, 60000); // Update every minute
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setExporterLoading(true);
+    fetchFarmersList()
+      .then((rows) => {
+        if (cancelled) return;
+        if (rows.length === 0) {
+          setBlocks(mockConsignmentData);
+          setExporterError('No farmers returned from the API — showing demo blocks.');
+        } else {
+          setBlocks(rows.map(mapFarmerToConsignmentBlock));
+          setExporterError(null);
+        }
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setBlocks(mockConsignmentData);
+        setExporterError(`${getApiErrorMessage(e, 'Could not load supply base.')} Showing demo data.`);
+      })
+      .finally(() => {
+        if (!cancelled) setExporterLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Calculate summary statistics
@@ -331,6 +390,26 @@ export function Exporter() {
             Create New Shipment Batch
           </button>
         </div>
+
+        {exporterLoading ? (
+          <p className="mb-4 text-sm text-gray-500" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            Loading supply base from API…
+          </p>
+        ) : null}
+        {exporterError ? (
+          <div
+            className="mb-4 rounded-lg border px-4 py-3 text-sm"
+            style={{
+              fontFamily: 'IBM Plex Sans, sans-serif',
+              borderColor: '#D97706',
+              backgroundColor: '#FFFBEB',
+              color: '#92400E',
+            }}
+            role="status"
+          >
+            {exporterError}
+          </div>
+        ) : null}
 
         {/* Summary Cards */}
         <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-3 sm:gap-4 md:gap-5">

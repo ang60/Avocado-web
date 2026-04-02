@@ -1,6 +1,7 @@
 import { lazy, type ComponentType } from 'react';
 import { createBrowserRouter, redirect } from 'react-router';
-import { isAuthenticated } from './auth';
+import { getAuthUser, isAuthenticated } from './auth';
+import { hasAppAccess } from './rbac';
 import { AppShell } from './components/AppShell';
 
 function requireAuthLoader() {
@@ -8,6 +9,17 @@ function requireAuthLoader() {
     return redirect('/login');
   }
   return null;
+}
+
+function requireNavPermission(permission: string) {
+  return () => {
+    const gate = requireAuthLoader();
+    if (gate) return gate;
+    const u = getAuthUser();
+    if (hasAppAccess(u, permission)) return null;
+    if (hasAppAccess(u, 'nav.dashboard')) return redirect('/dashboard');
+    return redirect('/no-access');
+  };
 }
 
 function loginLoader() {
@@ -48,76 +60,102 @@ export const router = createBrowserRouter([
     Component: lazyRoute(() => import('./pages/Register'), 'Register'),
   },
   {
+    path: '/logout',
+    Component: lazyRoute(() => import('./pages/Logout'), 'Logout'),
+  },
+  {
     path: '/',
     loader: requireAuthLoader,
     Component: AppShell,
     children: [
       {
         index: true,
+        loader: requireNavPermission('nav.dashboard'),
         Component: lazyRoute(() => import('./pages/Dashboard'), 'Dashboard'),
       },
       {
         path: 'dashboard',
+        loader: requireNavPermission('nav.dashboard'),
         Component: lazyRoute(() => import('./pages/Dashboard'), 'Dashboard'),
       },
       {
+        path: 'no-access',
+        loader: requireAuthLoader,
+        Component: lazyRoute(() => import('./pages/NoAccess'), 'NoAccess'),
+      },
+      {
         path: 'scouting-reports',
+        loader: requireNavPermission('nav.scouting'),
         Component: lazyRoute(() => import('./pages/ScoutingReports'), 'ScoutingReports'),
       },
       {
         path: 'case-management',
+        loader: requireNavPermission('nav.cases'),
         Component: lazyRoute(() => import('./pages/CaseManagement'), 'CaseManagement'),
       },
       {
         path: 'case-management/:caseId',
+        loader: requireNavPermission('nav.cases'),
         Component: lazyRoute(() => import('./pages/CaseDetail'), 'CaseDetail'),
       },
       {
         path: 'outbreak-monitoring',
+        loader: requireNavPermission('nav.outbreak'),
         Component: lazyRoute(() => import('./pages/OutbreakMonitoring'), 'OutbreakMonitoring'),
       },
       {
         path: 'kephis-quarantine',
+        loader: requireNavPermission('nav.kephis'),
         Component: lazyRoute(() => import('./pages/KEPHISQuarantine'), 'KEPHISQuarantine'),
       },
       {
         path: 'hcda-registry',
+        loader: requireNavPermission('nav.hcda'),
         Component: lazyRoute(() => import('./pages/HCDARegistry'), 'HCDARegistry'),
       },
       {
         path: 'alerts',
+        loader: requireNavPermission('nav.alerts'),
         Component: lazyRoute(() => import('./pages/Alerts'), 'Alerts'),
       },
       {
         path: 'knowledge-base',
+        loader: requireNavPermission('nav.knowledge'),
         Component: lazyRoute(() => import('./pages/KnowledgeBase'), 'KnowledgeBase'),
       },
       {
         path: 'knowledge-base/:articleId',
+        loader: requireNavPermission('nav.knowledge'),
         Component: lazyRoute(() => import('./pages/KBArticleDetail'), 'KBArticleDetail'),
       },
       {
         path: 'symptom-codebook',
+        loader: requireNavPermission('nav.symptom_codebook'),
         Component: lazyRoute(() => import('./pages/SymptomCodebook'), 'SymptomCodebook'),
       },
       {
         path: 'farmers',
+        loader: requireNavPermission('nav.farmers'),
         Component: lazyRoute(() => import('./pages/Farmers'), 'Farmers'),
       },
       {
         path: 'farmers/:farmerId',
+        loader: requireNavPermission('nav.farmers'),
         Component: lazyRoute(() => import('./pages/FarmerDetail'), 'FarmerDetail'),
       },
       {
         path: 'compliance-hub',
+        loader: requireNavPermission('nav.reports'),
         Component: lazyRoute(() => import('./pages/ComplianceHub'), 'ComplianceHub'),
       },
       {
         path: 'admin',
+        loader: requireNavPermission('nav.admin'),
         Component: lazyRoute(() => import('./pages/Admin'), 'Admin'),
       },
       {
         path: 'exporter',
+        loader: requireNavPermission('nav.exporter'),
         Component: lazyRoute(() => import('./pages/Exporter'), 'Exporter'),
       },
     ],

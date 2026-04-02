@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { PasswordField } from './PasswordField';
 
 /** Matches seeded roles in accounts.0011_seed_core_roles when API list is empty */
 const DEFAULT_ROLE_OPTIONS = [
@@ -12,11 +13,34 @@ const DEFAULT_ROLE_OPTIONS = [
   'Exporter',
 ];
 
+const MIN_PW = 8;
+
+export type AddUserSavePayload = {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  county: string;
+  /** Only for Add User — optional; registrants already have a password */
+  password?: string;
+  /** Edit only: whether the account can sign in */
+  is_active?: boolean;
+};
+
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (user: { id?: string; name: string; email: string; phone: string; role: string; county: string }) => void | Promise<void>;
-  initialUser?: { id: string; name: string; email: string; phone: string; role: string; county: string } | null;
+  onSave: (user: AddUserSavePayload) => void | Promise<void>;
+  initialUser?: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    county: string;
+    isActive: boolean;
+  } | null;
   roleOptions: string[];
 }
 
@@ -28,13 +52,16 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
     role: '',
     county: "Murang'a",
   });
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [isActive, setIsActive] = useState(true);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const apiBackedRoles = useMemo(
     () => (roleOptions.length > 0 ? roleOptions : DEFAULT_ROLE_OPTIONS),
     [roleOptions],
   );
 
-  /** Every selectable name plus "(No role)" as empty string — avoids invalid <select value> when role is Unknown. */
   const roleSelectNames = useMemo(() => {
     const names = [...apiBackedRoles];
     const current = formData.role.trim();
@@ -46,6 +73,9 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
 
   useEffect(() => {
     if (!isOpen) return;
+    setLocalError(null);
+    setPassword('');
+    setPasswordConfirm('');
     if (initialUser) {
       const raw = (initialUser.role ?? '').trim();
       const roleValue = !raw || raw === 'Unknown' ? '' : raw;
@@ -56,7 +86,9 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
         role: roleValue,
         county: initialUser.county?.trim() || "Murang'a",
       });
+      setIsActive(initialUser.isActive);
     } else {
+      setIsActive(true);
       setFormData({
         name: '',
         email: '',
@@ -71,17 +103,40 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null);
+
+    const isNew = !initialUser;
+    if (isNew) {
+      const wantPw = password.length > 0 || passwordConfirm.length > 0;
+      if (wantPw) {
+        if (password.length < MIN_PW) {
+          setLocalError(`Password must be at least ${MIN_PW} characters.`);
+          return;
+        }
+        if (password !== passwordConfirm) {
+          setLocalError('Passwords do not match.');
+          return;
+        }
+      }
+    }
+
     try {
-      await Promise.resolve(
-        onSave({
-          id: initialUser?.id,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          role: formData.role,
-          county: formData.county,
-        }),
-      );
+      const payload: AddUserSavePayload = {
+        id: initialUser?.id,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+        county: formData.county,
+      };
+      if (isNew) {
+        if (password.length > 0) {
+          payload.password = password;
+        }
+      } else {
+        payload.is_active = isActive;
+      }
+      await Promise.resolve(onSave(payload));
       onClose();
     } catch {
       /* Parent sets error banner; keep modal open */
@@ -170,6 +225,47 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
               />
             </div>
 
+            {initialUser ? (
+              <label className="flex items-center gap-3 cursor-pointer rounded-lg border px-4 py-3" style={{ borderColor: '#E0DDD6' }}>
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <div>
+                  <span className="block text-sm font-medium text-[#1B4332]" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                    Account active
+                  </span>
+                  <span className="block text-xs text-[#717182]" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                    Turn on so this person can sign in with the password they set at registration (or phone code). You can assign a role
+                    below without changing their password.
+                  </span>
+                </div>
+              </label>
+            ) : (
+              <>
+                <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                  Password is optional here. People who already registered chose their own password — leave blank to add directory-only
+                  users or use a temporary password for staff created manually.
+                </p>
+                <PasswordField
+                  label={`Password (optional, min ${MIN_PW} if set)`}
+                  value={password}
+                  onChange={setPassword}
+                  required={false}
+                  autoComplete="new-password"
+                />
+                <PasswordField
+                  label="Confirm password"
+                  value={passwordConfirm}
+                  onChange={setPasswordConfirm}
+                  required={false}
+                  autoComplete="new-password"
+                />
+              </>
+            )}
+
             <div>
               <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Role {initialUser ? '' : '*'}
@@ -219,6 +315,12 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
               </select>
             </div>
           </div>
+
+          {localError ? (
+            <p className="mt-3 text-sm text-red-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              {localError}
+            </p>
+          ) : null}
 
           <div className="flex gap-3 mt-6 pt-6 border-t" style={{ borderColor: '#E0DDD6' }}>
             <button

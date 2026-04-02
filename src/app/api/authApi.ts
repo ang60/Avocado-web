@@ -12,6 +12,8 @@ export async function submitAccessRequest(params: {
   name: string;
   email?: string;
   phone_number: string;
+  password: string;
+  password_confirm: string;
 }): Promise<AccessRequestResponse> {
   return apiRequest<AccessRequestResponse>('/api/users/register/', {
     method: 'POST',
@@ -42,6 +44,17 @@ export async function verifyOtp(phoneNumber: string, code: string): Promise<Veri
     method: 'POST',
     auth: false,
     body: JSON.stringify({ phone_number: phoneNumber, code }),
+  });
+  setAuthSession({ access: res.access, refresh: res.refresh, user: res.user });
+  return res;
+}
+
+/** Sign in with email or phone plus password (account must be approved). */
+export async function loginWithPassword(identifier: string, password: string): Promise<VerifyOtpResponse> {
+  const res = await apiRequest<VerifyOtpResponse>('/api/users/login_password/', {
+    method: 'POST',
+    auth: false,
+    body: JSON.stringify({ identifier: identifier.trim(), password }),
   });
   setAuthSession({ access: res.access, refresh: res.refresh, user: res.user });
   return res;

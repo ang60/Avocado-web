@@ -1,7 +1,9 @@
 import { Bell, AlertTriangle, Info, CheckCircle, Clock, Map, FileText, Users, Settings, X, MapPin, TrendingUp, Eye, Radio, CheckCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { staticAlertRules } from '../data/alertRules';
+import { listAlertRules, type AdminAlertRuleApiRow } from '../api/adminApi';
+import { ApiError } from '../api/client';
 
 const alerts = [
   {
@@ -186,6 +188,35 @@ export function Alerts() {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [showConfigureRules, setShowConfigureRules] = useState(false);
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [configuredRules, setConfiguredRules] = useState<AdminAlertRuleApiRow[]>([]);
+  const [rulesLoading, setRulesLoading] = useState(true);
+  const [rulesError, setRulesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listAlertRules()
+      .then((rows) => {
+        if (!cancelled) {
+          setConfiguredRules(rows);
+          setRulesError(null);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setRulesError(
+            e instanceof ApiError
+              ? (e.getDetailMessage() ?? `Could not load alert rules (HTTP ${e.status}).`)
+              : 'Could not load alert rules.',
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setRulesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const unreadCount = alerts.filter(a => !a.read && !dismissedAlerts.includes(a.id)).length;
   const criticalCount = alerts.filter(a => a.severity === 'critical' && !dismissedAlerts.includes(a.id)).length;
@@ -414,7 +445,7 @@ export function Alerts() {
         </div>
       </div>
 
-      {/* Static rules (documentation / guidance) */}
+      {/* Rules persisted in Django (`AlertRule`); editable under Admin → Alert Rules */}
       <div
         className="mb-5 rounded-lg border p-4 sm:p-5"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
@@ -425,10 +456,105 @@ export function Alerts() {
               className="text-lg"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}
             >
-              Alert rules (static)
+              Configured alert rules
             </h2>
             <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-              Reference thresholds from agronomy guidance (for UI only; can be wired to real-time triggers later).
+              Live data from the API (`/api/alert_rules/`). Manage them under Admin → Alert Rules.
+            </p>
+          </div>
+        </div>
+        {rulesLoading ? (
+          <p className="text-sm text-gray-500" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            Loading rules…
+          </p>
+        ) : null}
+        {rulesError ? (
+          <p className="text-sm text-amber-800" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            {rulesError}
+          </p>
+        ) : null}
+        {!rulesLoading && !rulesError && configuredRules.length === 0 ? (
+          <p className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            No alert rules in the database yet.
+          </p>
+        ) : null}
+        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {configuredRules.map((r) => (
+            <div
+              key={r.id}
+              className="rounded-lg border p-4"
+              style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF', borderRadius: '8px' }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                  {r.name}
+                </p>
+                <span
+                  className="shrink-0 rounded px-2 py-1 text-xs uppercase"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    backgroundColor: r.status === 'active' ? '#DCFCE7' : '#E5E7EB',
+                    color: r.status === 'active' ? '#166534' : '#374151',
+                  }}
+                >
+                  {r.status}
+                </span>
+              </div>
+              <dl className="mt-2 space-y-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                <div>
+                  <dt className="inline font-medium text-[#1B4332]">Condition: </dt>
+                  <dd className="inline">{r.condition}</dd>
+                </div>
+                <div>
+                  <dt className="inline font-medium text-[#1B4332]">Threshold: </dt>
+                  <dd className="inline">{r.threshold}</dd>
+                </div>
+                {r.county ? (
+                  <div>
+                    <dt className="inline font-medium text-[#1B4332]">County: </dt>
+                    <dd className="inline">{r.county}</dd>
+                  </div>
+                ) : null}
+                {r.pest ? (
+                  <div>
+                    <dt className="inline font-medium text-[#1B4332]">Pest: </dt>
+                    <dd className="inline">{r.pest}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt className="inline font-medium text-[#1B4332]">Action: </dt>
+                  <dd className="inline">{r.action}</dd>
+                </div>
+                {r.recipients ? (
+                  <div>
+                    <dt className="inline font-medium text-[#1B4332]">Recipients: </dt>
+                    <dd className="inline break-all">{r.recipients}</dd>
+                  </div>
+                ) : null}
+                <div className="text-xs text-gray-500">
+                  Triggered {r.triggered}× · Last: {r.lastTriggered}
+                </div>
+              </dl>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Reference copy for field teams (static guidance) */}
+      <div
+        className="mb-5 rounded-lg border p-4 sm:p-5"
+        style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2
+              className="text-lg"
+              style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}
+            >
+              Reference thresholds (guidance)
+            </h2>
+            <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              Illustrative thresholds from agronomy guidance — not synchronized to the database.
             </p>
           </div>
         </div>

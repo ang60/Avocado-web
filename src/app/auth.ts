@@ -11,6 +11,10 @@ export type AuthUser = {
   county?: string | null;
   role_details?: { id: string; role_name: string } | null;
   entity_details?: { id: string; company_name: string } | null;
+  /** Permission names from the user's role (omitted on older sessions until next login). */
+  app_permissions?: string[];
+  /** Staff, superuser, or Administrator role — all nav areas without checking app_permissions. */
+  is_privileged?: boolean;
 };
 
 export function getAccessToken(): string | null {
@@ -34,11 +38,32 @@ export function getAuthUser(): AuthUser | null {
   }
 }
 
+const authListeners = new Set<() => void>();
+
+/** Subscribe to login/logout (localStorage session changes). Used by TopBar to refresh profile. */
+export function subscribeAuth(listener: () => void): () => void {
+  authListeners.add(listener);
+  return () => {
+    authListeners.delete(listener);
+  };
+}
+
+function notifyAuthListeners() {
+  authListeners.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      /* ignore */
+    }
+  });
+}
+
 export function setAuthSession(params: { access: string; refresh: string; user: AuthUser }) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(ACCESS_TOKEN_KEY, params.access);
   window.localStorage.setItem(REFRESH_TOKEN_KEY, params.refresh);
   window.localStorage.setItem(USER_KEY, JSON.stringify(params.user));
+  notifyAuthListeners();
 }
 
 export function clearAuthSession() {
@@ -46,6 +71,7 @@ export function clearAuthSession() {
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(REFRESH_TOKEN_KEY);
   window.localStorage.removeItem(USER_KEY);
+  notifyAuthListeners();
 }
 
 export function isAuthenticated(): boolean {

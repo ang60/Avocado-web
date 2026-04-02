@@ -9,6 +9,19 @@ export type PaginatedResults<T> = {
   results: T[];
 };
 
+/** DRF list views: either a JSON array or `{ results: [...] }` when paginated. */
+export function parseDrfList<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  if (
+    data &&
+    typeof data === 'object' &&
+    Array.isArray((data as PaginatedResults<T>).results)
+  ) {
+    return (data as PaginatedResults<T>).results;
+  }
+  return [];
+}
+
 export class ApiError extends Error {
   status: number;
   bodyText: string;

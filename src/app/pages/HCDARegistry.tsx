@@ -1,7 +1,10 @@
 
 import { Building2, MapPin, TrendingUp, CheckCircle, XCircle, Clock, Search, Download, FileCheck, Eye, X, User, Phone, Mail } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TableScroll } from '../components/TableScroll';
+import { fetchFarmersList } from '../api/realApi';
+import type { FarmerListRow } from '../api/types';
+import { getApiErrorMessage } from '../api/errors';
 
 interface FarmerRegistration {
   id: string;
@@ -183,13 +186,62 @@ const exporters = [
   'Fresh Produce Exporters',
 ];
 
+function mapApiFarmerToHcdaRow(r: FarmerListRow): FarmerRegistration {
+  let globalGAPStatus: FarmerRegistration['globalGAPStatus'] = 'compliant';
+  if (r.exportEligibility === 'at-risk') globalGAPStatus = 'expired';
+  if (r.exportEligibility === 'suspended') globalGAPStatus = 'non-compliant';
+  const countyKey = (r.county || 'UNK').slice(0, 3).toUpperCase().replace(/\s/g, '');
+  return {
+    id: r.id,
+    farmerName: r.name,
+    hcdaRegNumber: `HCDA-${countyKey}-${String(r.id).replace(/-/g, '').slice(0, 8)}`,
+    ward: r.ward || '—',
+    county: r.county || '—',
+    acreage: r.totalAcres,
+    globalGAPStatus,
+    globalGAPExpiry: r.lastInspection || '—',
+    primaryExporter: r.linkedExporter ? `Linked ${String(r.linkedExporter).slice(0, 8)}…` : '—',
+    lat: 0,
+    lng: 0,
+  };
+}
+
 export function HCDARegistry() {
-  const [farmers] = useState<FarmerRegistration[]>(mockFarmers);
+  const [farmers, setFarmers] = useState<FarmerRegistration[]>([]);
+  const [registryLoading, setRegistryLoading] = useState(true);
+  const [registryError, setRegistryError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExporter, setSelectedExporter] = useState<string>('all');
   const [selectedGAPStatus, setSelectedGAPStatus] = useState<string>('all');
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerRegistration | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRegistryLoading(true);
+    fetchFarmersList()
+      .then((rows) => {
+        if (cancelled) return;
+        if (rows.length === 0) {
+          setFarmers(mockFarmers);
+          setRegistryError('No farmers returned from the API — showing demo rows. Add farmer profiles in Django or seed data.');
+        } else {
+          setFarmers(rows.map(mapApiFarmerToHcdaRow));
+          setRegistryError(null);
+        }
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setFarmers(mockFarmers);
+        setRegistryError(`${getApiErrorMessage(e, 'Could not load farmers.')} Showing demo data.`);
+      })
+      .finally(() => {
+        if (!cancelled) setRegistryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const compliantCount = farmers.filter(f => f.globalGAPStatus === 'compliant').length;
   const expiredCount = farmers.filter(f => f.globalGAPStatus === 'expired').length;
@@ -286,6 +338,26 @@ export function HCDARegistry() {
             Verified Farmer Registration & GlobalGAP Compliance
           </p>
         </div>
+
+        {registryLoading ? (
+          <p className="mb-4 text-sm text-gray-500" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            Loading registry from API…
+          </p>
+        ) : null}
+        {registryError ? (
+          <div
+            className="mb-4 rounded-lg border px-4 py-3 text-sm"
+            style={{
+              fontFamily: 'IBM Plex Sans, sans-serif',
+              borderColor: '#D97706',
+              backgroundColor: '#FFFBEB',
+              color: '#92400E',
+            }}
+            role="status"
+          >
+            {registryError}
+          </div>
+        ) : null}
 
         {/* High-Level Metrics */}
         <div className="mb-4 grid grid-cols-1 gap-3 min-w-0 sm:mb-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">

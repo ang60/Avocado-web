@@ -1,6 +1,6 @@
 import { Users, Settings, Shield, Database, Bell, Edit, Trash2, Plus, Building2, FileCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { AddUserModal } from '../components/AddUserModal';
+import { AddUserModal, type AddUserSavePayload } from '../components/AddUserModal';
 import { AddRoleModal } from '../components/AddRoleModal';
 import { AddAlertRuleModal } from '../components/AddAlertRuleModal';
 import { AddEntityModal } from '../components/AddEntityModal';
@@ -86,7 +86,15 @@ export function Admin() {
   const [isAddEntityModalOpen, setIsAddEntityModalOpen] = useState(false);
   const [licenseExpiryFilter, setLicenseExpiryFilter] = useState<'all' | '30days' | '60days' | '90days'>('all');
   const [editingRole, setEditingRole] = useState<{ id: string; name: string; description: string; permissionIds: string[] } | null>(null);
-  const [editingUser, setEditingUser] = useState<{ id: string; name: string; email: string; phone: string; role: string; county: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    county: string;
+    isActive: boolean;
+  } | null>(null);
   const [editingEntity, setEditingEntity] = useState<{
     id: string;
     companyName: string;
@@ -154,7 +162,7 @@ export function Admin() {
     };
   }, []);
 
-  const handleAddUser = async (user: { id?: string; name: string; email: string; phone: string; role: string; county: string }) => {
+  const handleAddUser = async (user: AddUserSavePayload) => {
     // Modal provides UI-shape user. Map to backend schema.
     setAdminError(null);
     const fullName = String(user.name ?? '').trim();
@@ -172,6 +180,7 @@ export function Admin() {
           last_name: lastName || ' ',
           ...rolePayload,
           county: String(user.county ?? '').trim() || null,
+          ...(user.is_active !== undefined ? { is_active: user.is_active } : {}),
         });
       } else {
         await createUser({
@@ -179,6 +188,7 @@ export function Admin() {
           email: String(user.email ?? '').trim() || null,
           first_name: firstName || fullName || 'User',
           last_name: lastName || ' ',
+          ...(user.password ? { password: user.password } : {}),
           ...rolePayload,
           entity: null,
           county: String(user.county ?? '').trim() || null,
@@ -602,6 +612,7 @@ export function Admin() {
                             phone: user.phone ?? '',
                             role: user.role,
                             county: user.county,
+                            isActive: user.status === 'active',
                           });
                           setIsAddUserModalOpen(true);
                         }}

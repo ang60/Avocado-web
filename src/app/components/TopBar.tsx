@@ -1,8 +1,8 @@
-import { Search, ChevronRight, Bell, Settings, Menu } from 'lucide-react';
-import { useLocation } from 'react-router';
+import { Search, ChevronRight, Bell, Settings, Menu, LogOut, ChevronDown } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router';
 import { AppLink } from './AppLink';
-import { useMemo, useState } from 'react';
-import { getAuthUser } from '../auth';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { clearAuthSession, getAuthUser, subscribeAuth } from '../auth';
 import { useSidebar } from '../context/SidebarContext';
 
 const routeNames: Record<string, string> = {
@@ -48,8 +48,25 @@ const articleTitles: Record<string, string> = {
 
 export function TopBar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [profileRev, setProfileRev] = useState(0);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const { isCollapsed, isMobile, setMobileNavOpen } = useSidebar();
+
+  useEffect(() => subscribeAuth(() => setProfileRev((n) => n + 1)), []);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [profileMenuOpen]);
 
   const getBreadcrumbs = () => {
     const path = location.pathname;
@@ -94,15 +111,16 @@ export function TopBar() {
   const currentUser = useMemo(() => {
     const u = getAuthUser();
     if (!u) {
-      return { name: 'User', initials: '—', role: '—' };
+      return { name: 'User', initials: '—', role: '—', phone: '' };
     }
     const name =
       [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.phone_number || 'User';
     const ri = `${u.first_name?.[0] ?? ''}${u.last_name?.[0] ?? ''}`.trim();
     const initials = (ri || u.phone_number?.slice(-2) || '?').toUpperCase();
-    const role = u.role_details?.role_name?.trim() || 'User';
-    return { name, initials: initials.slice(0, 2), role };
-  }, [location.pathname]);
+    const role = u.role_details?.role_name?.trim() || '—';
+    const phone = (u.phone_number || '').trim();
+    return { name, initials: initials.slice(0, 2), role, phone };
+  }, [location.pathname, profileRev]);
 
   return (
     <div 
@@ -202,40 +220,100 @@ export function TopBar() {
             style={{ backgroundColor: '#E0DDD6' }}
           />
 
-          {/* User Profile */}
-          <div className="flex cursor-pointer items-center gap-2 rounded-lg p-1 transition-colors hover:bg-gray-50 sm:gap-3 sm:p-2">
-            <div className="hidden text-right sm:block">
-              <p 
-                className="text-sm"
-                style={{ 
-                  fontFamily: 'IBM Plex Sans, sans-serif',
-                  color: '#1B4332',
-                  fontWeight: '500',
-                }}
-              >
-                {currentUser.name}
-              </p>
-              <p 
-                className="text-xs"
-                style={{ 
-                  fontFamily: 'IBM Plex Sans, sans-serif',
-                  color: '#717182',
-                }}
-              >
-                {currentUser.role}
-              </p>
-            </div>
-            <div 
-              className="flex h-9 w-9 items-center justify-center rounded-full sm:h-10 sm:w-10"
-              style={{
-                backgroundColor: '#2D6A4F',
-                color: '#FFFFFF',
-                fontFamily: 'IBM Plex Sans, sans-serif',
-                fontWeight: '600',
-              }}
+          {/* User profile + account menu */}
+          <div className="relative" ref={profileMenuRef}>
+            <button
+              type="button"
+              className="flex cursor-pointer items-center gap-2 rounded-lg p-1 transition-colors hover:bg-gray-50 sm:gap-3 sm:p-2"
+              onClick={() => setProfileMenuOpen((o) => !o)}
+              aria-expanded={profileMenuOpen}
+              aria-haspopup="menu"
             >
-              <span className="text-sm">{currentUser.initials}</span>
-            </div>
+              <div className="hidden text-right sm:block">
+                <p
+                  className="text-sm"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    color: '#1B4332',
+                    fontWeight: '500',
+                  }}
+                >
+                  {currentUser.name}
+                </p>
+                {currentUser.phone ? (
+                  <p
+                    className="text-xs text-gray-500"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+                  >
+                    {currentUser.phone}
+                  </p>
+                ) : null}
+                <p
+                  className="text-xs"
+                  style={{
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    color: '#717182',
+                  }}
+                >
+                  {currentUser.role}
+                </p>
+              </div>
+              <ChevronDown className="hidden h-4 w-4 shrink-0 text-gray-500 sm:block" />
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-full sm:h-10 sm:w-10"
+                style={{
+                  backgroundColor: '#2D6A4F',
+                  color: '#FFFFFF',
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  fontWeight: '600',
+                }}
+              >
+                <span className="text-sm">{currentUser.initials}</span>
+              </div>
+            </button>
+
+            {profileMenuOpen ? (
+                <div
+                  className="absolute right-0 z-50 mt-1 min-w-[200px] rounded-lg border bg-white py-1 shadow-lg"
+                  style={{ borderColor: '#E0DDD6' }}
+                  role="menu"
+                >
+                  <div className="border-b px-3 py-2 sm:hidden" style={{ borderColor: '#E0DDD6' }}>
+                    <p className="text-sm font-medium text-[#1B4332]" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                      {currentUser.name}
+                    </p>
+                    {currentUser.phone ? (
+                      <p className="text-xs text-gray-500" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                        {currentUser.phone}
+                      </p>
+                    ) : null}
+                    <p className="text-xs text-[#717182]" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                      {currentUser.role}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#1B4332] hover:bg-[#F7F4EF]"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+                    onClick={() => {
+                      clearAuthSession();
+                      setProfileMenuOpen(false);
+                      navigate('/login', { replace: true });
+                    }}
+                  >
+                    Switch account (sign in as someone else)
+                  </button>
+                  <AppLink
+                    to="/logout"
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </AppLink>
+                </div>
+              ) : null}
           </div>
         </div>
       </div>

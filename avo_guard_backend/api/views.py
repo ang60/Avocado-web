@@ -76,11 +76,43 @@ def _scoped_scouting_qs(user):
     return ScoutingReport.objects.none()
 
 
+def _weekly_logs_list(raw) -> list:
+    """weekly_scouting_logs_4w must be a list; bad JSON types must not crash the dashboard."""
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return raw[:4]
+    return []
+
+
+def _weekly_completion_fraction(logs: list) -> float:
+    if not logs:
+        return 0.0
+    completed = 0
+    for x in logs:
+        try:
+            if int(x) == 1:
+                completed += 1
+        except (TypeError, ValueError):
+            continue
+    return completed / 4.0
+
+
+def _ensure_aware(dt):
+    """Avoid subtracting naive and aware datetimes (raises TypeError → HTTP 500)."""
+    if dt is None:
+        return None
+    if timezone.is_naive(dt):
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
+
+
 class FarmerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = FarmerProfile.objects.all().select_related('user')
     serializer_class = FarmerListSerializer
     pagination_class = StandardResultsSetPagination
     http_method_names = ['get']
+    permission_classes = [permissions.IsAuthenticated, require_permission('nav.farmers')]
 
     def get_serializer_class(self):
         return FarmerDetailSerializer if self.action == 'retrieve' else FarmerListSerializer
@@ -93,7 +125,7 @@ class CaseViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.Lis
     queryset = Case.objects.all().select_related('farmer', 'block', 'farmer__user', 'assigned_agronomist')
     serializer_class = CaseDetailSerializer
     http_method_names = ['get', 'post', 'head', 'options']
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, require_permission('nav.cases')]
     pagination_class = None
 
     def get_serializer_class(self):
@@ -115,7 +147,7 @@ class CaseViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.Lis
 
 
 class CaseManagementView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, require_permission('nav.cases')]
 
     def get(self, request):
         qs = _scoped_cases_qs(request.user)
@@ -139,27 +171,27 @@ class CaseManagementView(APIView):
 
 
 class DashboardView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, require_permission('nav.dashboard')]
 
     def get(self, request):
         now = timezone.now()
         farmers_qs = _scoped_farmers_qs(request.user)
-        cases_qs = _scoped_cases_qs(request.user)
-        scouting_qs = _scoped_scouting_qs(request.user)
+        cases_qs = _scoped_cases_qs(request.user).select_related('farmer')
+        scouting_qs = _scoped_scouting_qs(request.user).select_related('farmer')
 
         # Metrics for cards
         open_cases = cases_qs.filter(status__in=['new', 'under-review']).count()
         active_farmers = farmers_qs.count()
-        detected_scans = scouting_qs.filter(status=scouting_qs.model.DetectionStatus.DETECTED).count()
+        detected_scans = scouting_qs.filter(status=ScoutingReport.DetectionStatus.DETECTED).count()
         compliance = 0
         if farmers_qs.exists():
             # crude average based on weekly_scouting_logs_4w (list of ints)
             total_pct = 0
             count = 0
             for f in farmers_qs.only('weekly_scouting_logs_4w'):
-                logs = list(f.weekly_scouting_logs_4w or [])[:4]
-                completed = sum(1 for x in logs if int(x) == 1) if logs else 0
-                total_pct += int(round((completed / 4) * 100))
+                logs = _weekly_logs_list(f.weekly_scouting_logs_4w)
+                frac = _weekly_completion_fraction(logs)
+                total_pct += int(round(frac * 100))
                 count += 1
             compliance = int(round(total_pct / max(count, 1)))
 
@@ -190,7 +222,7 @@ class DashboardView(APIView):
         high = cases_qs.filter(severity=Case.Severity.HIGH).count()
         medium = cases_qs.filter(severity=Case.Severity.MEDIUM).count()
         low = cases_qs.filter(severity=Case.Severity.LOW).count()
-        no = max(0, scouting_qs.filter(status=scouting_qs.model.DetectionStatus.CLEAN).count())
+        no = max(0, scouting_qs.filter(status=ScoutingReport.DetectionStatus.CLEAN).count())
         pestDistribution = [
             {'name': 'High Risk', 'value': high, 'color': '#D97706'},
             {'name': 'Medium Risk', 'value': medium, 'color': '#F59E0B'},
@@ -202,17 +234,19 @@ class DashboardView(APIView):
         triage = []
         q_cases = cases_qs.filter(status='new').order_by('-date_submitted')[:10]
         for c in q_cases:
-            submitted_at = c.date_submitted or now
+            submitted_raw = c.date_submitted
+            submitted_at = _ensure_aware(submitted_raw) if submitted_raw else now
             submittedHours = int(max(0, (now - submitted_at).total_seconds() // 3600))
             severity = c.severity if c.severity in ('high', 'medium', 'low') else 'medium'
             pest = c.pest_disease or ''
             scout = c.scout_name or ''
             priority = {'high': 1, 'medium': 2, 'low': 3}.get(severity, 2)
+            farmer = c.farmer
             triage.append(
                 {
                     'id': str(c.id),
-                    'farm': c.farmer.farm_name,
-                    'location': c.farmer.location,
+                    'farm': farmer.farm_name if farmer else '',
+                    'location': farmer.location if farmer else '',
                     'severity': severity,
                     'pest': pest,
                     'scout': scout,
@@ -223,14 +257,18 @@ class DashboardView(APIView):
 
         recentScoutingRecords = []
         for r in scouting_qs.order_by('-submitted_at')[:8]:
+            st = r.submitted_at
+            date_s = st.strftime('%Y-%m-%d') if st else ''
+            time_s = st.strftime('%H:%M') if st else ''
+            rf = r.farmer
             recentScoutingRecords.append(
                 {
                     'id': str(r.id),
                     'scout': r.scout_name or '',
-                    'farm': r.farmer.farm_name,
-                    'location': r.farmer.location,
-                    'date': r.submitted_at.strftime('%Y-%m-%d'),
-                    'time': r.submitted_at.strftime('%H:%M'),
+                    'farm': rf.farm_name if rf else '',
+                    'location': rf.location if rf else '',
+                    'date': date_s,
+                    'time': time_s,
                     'blocksInspected': 1,
                     'issuesFound': 1 if r.status == ScoutingReport.DetectionStatus.DETECTED else 0,
                     'status': r.status,
@@ -254,7 +292,7 @@ class DashboardView(APIView):
 class ScoutingReportViewSet(viewsets.ModelViewSet):
     queryset = ScoutingReport.objects.all().select_related('farmer', 'block', 'farmer__user', 'assigned_to', 'related_case')
     http_method_names = ['get', 'post', 'patch', 'head', 'options']
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, require_permission('nav.scouting')]
     pagination_class = StandardResultsSetPagination
 
     def get_serializer_class(self):
@@ -269,8 +307,8 @@ class ScoutingReportViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ('partial_update', 'update'):
-            return [CanManageScoutingReview()]
-        return [permissions.IsAuthenticated()]
+            return [permissions.IsAuthenticated(), require_permission('nav.scouting')(), CanManageScoutingReview()]
+        return [permissions.IsAuthenticated(), require_permission('nav.scouting')()]
 
     def perform_create(self, serializer):
         report: ScoutingReport = serializer.save()
@@ -304,7 +342,7 @@ class AlertRuleViewSet(viewsets.ModelViewSet):
 
 
 class AdminSummaryView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsAdminLikeUser]
+    permission_classes = [permissions.IsAuthenticated, require_permission('nav.admin'), IsAdminLikeUser]
 
     def get(self, request):
         active_users = (

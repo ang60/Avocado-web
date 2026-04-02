@@ -106,13 +106,17 @@ class UserSerializer(serializers.ModelSerializer):
     role_details = RoleSerializer(source='role', read_only=True)
     # Assign by human-readable Role.role_name (preferred from the Admin UI dropdown).
     role_name = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    app_permissions = serializers.SerializerMethodField(read_only=True)
+    is_privileged = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
         fields = [
             'id', 'phone_number', 'email', 'first_name', 'last_name',
+            'password',
             'role', 'role_name', 'role_details', 'county', 'entity', 'entity_details',
             'last_login', 'is_staff', 'is_active',
+            'app_permissions', 'is_privileged',
         ]
         read_only_fields = ['last_login', 'is_staff']
         extra_kwargs = {
@@ -120,6 +124,29 @@ class UserSerializer(serializers.ModelSerializer):
             'entity': {'write_only': True, 'required': False},
             'role': {'write_only': True, 'required': False},
         }
+
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    def get_app_permissions(self, obj):
+        if obj.is_superuser or obj.is_staff:
+            return list(AppPermission.objects.values_list('name', flat=True).order_by('name'))
+        role = obj.role
+        if not role:
+            return []
+        return list(role.permissions.values_list('name', flat=True).order_by('name'))
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_privileged(self, obj):
+        """
+        Full navigation bypass in the SPA (not the same as is_admin_like: KEPHIS/HCDA
+        keep regulator directory powers on the API but only see nav allowed by app_permissions).
+        """
+        from api.rbac import ROLE_ADMIN
+
+        if obj.is_superuser or obj.is_staff:
+            return True
+        role = obj.role
+        name = str(getattr(role, 'role_name', '') or '').strip()
+        return name in (ROLE_ADMIN, 'System Administrator')
 
     def validate(self, attrs):
         """
@@ -154,16 +181,26 @@ class UserSerializer(serializers.ModelSerializer):
             user.save()
         return user
 
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save(update_fields=['password'])
+        return user
+
 class RegisterSerializer(serializers.Serializer):
     """
     Access request only — not phone verification and does not send an OTP.
     Creates or updates a pending user; admin must set is_active before the user can use request_otp / verify_otp.
-      - POST /api/users/register/ with { name, email?, phone_number }
+      - POST /api/users/register/ with { name, email?, phone_number, password, password_confirm }
     """
 
     name = serializers.CharField(max_length=255)
     email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
     phone_number = serializers.CharField(max_length=15)
+    password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
+    password_confirm = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
 
     def validate_phone_number(self, value: str) -> str:
         return normalize_phone_number(value)
@@ -175,9 +212,13 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {'phone_number': 'An account with this phone number already exists. Sign in instead.'}
             )
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError({'password_confirm': 'Passwords do not match.'})
+        attrs.pop('password_confirm', None)
         return attrs
 
     def create(self, validated_data):
+        password = validated_data.pop('password')
         name = validated_data.get('name') or ''
         email = validated_data.get('email') or ''
         phone_number = validated_data.get('phone_number')
@@ -191,11 +232,13 @@ class RegisterSerializer(serializers.Serializer):
             user.first_name = first_name or user.first_name
             user.last_name = last_name or user.last_name
             user.email = (email or None) if email else user.email
-            user.save(update_fields=['first_name', 'last_name', 'email'])
+            user.set_password(password)
+            user.save(update_fields=['first_name', 'last_name', 'email', 'password'])
             return user
 
         return User.objects.create_user(
             phone_number=phone_number,
+            password=password,
             first_name=first_name,
             last_name=last_name,
             email=email or None,
@@ -215,3 +258,16 @@ class VerifyOTPSerializer(serializers.Serializer):
 
     def validate_phone_number(self, value: str) -> str:
         return normalize_phone_number(value)
+
+
+class LoginPasswordSerializer(serializers.Serializer):
+    """Sign-in with email or phone plus password (approved accounts only)."""
+
+    identifier = serializers.CharField(max_length=255, help_text='Email address or phone number')
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+
+    def validate_identifier(self, value: str) -> str:
+        s = (value or '').strip()
+        if not s:
+            raise serializers.ValidationError('Enter your email or phone number.')
+        return s

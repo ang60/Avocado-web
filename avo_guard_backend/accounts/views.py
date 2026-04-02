@@ -5,7 +5,17 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import User, OTP, Entity, Role, AppPermission
 from .permissions import IsAdminLikeUser
-from .serializers import UserSerializer, OTPSerializer, VerifyOTPSerializer, RegisterSerializer, EntitySerializer, RoleSerializer, AppPermissionSerializer
+from .serializers import (
+    UserSerializer,
+    OTPSerializer,
+    VerifyOTPSerializer,
+    RegisterSerializer,
+    LoginPasswordSerializer,
+    normalize_phone_number,
+    EntitySerializer,
+    RoleSerializer,
+    AppPermissionSerializer,
+)
 from django.conf import settings
 import random
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -13,6 +23,20 @@ from .sms_utils import send_advanta_sms
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse, inline_serializer
 
 logger = logging.getLogger(__name__)
+
+
+def _user_for_login_identifier(identifier: str):
+    """
+    Resolve a user by email (case-insensitive) or normalized phone number.
+    """
+    if '@' in identifier:
+        return User.objects.filter(email__iexact=identifier.strip().lower()).first()
+    try:
+        phone = normalize_phone_number(identifier)
+    except serializers.ValidationError:
+        return None
+    return User.objects.filter(phone_number=phone).first()
+
 
 class StandardResultsSetPagination(pagination.PageNumberPagination):
     page_size = 10
@@ -53,7 +77,7 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['phone_number', 'email', 'first_name', 'last_name']
 
     def get_permissions(self):
-        if self.action in ('register', 'request_otp', 'verify_otp'):
+        if self.action in ('register', 'request_otp', 'verify_otp', 'login_password'):
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated(), IsAdminLikeUser()]
 
@@ -80,7 +104,8 @@ class UserViewSet(viewsets.ModelViewSet):
                 {
                         'detail': (
                         'Application received. No verification code is sent for this step. '
-                        'After an administrator activates your account, use Sign in to verify your phone with a one-time code.'
+                        'After an administrator activates your account, sign in with your email or phone and password, '
+                        'or use a one-time code sent to your phone.'
                     ),
                     'status': 'pending_approval',
                 },
@@ -88,6 +113,60 @@ class UserViewSet(viewsets.ModelViewSet):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        request=LoginPasswordSerializer,
+        summary='Sign in with email or phone and password',
+        description=(
+            'Returns JWT tokens for an **admin-approved** user. '
+            'Use an email or phone that matches the account; phone should match registration format (e.g. +254…).'
+        ),
+        responses={
+            200: inline_serializer(
+                name='LoginPasswordResponse',
+                fields={
+                    'refresh': serializers.CharField(),
+                    'access': serializers.CharField(),
+                    'user': UserSerializer(),
+                    'is_new_user': serializers.BooleanField(),
+                },
+            ),
+        },
+    )
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def login_password(self, request):
+        serializer = LoginPasswordSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        identifier = serializer.validated_data['identifier']
+        password = serializer.validated_data['password']
+        user = _user_for_login_identifier(identifier)
+
+        if not user or not user.check_password(password):
+            return Response(
+                {'detail': 'Invalid email, phone, or password.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not user.is_active:
+            return Response(
+                {
+                    'error': 'pending_approval',
+                    'detail': 'Your account is pending administrator approval.',
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': UserSerializer(user).data,
+                'is_new_user': False,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @extend_schema(
         request=OTPSerializer,

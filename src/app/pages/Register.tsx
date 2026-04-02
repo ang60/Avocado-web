@@ -3,26 +3,33 @@ import { FormEvent, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import avocadoLogo from '../../imports/avocado_logo.svg';
 import { AuthBrandingPanel } from '../components/AuthBrandingPanel';
+import { PasswordField } from '../components/PasswordField';
 import { submitAccessRequest } from '../api/authApi';
 import { ApiError } from '../api/client';
 import { getApiErrorMessage } from '../api/errors';
 
+const MIN_PASSWORD = 8;
+
 /**
- * Individual access request: name, email, phone. Admin activates the user in Django admin;
- * no verification SMS is sent from this step.
+ * Individual access request: name, email, phone, password (+ confirm). Admin activates the user;
+ * no SMS from this step.
  */
 export function Register() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successDetail, setSuccessDetail] = useState<string | null>(null);
 
-  const canSubmit = useMemo(
-    () => fullName.trim().length > 0 && email.trim().length > 0 && phoneNumber.trim().length > 0,
-    [fullName, email, phoneNumber],
-  );
+  const canSubmit = useMemo(() => {
+    if (fullName.trim().length === 0 || email.trim().length === 0 || phoneNumber.trim().length === 0) return false;
+    if (password.length < MIN_PASSWORD || passwordConfirm.length < MIN_PASSWORD) return false;
+    if (password !== passwordConfirm) return false;
+    return true;
+  }, [fullName, email, phoneNumber, password, passwordConfirm]);
 
   function messageFromErr(err: unknown, fallback: string): string {
     if (err instanceof ApiError) {
@@ -39,11 +46,24 @@ export function Register() {
     setError(null);
     setSuccessDetail(null);
 
+    if (password !== passwordConfirm) {
+      setError('Passwords do not match.');
+      setSubmitting(false);
+      return;
+    }
+    if (password.length < MIN_PASSWORD) {
+      setError(`Password must be at least ${MIN_PASSWORD} characters.`);
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const res = await submitAccessRequest({
         name: fullName.trim(),
         email: email.trim(),
         phone_number: phoneNumber.trim(),
+        password,
+        password_confirm: passwordConfirm,
       });
       setSuccessDetail(res.detail);
     } catch (err) {
@@ -65,8 +85,8 @@ export function Register() {
               Create your account
             </h1>
             <p className="text-gray-500 text-sm text-center max-w-md" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              For individuals: enter your details below. An administrator will review and approve your account. You will not receive a text
-              message from this step — after approval, sign in with your phone to receive a verification code.
+              For individuals: enter your details and choose a password. An administrator will review and approve your account. After approval,
+              sign in with your phone; you can use your password in Django admin if needed.
             </p>
           </div>
 
@@ -133,6 +153,29 @@ export function Register() {
               </div>
             </div>
 
+            <PasswordField
+              label={`Password (min ${MIN_PASSWORD} characters) *`}
+              value={password}
+              onChange={setPassword}
+              required
+              autoComplete="new-password"
+              inputClassName="!bg-[#f3f7f4] !border-transparent focus:border-green-500"
+            />
+            <PasswordField
+              label="Confirm password *"
+              value={passwordConfirm}
+              onChange={setPasswordConfirm}
+              required
+              autoComplete="new-password"
+              inputClassName="!bg-[#f3f7f4] !border-transparent focus:border-green-500"
+            />
+
+            {password && passwordConfirm && password !== passwordConfirm ? (
+              <p className="text-xs text-amber-800" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                Passwords do not match.
+              </p>
+            ) : null}
+
             {error ? (
               <p
                 className="rounded-md border border-[#DC2626] bg-[#FEE2E2] px-3 py-2 text-xs text-[#B91C1C]"
@@ -167,7 +210,7 @@ export function Register() {
             style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
             <ShieldCheck className="w-4 h-4 text-green-600" />
-            No SMS from this page — verification codes are only sent when you sign in after approval
+            No SMS from this page — verification codes are sent only when you sign in after approval
           </div>
         </div>
 

@@ -7,7 +7,7 @@ import type {
   FarmerListRow,
   ScoutingFeedItem,
 } from './types';
-import { apiRequest, type PaginatedResults } from './client';
+import { apiRequest, parseDrfList, type PaginatedResults } from './client';
 
 /**
  * Real backend API calls (Django/DRF).
@@ -19,7 +19,10 @@ export async function fetchDashboard(): Promise<DashboardPayload> {
 }
 
 export async function fetchFarmersList(): Promise<FarmerListRow[]> {
-  return apiRequest<FarmerListRow[]>('/api/farmers/?page_size=1000').then((res: any) => res.results ?? res);
+  const data = await apiRequest<PaginatedResults<FarmerListRow> | FarmerListRow[]>(
+    '/api/farmers/?page_size=1000',
+  );
+  return parseDrfList<FarmerListRow>(data);
 }
 
 export async function fetchFarmerDetail(farmerId: string | undefined): Promise<FarmerDetailPayload> {
@@ -37,9 +40,10 @@ export async function fetchCaseDetail(caseId: string | undefined): Promise<CaseD
 }
 
 export async function fetchScoutingFeed(): Promise<ScoutingFeedItem[]> {
-  return apiRequest<PaginatedResults<ScoutingFeedItem>>('/api/scouting_reports/?page_size=500').then(
-    (res) => res.results ?? []
+  const data = await apiRequest<PaginatedResults<ScoutingFeedItem> | ScoutingFeedItem[]>(
+    '/api/scouting_reports/?page_size=500',
   );
+  return parseDrfList<ScoutingFeedItem>(data);
 }
 
 export type CreateCaseFromScoutingPayload = {

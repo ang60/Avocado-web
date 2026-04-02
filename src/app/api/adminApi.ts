@@ -1,5 +1,5 @@
 import type { AdminEntityRow, AdminRoleRow, AdminUserRow } from './types';
-import { apiRequest, type PaginatedResults } from './client';
+import { apiRequest, parseDrfList, type PaginatedResults } from './client';
 
 export type AppPermissionDto = { id: string; name: string };
 
@@ -12,8 +12,10 @@ function entityTypeToUiSlug(entityType: string): string {
 }
 
 export async function listPermissions(): Promise<AppPermissionDto[]> {
-  const data = await apiRequest<PaginatedResults<AppPermissionDto>>('/api/permissions/?page_size=1000');
-  return data.results;
+  const data = await apiRequest<PaginatedResults<AppPermissionDto> | AppPermissionDto[]>(
+    '/api/permissions/?page_size=1000',
+  );
+  return parseDrfList<AppPermissionDto>(data);
 }
 
 function formatLastLogin(iso: string | null | undefined): string {
@@ -24,8 +26,8 @@ function formatLastLogin(iso: string | null | undefined): string {
 }
 
 export async function listUsers(): Promise<AdminUserRow[]> {
-  const data = await apiRequest<PaginatedResults<any>>('/api/users/?page_size=1000');
-  return data.results.map((u) => {
+  const data = await apiRequest<PaginatedResults<any> | any[]>('/api/users/?page_size=1000');
+  return parseDrfList<any>(data).map((u) => {
     const first = u.first_name ?? '';
     const last = u.last_name ?? '';
     return {
@@ -46,6 +48,7 @@ export async function createUser(input: {
   email?: string | null;
   first_name: string;
   last_name: string;
+  password?: string | null;
   role?: string | null; // role uuid (optional if role_name is set)
   role_name?: string | null; // Role.role_name — preferred for Admin UI
   entity?: string | null; // entity uuid
@@ -61,6 +64,7 @@ export async function updateUser(
     email: string | null;
     first_name: string;
     last_name: string;
+    password: string | null;
     role: string | null;
     role_name: string | null;
     entity: string | null;
@@ -76,8 +80,8 @@ export async function deleteUser(id: string) {
 }
 
 export async function listRoles(): Promise<AdminRoleRow[]> {
-  const data = await apiRequest<PaginatedResults<any>>('/api/roles/?page_size=1000');
-  return data.results.map((r) => ({
+  const data = await apiRequest<PaginatedResults<any> | any[]>('/api/roles/?page_size=1000');
+  return parseDrfList<any>(data).map((r) => ({
     id: r.id,
     name: r.role_name ?? '',
     description: r.description ?? '',
@@ -111,8 +115,8 @@ export async function deleteRole(id: string) {
 }
 
 export async function listEntities(): Promise<AdminEntityRow[]> {
-  const data = await apiRequest<PaginatedResults<any>>('/api/entities/?page_size=1000');
-  return data.results.map((e) => ({
+  const data = await apiRequest<PaginatedResults<any> | any[]>('/api/entities/?page_size=1000');
+  return parseDrfList<any>(data).map((e) => ({
     id: e.id,
     companyName: e.company_name ?? '',
     hcdaLicense: e.HCDA_license ?? '',
@@ -178,8 +182,9 @@ export type AdminAlertRuleApiRow = {
 };
 
 export async function listAlertRules(): Promise<AdminAlertRuleApiRow[]> {
-  const data = await apiRequest<PaginatedResults<any>>('/api/alert_rules/?page_size=1000');
-  return data.results.map((r) => ({
+  const data = await apiRequest<PaginatedResults<any> | any[]>('/api/alert_rules/?page_size=1000');
+  const rows = parseDrfList<any>(data);
+  return rows.map((r) => ({
     id: r.id,
     name: r.name,
     condition: r.condition,
