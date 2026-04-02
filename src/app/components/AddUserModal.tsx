@@ -1,10 +1,21 @@
 import { X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+/** Matches seeded roles in accounts.0011_seed_core_roles when API list is empty */
+const DEFAULT_ROLE_OPTIONS = [
+  'Administrator',
+  'Farmer',
+  'Farm Manager',
+  'KEPHIS',
+  'HCDA',
+  'Agronomist',
+  'Exporter',
+];
 
 interface AddUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (user: { id?: string; name: string; email: string; phone: string; role: string; county: string }) => void;
+  onSave: (user: { id?: string; name: string; email: string; phone: string; role: string; county: string }) => void | Promise<void>;
   initialUser?: { id: string; name: string; email: string; phone: string; role: string; county: string } | null;
   roleOptions: string[];
 }
@@ -14,90 +25,96 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
     name: '',
     email: '',
     phone: '',
-    role: 'Field Scout',
-    county: 'Murang\'a',
+    role: '',
+    county: "Murang'a",
   });
+
+  const apiBackedRoles = useMemo(
+    () => (roleOptions.length > 0 ? roleOptions : DEFAULT_ROLE_OPTIONS),
+    [roleOptions],
+  );
+
+  /** Every selectable name plus "(No role)" as empty string — avoids invalid <select value> when role is Unknown. */
+  const roleSelectNames = useMemo(() => {
+    const names = [...apiBackedRoles];
+    const current = formData.role.trim();
+    if (current && current !== 'Unknown' && !names.includes(current)) {
+      names.unshift(current);
+    }
+    return names;
+  }, [apiBackedRoles, formData.role]);
 
   useEffect(() => {
     if (!isOpen) return;
     if (initialUser) {
+      const raw = (initialUser.role ?? '').trim();
+      const roleValue = !raw || raw === 'Unknown' ? '' : raw;
       setFormData({
         name: initialUser.name ?? '',
         email: initialUser.email ?? '',
         phone: initialUser.phone ?? '',
-        role: initialUser.role ?? 'Field Scout',
-        county: initialUser.county ?? "Murang'a",
+        role: roleValue,
+        county: initialUser.county?.trim() || "Murang'a",
       });
     } else {
       setFormData({
         name: '',
         email: '',
         phone: '',
-        role: roleOptions[0] ?? 'Field Scout',
+        role: apiBackedRoles[0] ?? '',
         county: "Murang'a",
       });
     }
-  }, [initialUser, isOpen, roleOptions]);
+  }, [initialUser, isOpen, apiBackedRoles]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      id: initialUser?.id,
-      ...formData,
-      status: 'active',
-      lastLogin: 'Never',
-    });
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'Field Scout',
-      county: 'Murang\'a',
-    });
-    onClose();
+    try {
+      await Promise.resolve(
+        onSave({
+          id: initialUser?.id,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          county: formData.county,
+        }),
+      );
+      onClose();
+    } catch {
+      /* Parent sets error banner; keep modal open */
+    }
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={onClose}
     >
-      <div 
+      <div
         className="w-full max-w-2xl rounded-lg border overflow-hidden"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', maxHeight: '90vh' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div 
+        <div
           className="px-6 py-4 border-b flex items-center justify-between"
           style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}
         >
-          <h2 
-            className="text-xl"
-            style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
-          >
+          <h2 className="text-xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
             {initialUser ? 'Edit User' : 'Add New User'}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/50 transition-colors"
-          >
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-white/50 transition-colors">
             <X className="w-5 h-5" style={{ color: '#717182' }} />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
           <div className="space-y-4">
-            {/* Name */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Full Name *
               </label>
               <input
@@ -115,12 +132,8 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
               />
             </div>
 
-            {/* Email */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Email Address *
               </label>
               <input
@@ -138,12 +151,8 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
               />
             </div>
 
-            {/* Phone */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Phone Number *
               </label>
               <input
@@ -161,16 +170,12 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
               />
             </div>
 
-            {/* Role */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
-                Role *
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                Role {initialUser ? '' : '*'}
               </label>
               <select
-                required
+                required={!initialUser}
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="w-full px-4 py-2 rounded-lg border"
@@ -180,30 +185,17 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
                   backgroundColor: '#FFFFFF',
                 }}
               >
-                {roleOptions.length > 0 ? (
-                  roleOptions.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="Field Scout">Field Scout</option>
-                    <option value="Agronomist">Agronomist</option>
-                    <option value="Farm Manager">Farm Manager</option>
-                    <option value="System Administrator">System Administrator</option>
-                    <option value="Regional Coordinator">Regional Coordinator</option>
-                  </>
-                )}
+                {initialUser ? <option value="">— No role assigned —</option> : null}
+                {roleSelectNames.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* County */}
             <div>
-              <label 
-                className="block text-sm mb-2"
-                style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-              >
+              <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Primary County *
               </label>
               <select
@@ -228,7 +220,6 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3 mt-6 pt-6 border-t" style={{ borderColor: '#E0DDD6' }}>
             <button
               type="button"

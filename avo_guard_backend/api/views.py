@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from accounts.permissions import IsAdminLikeUser
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import mixins, permissions, status, viewsets
@@ -303,7 +304,7 @@ class AlertRuleViewSet(viewsets.ModelViewSet):
 
 
 class AdminSummaryView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAdminLikeUser]
 
     def get(self, request):
         active_users = (

@@ -104,20 +104,47 @@ class EntitySerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     entity_details = EntitySerializer(source='entity', read_only=True)
     role_details = RoleSerializer(source='role', read_only=True)
+    # Assign by human-readable Role.role_name (preferred from the Admin UI dropdown).
+    role_name = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
         fields = [
-            'id', 'phone_number', 'email', 'first_name', 'last_name', 
-            'role', 'role_details', 'county', 'entity', 'entity_details', 
-            'last_login', 'is_staff', 'is_active'
+            'id', 'phone_number', 'email', 'first_name', 'last_name',
+            'role', 'role_name', 'role_details', 'county', 'entity', 'entity_details',
+            'last_login', 'is_staff', 'is_active',
         ]
-        read_only_fields = ['last_login', 'is_staff', 'is_active']
+        read_only_fields = ['last_login', 'is_staff']
         extra_kwargs = {
             'password': {'write_only': True, 'required': False},
             'entity': {'write_only': True, 'required': False},
             'role': {'write_only': True, 'required': False},
         }
+
+    def validate(self, attrs):
+        """
+        If the client sends `role_name`, it overrides `role` (UUID) and resolves
+        the ForeignKey by Role.role_name (case-insensitive).
+        """
+        if 'role_name' in self.initial_data:
+            attrs.pop('role_name', None)
+            raw = self.initial_data.get('role_name')
+            if raw is None or (isinstance(raw, str) and not raw.strip()):
+                attrs['role'] = None
+            else:
+                s = str(raw).strip()
+                role_obj = Role.objects.filter(role_name__iexact=s).first()
+                if not role_obj:
+                    raise serializers.ValidationError(
+                        {
+                            'role_name': (
+                                f'No role named "{s}". Create it under Roles (exact name) '
+                                'or pick an existing role from the list.'
+                            ),
+                        }
+                    )
+                attrs['role'] = role_obj
+        return attrs
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -129,8 +156,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.Serializer):
     """
-    Frontend integration payload:
-      - POST /api/users/register/ with { name, email, phone_number }
+    Access request only — not phone verification and does not send an OTP.
+    Creates or updates a pending user; admin must set is_active before the user can use request_otp / verify_otp.
+      - POST /api/users/register/ with { name, email?, phone_number }
     """
 
     name = serializers.CharField(max_length=255)
@@ -139,6 +167,15 @@ class RegisterSerializer(serializers.Serializer):
 
     def validate_phone_number(self, value: str) -> str:
         return normalize_phone_number(value)
+
+    def validate(self, attrs):
+        phone = attrs['phone_number']
+        existing = User.objects.filter(phone_number=phone).first()
+        if existing and existing.is_active:
+            raise serializers.ValidationError(
+                {'phone_number': 'An account with this phone number already exists. Sign in instead.'}
+            )
+        return attrs
 
     def create(self, validated_data):
         name = validated_data.get('name') or ''
@@ -149,31 +186,22 @@ class RegisterSerializer(serializers.Serializer):
         first_name = parts[0] if parts else ''
         last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
 
-        user, _ = User.objects.get_or_create(
-            phone_number=phone_number,
-            defaults={
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': email or None,
-                'county': None,
-                'is_active': True,
-            },
-        )
-
-        changed = False
-        if first_name and user.first_name != first_name:
-            user.first_name = first_name
-            changed = True
-        if last_name and user.last_name != last_name:
-            user.last_name = last_name
-            changed = True
-        if email and user.email != email:
-            user.email = email
-            changed = True
-        if changed:
+        user = User.objects.filter(phone_number=phone_number).first()
+        if user:
+            user.first_name = first_name or user.first_name
+            user.last_name = last_name or user.last_name
+            user.email = (email or None) if email else user.email
             user.save(update_fields=['first_name', 'last_name', 'email'])
+            return user
 
-        return user
+        return User.objects.create_user(
+            phone_number=phone_number,
+            first_name=first_name,
+            last_name=last_name,
+            email=email or None,
+            county=None,
+            is_active=False,
+        )
 
 class OTPSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)

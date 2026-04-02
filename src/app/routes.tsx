@@ -17,6 +17,13 @@ function loginLoader() {
   return null;
 }
 
+function registerLoader() {
+  if (isAuthenticated()) {
+    return redirect('/dashboard');
+  }
+  return null;
+}
+
 function lazyRoute<T extends Record<string, ComponentType<object>>>(
   importer: () => Promise<T>,
   exportName: keyof T
@@ -34,6 +41,11 @@ export const router = createBrowserRouter([
     path: '/login',
     loader: loginLoader,
     Component: lazyRoute(() => import('./pages/Login'), 'Login'),
+  },
+  {
+    path: '/register',
+    loader: registerLoader,
+    Component: lazyRoute(() => import('./pages/Register'), 'Register'),
   },
   {
     path: '/',

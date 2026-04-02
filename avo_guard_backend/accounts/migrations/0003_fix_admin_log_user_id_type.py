@@ -7,6 +7,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0002_fix_id_type'),
+        ('admin', '0001_initial'),
     ]
 
     operations = [

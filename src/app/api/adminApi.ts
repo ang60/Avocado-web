@@ -46,7 +46,8 @@ export async function createUser(input: {
   email?: string | null;
   first_name: string;
   last_name: string;
-  role?: string | null; // role uuid
+  role?: string | null; // role uuid (optional if role_name is set)
+  role_name?: string | null; // Role.role_name — preferred for Admin UI
   entity?: string | null; // entity uuid
   county?: string | null;
 }) {
@@ -60,8 +61,9 @@ export async function updateUser(
     email: string | null;
     first_name: string;
     last_name: string;
-    role: string | null; // role uuid
-    entity: string | null; // entity uuid
+    role: string | null;
+    role_name: string | null;
+    entity: string | null;
     county: string | null;
     is_active: boolean;
   }>

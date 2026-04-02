@@ -28,6 +28,7 @@ import {
   type AppPermissionDto,
   type AdminAlertRuleApiRow,
 } from '../api/adminApi';
+import { ApiError } from '../api/client';
 
 const FALLBACK_SYSTEM_STATS = [
   { label: 'Active Users', value: '—', icon: Users, color: '#2D6A4F' },
@@ -51,31 +52,6 @@ const ALERT_ACTION_LABELS: Record<string, string> = {
   dashboard: 'Dashboard Notification Only',
 };
 
-const initialUsers = [
-  { id: '1', name: 'Jane Wambui', role: 'System Administrator', email: 'jane.wambui@avoguard.ke', phone: '+254 712 345 678', county: 'Murang\'a', status: 'active', lastLogin: '2 hours ago' },
-  { id: '2', name: 'Peter Mwangi', role: 'Field Scout', email: 'peter.mwangi@avoguard.ke', phone: '+254 723 456 789', county: 'Nyeri', status: 'active', lastLogin: '4 hours ago' },
-  { id: '3', name: 'Grace Achieng', role: 'Agronomist', email: 'grace.achieng@avoguard.ke', phone: '+254 734 567 890', county: 'Kiambu', status: 'active', lastLogin: '5 hours ago' },
-  { id: '4', name: 'Samuel Omondi', role: 'Field Scout', email: 'samuel.omondi@avoguard.ke', phone: '+254 745 678 901', county: 'Murang\'a', status: 'active', lastLogin: '1 day ago' },
-  { id: '5', name: 'Mary Akinyi', role: 'Regional Coordinator', email: 'mary.akinyi@avoguard.ke', phone: '+254 756 789 012', county: 'Meru', status: 'inactive', lastLogin: '3 days ago' },
-];
-
-const initialRoles = [
-  { id: '1', name: 'System Administrator', description: 'Full system access and configuration', users: 2, permissions: 15 },
-  { id: '2', name: 'Agronomist', description: 'Review cases and provide recommendations', users: 8, permissions: 10 },
-  { id: '3', name: 'Field Scout', description: 'Submit scouting reports and manage cases', users: 24, permissions: 7 },
-  { id: '4', name: 'Farm Manager', description: 'View reports and compliance data', users: 6, permissions: 5 },
-  { id: '5', name: 'Regional Coordinator', description: 'Coordinate regional activities and monitor compliance', users: 2, permissions: 12 },
-];
-
-const initialEntities = [
-  { id: '1', companyName: 'Vegpro Kenya Ltd', hcdaLicense: 'HCDA/EX/2024/1287', headAgronomist: 'Dr. James Kamau', linkedFarmers: 142, status: true, email: 'info@vegpro.co.ke', phone: '+254 720 123 456', county: 'Kiambu', entityType: 'exporter', licenseExpiry: '2026-12-31' },
-  { id: '2', companyName: 'FreshPack Exporters', hcdaLicense: 'HCDA/EX/2023/0892', headAgronomist: 'Mary Wanjiku', linkedFarmers: 98, status: true, email: 'contact@freshpack.co.ke', phone: '+254 733 456 789', county: 'Murang\'a', entityType: 'exporter', licenseExpiry: '2026-08-15' },
-  { id: '3', companyName: 'Avocado Direct Ltd', hcdaLicense: 'HCDA/EX/2025/0156', headAgronomist: 'Peter Ochieng', linkedFarmers: 67, status: true, email: 'admin@avocadodirect.co.ke', phone: '+254 745 678 901', county: 'Nyeri', entityType: 'exporter', licenseExpiry: '2027-03-20' },
-  { id: '4', companyName: 'Kakuzi PLC', hcdaLicense: 'HCDA/EX/2022/0543', headAgronomist: 'Grace Muthoni', linkedFarmers: 210, status: false, email: 'support@kakuzi.co.ke', phone: '+254 756 789 012', county: 'Murang\'a', entityType: 'exporter', licenseExpiry: '2026-06-30' },
-  { id: '5', companyName: 'KEPHIS Central Office', hcdaLicense: 'N/A', headAgronomist: 'Dr. Samuel Njoroge', linkedFarmers: 0, status: true, email: 'info@kephis.org', phone: '+254 767 890 123', county: 'Nairobi', entityType: 'kephis', licenseExpiry: 'N/A' },
-  { id: '6', companyName: 'HCDA Headquarters', hcdaLicense: 'N/A', headAgronomist: 'Ann Wairimu', linkedFarmers: 0, status: true, email: 'contact@hcda.or.ke', phone: '+254 778 901 234', county: 'Nairobi', entityType: 'hcda', licenseExpiry: 'N/A' },
-];
-
 export function Admin() {
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'entities' | 'alerts' | 'settings'>('users');
   const [activeEntitySubTab, setActiveEntitySubTab] = useState<'all' | 'exporters' | 'government' | 'partners'>('all');
@@ -84,10 +60,26 @@ export function Admin() {
   const [permissions, setPermissions] = useState<AppPermissionDto[]>([]);
 
   const [statsCards, setStatsCards] = useState(FALLBACK_SYSTEM_STATS);
-  const [users, setUsers] = useState(initialUsers);
-  const [roles, setRoles] = useState(initialRoles);
+  const [users, setUsers] = useState<
+    { id: string; name: string; role: string; email: string; phone: string; county: string; status: string; lastLogin: string }[]
+  >([]);
+  const [roles, setRoles] = useState<{ id: string; name: string; description: string; users: number; permissions: number }[]>([]);
   const [alertRules, setAlertRules] = useState<AdminAlertRuleApiRow[]>([]);
-  const [entities, setEntities] = useState(initialEntities);
+  const [entities, setEntities] = useState<
+    {
+      id: string;
+      companyName: string;
+      hcdaLicense: string;
+      headAgronomist: string;
+      linkedFarmers: number;
+      status: boolean;
+      email: string;
+      phone: string;
+      county: string;
+      entityType: string;
+      licenseExpiry: string;
+    }[]
+  >([]);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
   const [isAddAlertRuleModalOpen, setIsAddAlertRuleModalOpen] = useState(false);
@@ -140,7 +132,16 @@ export function Admin() {
         }
       } catch (e) {
         if (cancelled) return;
-        setAdminError('Could not load admin data. Using demo lists.');
+        setUsers([]);
+        setRoles([]);
+        setEntities([]);
+        setPermissions([]);
+        const apiMsg = e instanceof ApiError ? e.getDetailMessage() : null;
+        setAdminError(
+          apiMsg
+            ? `Could not load admin data: ${apiMsg}`
+            : 'Could not load admin data. You may lack directory access (Staff/Superuser in Django admin, or an Administrator-class role), or the API is unreachable. Sign in again with an account that has those flags.',
+        );
       } finally {
         if (cancelled) return;
         setAdminLoading(false);
@@ -155,19 +156,21 @@ export function Admin() {
 
   const handleAddUser = async (user: { id?: string; name: string; email: string; phone: string; role: string; county: string }) => {
     // Modal provides UI-shape user. Map to backend schema.
+    setAdminError(null);
+    const fullName = String(user.name ?? '').trim();
+    const [firstName, ...rest] = fullName.split(/\s+/);
+    const lastName = rest.join(' ');
+    const roleName = String(user.role ?? '').trim();
+    const rolePayload =
+      !roleName || roleName === 'Unknown' ? { role_name: null as string | null } : { role_name: roleName };
     try {
-      setAdminError(null);
-      const fullName = String(user.name ?? '').trim();
-      const [firstName, ...rest] = fullName.split(/\s+/);
-      const lastName = rest.join(' ');
-      const roleId = roles.find((r) => r.name === user.role)?.id ?? null;
       if (user.id) {
         await updateUser(user.id, {
           phone_number: String(user.phone ?? '').trim(),
           email: String(user.email ?? '').trim() || null,
           first_name: firstName || fullName || 'User',
           last_name: lastName || ' ',
-          role: roleId,
+          ...rolePayload,
           county: String(user.county ?? '').trim() || null,
         });
       } else {
@@ -176,15 +179,33 @@ export function Admin() {
           email: String(user.email ?? '').trim() || null,
           first_name: firstName || fullName || 'User',
           last_name: lastName || ' ',
-          role: roleId,
+          ...rolePayload,
           entity: null,
           county: String(user.county ?? '').trim() || null,
         });
       }
       const fresh = await listUsers();
       setUsers(fresh);
-    } catch {
-      setAdminError(user.id ? 'Could not update user. Check required fields and your permissions.' : 'Could not create user. Check required fields and your permissions.');
+    } catch (e) {
+      let msg =
+        user.id
+          ? 'Could not update user. Check the message below, field validation, and that the row id is a real user from the server (refresh if the list was empty).'
+          : 'Could not create user. Check the message below and field validation.';
+      if (e instanceof ApiError) {
+        const d = e.getDetailMessage();
+        if (d) msg = d;
+        else if (e.status === 403) {
+          msg =
+            'Access denied (403). The app only accepts Staff status, Superuser, or roles Administrator / System Administrator / KEPHIS / HCDA. Django’s “superuser” only applies here if you sign in to this app with that same user (phone OTP) and Staff/Superuser are checked at /admin/ → Users.';
+        } else if (e.status === 404) {
+          msg =
+            'User not found (404). Refresh the Admin page so the table loads from the API — placeholder rows are no longer used.';
+        } else if (e.bodyText) {
+          msg = `Request failed (HTTP ${e.status}): ${e.bodyText.slice(0, 500)}`;
+        }
+      }
+      setAdminError(msg);
+      throw e instanceof Error ? e : new Error(msg);
     }
   };
 

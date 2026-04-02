@@ -4,6 +4,7 @@ from rest_framework import viewsets, status, permissions, serializers, filters, 
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import User, OTP, Entity, Role, AppPermission
+from .permissions import IsAdminLikeUser
 from .serializers import UserSerializer, OTPSerializer, VerifyOTPSerializer, RegisterSerializer, EntitySerializer, RoleSerializer, AppPermissionSerializer
 from django.conf import settings
 import random
@@ -23,6 +24,7 @@ class AppPermissionViewSet(viewsets.ModelViewSet):
     queryset = AppPermission.objects.all()
     serializer_class = AppPermissionSerializer
     pagination_class = StandardResultsSetPagination
+    permission_classes = [permissions.IsAuthenticated, IsAdminLikeUser]
 
 @extend_schema(tags=['User Management'])
 class RoleViewSet(viewsets.ModelViewSet):
@@ -31,6 +33,7 @@ class RoleViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['role_name', 'description']
+    permission_classes = [permissions.IsAuthenticated, IsAdminLikeUser]
 
 @extend_schema(tags=['User Management'])
 class EntityViewSet(viewsets.ModelViewSet):
@@ -39,6 +42,7 @@ class EntityViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['company_name', 'HCDA_license', 'primary_county', 'company_email', 'phone_number']
+    permission_classes = [permissions.IsAuthenticated, IsAdminLikeUser]
 
 @extend_schema(tags=['User Management'])
 class UserViewSet(viewsets.ModelViewSet):
@@ -48,46 +52,74 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['phone_number', 'email', 'first_name', 'last_name']
 
-    @extend_schema(request=RegisterSerializer, responses={201: UserSerializer})
+    def get_permissions(self):
+        if self.action in ('register', 'request_otp', 'verify_otp'):
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated(), IsAdminLikeUser()]
+
+    @extend_schema(
+        request=RegisterSerializer,
+        responses={
+            201: OpenApiResponse(
+                response=inline_serializer(
+                    name='RegisterResponse',
+                    fields={
+                        'detail': serializers.CharField(),
+                        'status': serializers.CharField(),
+                    },
+                ),
+            ),
+        },
+    )
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def register(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            phone_number = serializer.validated_data['phone_number']
-
-            code = str(random.randint(100000, 999999))
-            OTP.objects.create(phone_number=phone_number, code=code)
-
-            # Send OTP unless explicitly skipped.
-            if getattr(settings, 'OTP_SKIP_SMS', False):
-                logger.info('[OTP] OTP_SKIP_SMS=1; stored OTP for phone=%s', phone_number)
-            else:
-                try:
-                    send_advanta_sms(
-                        phone_number=phone_number,
-                        message=f"Your Avo Guard verification code is: {code}",
-                    )
-                except Exception:
-                    logger.exception('[OTP] SMS sending failed for phone=%s', phone_number)
-                    if getattr(settings, 'DEBUG', False):
-                        # Keep dev usability: OTP is still valid in DB even if SMS fails.
-                        print(f'[OTP] {phone_number} -> {code}')
-
-            # For integration/debug: optionally return code in JSON (do not enable on public production).
-            if getattr(settings, 'OTP_ECHO_CODE', False):
-                return Response({'detail': 'ok', 'code': code}, status=status.HTTP_200_OK)
-
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            serializer.save()
+            return Response(
+                {
+                        'detail': (
+                        'Application received. No verification code is sent for this step. '
+                        'After an administrator activates your account, use Sign in to verify your phone with a one-time code.'
+                    ),
+                    'status': 'pending_approval',
+                },
+                status=status.HTTP_201_CREATED,
+            )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @extend_schema(request=OTPSerializer)
+    @extend_schema(
+        request=OTPSerializer,
+        summary='Request account verification code',
+        description=(
+            'Sends an SMS code to verify an **existing, admin-approved** account. '
+            'Not used for registration; use register first, then sign in here after approval.'
+        ),
+    )
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def request_otp(self, request):
         serializer = OTPSerializer(data=request.data)
         if serializer.is_valid():
             phone_number = serializer.validated_data['phone_number']
+            user = User.objects.filter(phone_number=phone_number).first()
+            if not user:
+                return Response(
+                    {
+                        'error': 'not_registered',
+                        'detail': 'No account found for this phone number. Submit an access request first.',
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            if not user.is_active:
+                return Response(
+                    {
+                        'error': 'pending_approval',
+                        'detail': 'Your account is pending administrator approval. You will be able to sign in after approval.',
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
             code = str(random.randint(100000, 999999))
             OTP.objects.create(phone_number=phone_number, code=code)
 
@@ -98,7 +130,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 try:
                     send_advanta_sms(
                         phone_number=phone_number,
-                        message=f"Your Avo Guard verification code is: {code}",
+                        message=f"Your Avo Guard account verification code is: {code}",
                     )
                 except Exception:
                     logger.exception('[OTP] SMS sending failed for phone=%s', phone_number)
@@ -113,6 +145,11 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         request=VerifyOTPSerializer,
+        summary='Verify account with SMS code',
+        description=(
+            'Completes sign-in for an approved user by checking the one-time code. '
+            'Does not create or register users.'
+        ),
         responses={
             200: inline_serializer(
                 name='VerifyOTPResponse',
@@ -135,22 +172,39 @@ class UserViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             phone_number = serializer.validated_data['phone_number']
             code = serializer.validated_data['code']
-            
+
+            user = User.objects.filter(phone_number=phone_number).first()
+            if not user:
+                return Response(
+                    {
+                        'error': 'not_registered',
+                        'detail': 'No account found for this phone number.',
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            if not user.is_active:
+                return Response(
+                    {
+                        'error': 'pending_approval',
+                        'detail': 'Your account is pending administrator approval.',
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
             otp = OTP.objects.filter(phone_number=phone_number, code=code, is_used=False).order_by('-created_at').first()
-            
+
             if otp:
                 otp.is_used = True
                 otp.save()
-                
-                user, created = User.objects.get_or_create(phone_number=phone_number)
+
                 refresh = RefreshToken.for_user(user)
-                
+
                 return Response({
                     'refresh': str(refresh),
                     'access': str(refresh.access_token),
                     'user': UserSerializer(user).data,
-                    'is_new_user': created
+                    'is_new_user': False,
                 }, status=status.HTTP_200_OK)
-            
-            return Response({"error": "Invalid or expired OTP"}, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({"error": "invalid_otp", "detail": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

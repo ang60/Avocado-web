@@ -19,6 +19,25 @@ export class ApiError extends Error {
     this.status = status;
     this.bodyText = bodyText;
   }
+
+  /** Parses DRF `detail`, `error`, or field error arrays from JSON body when present. */
+  getDetailMessage(): string | null {
+    const raw = this.bodyText?.trim();
+    if (!raw) return null;
+    try {
+      const body = JSON.parse(raw) as Record<string, unknown>;
+      const detail = body.detail;
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail) && typeof detail[0] === 'string') return detail.join(' ');
+      for (const v of Object.values(body)) {
+        if (Array.isArray(v) && typeof v[0] === 'string') return v[0];
+        if (typeof v === 'string') return v;
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
 }
 
 function buildUrl(path: string): string {

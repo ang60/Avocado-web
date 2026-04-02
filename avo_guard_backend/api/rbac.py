@@ -11,7 +11,9 @@ ROLE_AGRONOMIST = 'Agronomist'
 ROLE_FARM_MANAGER = 'Farm Manager'
 ROLE_FARMER = 'Farmer'
 
-ADMIN_LIKE_ROLES = {ROLE_ADMIN, ROLE_KEPHIS, ROLE_HCDA}
+# Directory / destructive APIs: staff or these role_name values (see accounts migration 0011_seed_core_roles).
+# Include legacy UI strings for backward compatibility.
+ADMIN_LIKE_ROLES = {ROLE_ADMIN, 'System Administrator', ROLE_KEPHIS, ROLE_HCDA}
 
 
 def role_name(user) -> str:

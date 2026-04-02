@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'drf_spectacular',
     'accounts',
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -72,10 +74,35 @@ WSGI_APPLICATION = 'avo_guard.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-if not DEBUG:
-    database_url = os.environ.get('DATABASE_URL')
+def _clean_database_url(value):
+    """
+    Accept common .env mishaps like surrounding quotes or a literal "b'...'" prefix.
+    Returns a clean string (or empty string if unset).
+    """
+    if value is None:
+        return ""
+    if isinstance(value, (bytes, bytearray)):
+        value = value.decode("utf-8", errors="ignore")
+    value = str(value).strip()
+    value = value.strip('"').strip("'").strip()
+    # Handle accidental literal representation: b'postgres://...'
+    if (value.startswith("b'") and value.endswith("'")) or (value.startswith('b"') and value.endswith('"')):
+        value = value[2:-1].strip()
+    return value
+
+if DEBUG:
+    database_url = _clean_database_url(os.environ.get("DATABASE_URL_LOCAL"))
+    if not database_url:
+        database_url = _clean_database_url(os.environ.get("DATABASE_URL"))
 else:
-    database_url = os.environ.get('DATABASE_URL_LOCAL')
+    database_url = _clean_database_url(os.environ.get("DATABASE_URL"))
+    if not database_url:
+        database_url = _clean_database_url(os.environ.get("DATABASE_URL_LOCAL"))
+
+if not database_url:
+    raise RuntimeError(
+        "Database URL is not configured. Set DATABASE_URL (prod) or DATABASE_URL_LOCAL (dev) in your environment."
+    )
 
 DATABASES = {
     "default": dj_database_url.parse(
@@ -210,23 +237,14 @@ else:
         },
     }
 
-CORS_ORIGIN_ALLOW_ALL = True
-
+# django-cors-headers (browser calls from Vite, etc.)
+# https://github.com/adamchainz/django-cors-headers
 CORS_ALLOW_CREDENTIALS = True
-
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-
-CORS_ALLOW_HEADERS = [
-    'access-control-allow-origin',
-    'access-control-allow-headers',
-    'content-type',
-    'authorization',
-    'x-auth-token',
-]
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    _cors_raw = os.environ.get(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173',
+    )
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_raw.split(',') if o.strip()]

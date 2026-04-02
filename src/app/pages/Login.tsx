@@ -1,27 +1,35 @@
-import { Phone, KeyRound, ArrowRight, ShieldCheck, BarChart3, ClipboardList, Map } from 'lucide-react';
-import { FormEvent, ReactNode, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Phone, KeyRound, ArrowRight, ShieldCheck } from 'lucide-react';
+import { FormEvent, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import avocadoLogo from '../../imports/avocado_logo.svg';
-import { registerAndRequestOtp, requestOtp, verifyOtp } from '../api/authApi';
+import { AuthBrandingPanel } from '../components/AuthBrandingPanel';
+import { requestOtp, verifyOtp } from '../api/authApi';
+import { ApiError } from '../api/client';
+import { getApiErrorMessage } from '../api/errors';
 
 export function Login() {
   const navigate = useNavigate();
   const [step, setStep] = useState<'request' | 'verify'>('request');
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('+254798208346');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  const canSubmitRequest = phoneNumber.trim().length > 0;
+  const canSubmitVerify = phoneNumber.trim().length > 0 && otpCode.trim().length > 0;
+
   const canSubmit = useMemo(
-    () =>
-      step === 'request'
-        ? phoneNumber.trim().length > 0 && fullName.trim().length > 0 && email.trim().length > 0
-        : phoneNumber.trim().length > 0 && otpCode.trim().length > 0,
-    [email, fullName, phoneNumber, otpCode, step],
+    () => (step === 'request' ? canSubmitRequest : canSubmitVerify),
+    [step, canSubmitRequest, canSubmitVerify],
   );
+
+  function messageFromErr(err: unknown, fallback: string): string {
+    if (err instanceof ApiError) {
+      return err.getDetailMessage() ?? getApiErrorMessage(err, fallback);
+    }
+    return getApiErrorMessage(err, fallback);
+  }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,15 +42,22 @@ export function Login() {
     try {
       const phone = phoneNumber.trim();
       if (step === 'request') {
-        await registerAndRequestOtp({ name: fullName.trim(), email: email.trim(), phone_number: phone });
+        await requestOtp(phone);
         setStep('verify');
-        setInfo('OTP sent. Enter the 6-digit code to continue.');
+        setInfo('If your account is approved, a verification code was sent. Enter it to finish signing in.');
       } else {
         await verifyOtp(phone, otpCode.trim());
         navigate('/dashboard');
       }
-    } catch {
-      setError(step === 'request' ? 'Unable to send OTP. Check the phone number and try again.' : 'Invalid OTP. Please try again.');
+    } catch (err) {
+      setError(
+        messageFromErr(
+          err,
+          step === 'request'
+            ? 'Could not send a verification code. Check the phone number and that your access request was approved.'
+            : 'Invalid or expired code. Try again.',
+        ),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -57,58 +72,20 @@ export function Login() {
               <img src={avocadoLogo} alt="logo" className="w-8 h-8" />
             </div>
 
-            <h1
-              className="text-2xl font-semibold text-gray-800"
-              style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-            >
-              Welcome Back
+            <h1 className="text-2xl font-semibold text-gray-800" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              Sign in
             </h1>
-            <p className="text-gray-500 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              Sign in to your Dashboard
+            <p className="text-gray-500 text-sm text-center max-w-md" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              Verify your account with a code sent to your phone. If you have not registered yet, create an account first and wait for admin
+              approval.
             </p>
           </div>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
-            {step === 'request' ? (
-              <>
-                <div>
-                  <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                    Full Name
-                  </label>
-                  <div className="mt-2 relative">
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Jane Wambui"
-                      className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 px-4"
-                      style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-                      autoComplete="name"
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                    Email
-                  </label>
-                  <div className="mt-2 relative">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="e.g. name@example.com"
-                      className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 px-4"
-                      style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-                      autoComplete="email"
-                      required
-                    />
-                  </div>
-                </div>
-              </>
-            ) : null}
             <div>
-              <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>Phone Number</label>
+              <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                Phone number
+              </label>
               <div className="mt-2 relative">
                 <Phone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
                 <input
@@ -119,6 +96,7 @@ export function Login() {
                   className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-10 pr-10"
                   style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                   autoComplete="tel"
+                  required
                 />
               </div>
             </div>
@@ -126,7 +104,7 @@ export function Login() {
             {step === 'verify' ? (
               <div>
                 <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  One-Time Password (OTP)
+                  Verification code
                 </label>
                 <div className="mt-2 relative">
                   <KeyRound className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
@@ -164,15 +142,15 @@ export function Login() {
                       setInfo(null);
                       try {
                         await requestOtp(phoneNumber.trim());
-                        setInfo('OTP resent.');
-                      } catch {
-                        setError('Unable to resend OTP. Please try again.');
+                        setInfo('A new verification code was sent.');
+                      } catch (err) {
+                        setError(messageFromErr(err, 'Unable to resend the code.'));
                       } finally {
                         setSubmitting(false);
                       }
                     }}
                   >
-                    Resend OTP
+                    Resend code
                   </button>
                 </div>
               </div>
@@ -202,17 +180,22 @@ export function Login() {
               className="w-full bg-gradient-to-r from-[#4fa36c] to-[#3c8f5a] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
             >
-              {submitting ? (step === 'request' ? 'Sending OTP...' : 'Verifying...') : step === 'request' ? 'Send OTP' : 'Verify & Sign In'}
+              {submitting
+                ? step === 'request'
+                  ? 'Sending code...'
+                  : 'Verifying...'
+                : step === 'request'
+                  ? 'Send verification code'
+                  : 'Verify & sign in'}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
 
-          <div
-            className="mt-6 text-center text-sm text-gray-600"
-            style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-          >
-            Don't have an account?{' '}
-            <span className="text-green-600 font-medium cursor-pointer">Create Account</span>
+          <div className="mt-6 text-center text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            New here?{' '}
+            <Link to="/register" className="text-green-600 font-medium hover:underline">
+              Create an account
+            </Link>
           </div>
 
           <div
@@ -220,81 +203,11 @@ export function Login() {
             style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
             <ShieldCheck className="w-4 h-4 text-green-600" />
-            Secure login protected by encryption
+            Codes verify approved accounts only — not sent from registration
           </div>
         </div>
 
-        <div className="rounded-2xl p-12 bg-gradient-to-b from-[#1f5a3d] to-[#184e35] text-white flex flex-col justify-between min-h-[790px]">
-          <div>
-            <div className="flex items-center gap-5 mb-10">
-              <div className="w-28 h-28 rounded-full bg-white flex items-center justify-center">
-                <img src={avocadoLogo} alt="logo" className="w-20 h-20" />
-              </div>
-
-              <div>
-                <h2 className="text-6xl font-semibold leading-none" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  AvoGuard
-                </h2>
-                <p className="mt-2 text-base text-green-200" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  Pest and Disease Monitoring System
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-8 mt-10">
-              <Feature
-                icon={<BarChart3 />}
-                title="Real-time Dashboard"
-                description="Monitor farms, pest reports, and alerts in real-time"
-              />
-
-              <Feature
-                icon={<ClipboardList />}
-                title="Case Management"
-                description="Track, assign, and resolve pest and disease cases efficiently"
-              />
-
-              <Feature
-                icon={<Map />}
-                title="Farmer Insights"
-                description="View farm profiles, locations, crops, and historical case data"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-center gap-2 mt-10">
-            <span className="w-2 h-2 rounded-full bg-green-300" />
-            <span className="w-2 h-2 rounded-full bg-green-700" />
-            <span className="w-2 h-2 rounded-full bg-green-700" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Feature({
-  icon,
-  title,
-  description,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex items-start gap-4">
-      <div className="w-10 h-10 rounded-full bg-green-400/20 flex items-center justify-center">
-        <div className="text-green-200">{icon}</div>
-      </div>
-
-      <div>
-        <h3 className="font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-          {title}
-        </h3>
-        <p className="text-green-200 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-          {description}
-        </p>
+        <AuthBrandingPanel />
       </div>
     </div>
   );
