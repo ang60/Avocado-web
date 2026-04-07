@@ -149,6 +149,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -243,6 +244,8 @@ CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 else:
+    # Production: set CORS_ALLOWED_ORIGINS to every browser origin that calls this API (comma-separated),
+    # e.g. https://avoguard.cognitron.co.ke — otherwise registration/login from the SPA will fail in the browser.
     _cors_raw = os.environ.get(
         'CORS_ALLOWED_ORIGINS',
         'http://localhost:5173,http://127.0.0.1:5173',

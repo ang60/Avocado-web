@@ -33,21 +33,38 @@ export class ApiError extends Error {
     this.bodyText = bodyText;
   }
 
-  /** Parses DRF `detail`, `error`, or field error arrays from JSON body when present. */
+  /** Parses DRF `detail`, `non_field_errors`, and per-field validation messages. */
   getDetailMessage(): string | null {
     const raw = this.bodyText?.trim();
     if (!raw) return null;
     try {
       const body = JSON.parse(raw) as Record<string, unknown>;
-      const detail = body.detail;
-      if (typeof detail === 'string') return detail;
-      if (Array.isArray(detail) && typeof detail[0] === 'string') return detail.join(' ');
-      for (const v of Object.values(body)) {
-        if (Array.isArray(v) && typeof v[0] === 'string') return v[0];
-        if (typeof v === 'string') return v;
+      const chunks: string[] = [];
+
+      const pushDetail = (val: unknown) => {
+        if (typeof val === 'string' && val.trim()) chunks.push(val.trim());
+        else if (Array.isArray(val)) {
+          for (const item of val) {
+            if (typeof item === 'string' && item.trim()) chunks.push(item.trim());
+          }
+        }
+      };
+
+      pushDetail(body.detail);
+      pushDetail(body.non_field_errors);
+
+      for (const [key, val] of Object.entries(body)) {
+        if (key === 'detail' || key === 'non_field_errors') continue;
+        if (typeof val === 'string' && val.trim()) chunks.push(`${key}: ${val.trim()}`);
+        else if (Array.isArray(val)) {
+          const strs = val.filter((x): x is string => typeof x === 'string').map((s) => s.trim()).filter(Boolean);
+          if (strs.length) chunks.push(`${key}: ${strs.join(' ')}`);
+        }
       }
+
+      return chunks.length ? [...new Set(chunks)].join(' ') : null;
     } catch {
-      /* ignore */
+      /* not JSON (e.g. HTML error page) */
     }
     return null;
   }

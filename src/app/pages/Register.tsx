@@ -33,7 +33,15 @@ export function Register() {
 
   function messageFromErr(err: unknown, fallback: string): string {
     if (err instanceof ApiError) {
-      return err.getDetailMessage() ?? getApiErrorMessage(err, fallback);
+      const parsed = err.getDetailMessage();
+      if (parsed) return parsed;
+      if (err.status >= 500) {
+        return `Server error (HTTP ${err.status}). Check that the database is reachable, migrations are applied, and the API process logs on the server.`;
+      }
+      if (err.status === 400) {
+        return 'Invalid request. Check all fields; if this continues, the server may have returned a non-JSON error.';
+      }
+      return getApiErrorMessage(err, fallback);
     }
     return getApiErrorMessage(err, fallback);
   }
