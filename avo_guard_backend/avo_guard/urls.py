@@ -12,6 +12,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('accounts.urls')),
     path('api/', include('api.urls')),
+    path('api/pest-scouting/', include('pest_scouting.urls')),
+    path('api/case-management/', include('case_management.urls')),
+    path('api/knowledge-base/', include('knowledge_base.urls')),
+    path('api/kephis-quarantine/', include('kephis_quarantine.urls')),
     # API Schema:
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     # Optional UI:

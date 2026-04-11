@@ -69,10 +69,6 @@ export function ScoutingReports() {
   const submitCreateCase = useCallback(async () => {
     const item = createCaseModalItem;
     if (!item) return;
-    if (!item.farmerId) {
-      setCreateCaseError('This row has no farmer id. Refresh the scouting feed and try again.');
-      return;
-    }
     const title = createCaseTitle.trim();
     if (!title) {
       setCreateCaseError('Enter a case title (pest / issue).');
@@ -82,13 +78,10 @@ export function ScoutingReports() {
     setCreateCaseError(null);
     try {
       const row = await createCaseFromScouting({
-        farmer: item.farmerId,
-        scouting_report: item.id,
-        pest_disease: title,
+        weekly_record: item.id,
+        case_title: title,
         severity: createCaseSeverity,
         notes: createCaseNotes.trim() || undefined,
-        block: item.blockUuid || undefined,
-        assigned_agronomist: isAgronomistUser ? (assignCaseToMe ? undefined : null) : undefined,
       });
       setCreateCaseModalItem(null);
       navigate(`/case-management/${row.id}`);

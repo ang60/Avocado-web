@@ -82,20 +82,16 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center p-3">
-      <div className="w-full max-w-[1280px] grid md:grid-cols-[0.94fr_1.06fr] gap-6 items-stretch">
-        <div className="bg-white rounded-2xl shadow-sm p-10 flex flex-col justify-center min-h-[760px]">
-          <div className="flex flex-col items-center mb-8">
+    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center px-3 py-10 md:py-14">
+      <div className="w-full max-w-[1280px] grid md:grid-cols-[0.94fr_1.06fr] gap-6 items-start">
+        <div className="bg-white rounded-2xl shadow-sm px-6 py-8 md:p-10 flex flex-col justify-center">
+          <div className="flex flex-col items-center mb-6">
             <div className="w-14 h-14 rounded-full bg-[#eef5d8] flex items-center justify-center mb-4">
               <img src={avocadoLogo} alt="logo" className="w-8 h-8" />
             </div>
             <h1 className="text-2xl font-semibold text-gray-800" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
               Create your account
             </h1>
-            <p className="text-gray-500 text-sm text-center max-w-md" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              For individuals: enter your details and choose a password. An administrator will review and approve your account. After approval,
-              sign in with your phone; you can use your password in Django admin if needed.
-            </p>
           </div>
 
           {successDetail ? (
@@ -103,15 +99,15 @@ export function Register() {
               className="rounded-md border border-green-200 bg-green-50 px-3 py-3 text-sm text-green-900 mb-4"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
             >
-              <p className="font-medium mb-1">Application received</p>
-              <p>{successDetail}</p>
+              <p className="font-medium mb-1">Account created</p>
+              <p>Your account has been created successfully. An administrator will review and approve your account.</p>
               <Link to="/login" className="mt-3 inline-block text-green-700 font-medium hover:underline">
                 Go to sign in
               </Link>
             </div>
           ) : null}
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
                 Full name
@@ -121,7 +117,7 @@ export function Register() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Jane Wambui"
-                className="mt-2 w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 px-4"
+                className="mt-2 w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 px-4"
                 style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                 autoComplete="name"
                 required
@@ -136,7 +132,7 @@ export function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g. name@example.com"
-                className="mt-2 w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 px-4"
+                className="mt-2 w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 px-4"
                 style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                 autoComplete="email"
                 required
@@ -153,7 +149,7 @@ export function Register() {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="e.g. +2547XXXXXXXX"
-                  className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-10 pr-10"
+                  className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-10"
                   style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                   autoComplete="tel"
                   required
@@ -167,7 +163,7 @@ export function Register() {
               onChange={setPassword}
               required
               autoComplete="new-password"
-              inputClassName="!bg-[#f3f7f4] !border-transparent focus:border-green-500"
+              inputClassName="!bg-[#f3f7f4] !border-transparent focus:border-green-500 !py-2.5"
             />
             <PasswordField
               label="Confirm password *"
@@ -175,7 +171,7 @@ export function Register() {
               onChange={setPasswordConfirm}
               required
               autoComplete="new-password"
-              inputClassName="!bg-[#f3f7f4] !border-transparent focus:border-green-500"
+              inputClassName="!bg-[#f3f7f4] !border-transparent focus:border-green-500 !py-2.5"
             />
 
             {password && passwordConfirm && password !== passwordConfirm ? (
@@ -197,7 +193,7 @@ export function Register() {
               <button
                 type="submit"
                 disabled={!canSubmit || submitting}
-                className="w-full bg-gradient-to-r from-[#4fa36c] to-[#3c8f5a] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-[#4fa36c] to-[#3c8f5a] text-white py-2.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
               >
                 {submitting ? 'Submitting...' : 'Submit application'}
@@ -211,14 +207,6 @@ export function Register() {
             <Link to="/login" className="text-green-600 font-medium hover:underline">
               Sign in
             </Link>
-          </div>
-
-          <div
-            className="mt-5 border rounded-lg p-3 flex items-center justify-center gap-2 text-sm text-gray-500"
-            style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-          >
-            <ShieldCheck className="w-4 h-4 text-green-600" />
-            No SMS from this page — verification codes are sent only when you sign in after approval
           </div>
         </div>
 

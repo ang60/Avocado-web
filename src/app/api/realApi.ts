@@ -30,50 +30,211 @@ export async function fetchFarmerDetail(farmerId: string | undefined): Promise<F
   return apiRequest<FarmerDetailPayload>(`/api/farmers/${id}/`);
 }
 
+type BackendUser = {
+  id: string;
+  phone_number: string;
+  first_name?: string;
+  last_name?: string;
+};
+
+type BackendWeeklyRecord = {
+  id: string;
+  farmer?: BackendUser;
+  block?: { id: string; block_name: string } | string;
+  location?: string;
+  number_of_trees_affected?: number;
+  pests_observed?: string | null;
+  disease?: string | null;
+  voice_note?: string | null;
+  timestamp?: string;
+};
+
+type BackendCase = {
+  id: string;
+  case_title: string;
+  severity: 'high' | 'medium' | 'low' | 'unknown';
+  notes: string;
+  assigned_agronomist?: BackendUser | null;
+  pest_scouting_record?: BackendWeeklyRecord | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export async function fetchCaseManagement(): Promise<CaseManagementPayload> {
-  return apiRequest<CaseManagementPayload>('/api/case_management/');
+  const data = await apiRequest<PaginatedResults<BackendCase> | BackendCase[]>(
+    '/api/case-management/cases/?page_size=1000',
+  );
+  const rows = parseDrfList<BackendCase>(data);
+
+  const cases: CaseManagementCaseRow[] = rows.map((c) => {
+    const rec = c.pest_scouting_record ?? null;
+    const farmerName =
+      rec?.farmer?.first_name || rec?.farmer?.last_name
+        ? `${rec?.farmer?.first_name ?? ''} ${rec?.farmer?.last_name ?? ''}`.trim()
+        : (rec?.farmer?.phone_number ?? '—');
+    const location = rec?.location ?? '—';
+    const finding = (rec?.pests_observed || rec?.disease || c.case_title || '—').trim?.() ?? '—';
+    const affectedTrees = typeof rec?.number_of_trees_affected === 'number' ? rec.number_of_trees_affected : 0;
+    const blockLabel =
+      typeof rec?.block === 'object' && rec?.block
+        ? rec.block.block_name
+        : typeof rec?.block === 'string'
+          ? rec.block
+          : '—';
+
+    return {
+      id: c.id,
+      severity: c.severity,
+      farm: farmerName,
+      block: blockLabel || '—',
+      pestDisease: finding,
+      pestDiseaseKiswahili: '—',
+      dateSubmitted: (c.created_at || '').slice(0, 10) || '—',
+      status: 'new',
+      scoutName: (c.assigned_agronomist?.phone_number ?? '—') as string,
+      location,
+      affectedTrees,
+      symptoms: [],
+      notes: c.notes || '',
+      channel: 'smartphone',
+    };
+  });
+
+  const total = cases.length;
+  const high = cases.filter((c) => c.severity === 'high').length;
+  const medium = cases.filter((c) => c.severity === 'medium').length;
+  const low = cases.filter((c) => c.severity === 'low').length;
+
+  return {
+    kpis: [
+      { title: 'Total Cases', value: String(total), icon: 'folder', iconColor: '#1B4332', iconBg: '#74C69D20' },
+      { title: 'High Severity', value: String(high), icon: 'alert', iconColor: '#C0392B', iconBg: '#FEE2E2' },
+      { title: 'Medium Severity', value: String(medium), icon: 'users', iconColor: '#F39C12', iconBg: '#FEF3C7' },
+      { title: 'Low Severity', value: String(low), icon: 'check', iconColor: '#2D6A4F', iconBg: '#D1FAE5' },
+    ],
+    cases,
+  };
 }
 
 export async function fetchCaseDetail(caseId: string | undefined): Promise<CaseDetailPayload> {
   const id = String(caseId ?? '').trim();
-  return apiRequest<CaseDetailPayload>(`/api/cases/${id}/`);
+  const c = await apiRequest<BackendCase>(`/api/case-management/cases/${id}/`);
+  const rec = c.pest_scouting_record ?? null;
+
+  const farmerName =
+    rec?.farmer?.first_name || rec?.farmer?.last_name
+      ? `${rec?.farmer?.first_name ?? ''} ${rec?.farmer?.last_name ?? ''}`.trim()
+      : (rec?.farmer?.phone_number ?? 'Farmer');
+
+  const farmerPhone = rec?.farmer?.phone_number ?? '—';
+  const location = rec?.location ?? '—';
+  const finding = (rec?.pests_observed || rec?.disease || c.case_title || '—').trim?.() ?? '—';
+  const blockLabel =
+    typeof rec?.block === 'object' && rec?.block
+      ? rec.block.block_name
+      : typeof rec?.block === 'string'
+        ? rec.block
+        : '—';
+
+  return {
+    id: c.id,
+    farmerName,
+    farmerPhone,
+    location,
+    subCounty: '—',
+    farm: farmerName,
+    block: blockLabel || '—',
+    blockCoordinates: { lat: 0, lng: 0 },
+    severity: c.severity,
+    submissionChannel: 'smartphone',
+    pestDisease: finding,
+    pestDiseaseKiswahili: '—',
+    dateSubmitted: (c.created_at || '').slice(0, 10) || '—',
+    scoutName:
+      c.assigned_agronomist?.first_name || c.assigned_agronomist?.last_name
+        ? `${c.assigned_agronomist?.first_name ?? ''} ${c.assigned_agronomist?.last_name ?? ''}`.trim()
+        : (c.assigned_agronomist?.phone_number ?? '—'),
+    scoutPhone: c.assigned_agronomist?.phone_number ?? '—',
+    affectedTrees: typeof rec?.number_of_trees_affected === 'number' ? rec.number_of_trees_affected : 0,
+    symptoms: [],
+    symptomCodes: [],
+    notes: c.notes || '',
+    photos: [],
+    voiceNote: {
+      duration: '—',
+      url: (rec?.voice_note as string) || '',
+    },
+    timeline: [
+      { stage: 'Submitted', timestamp: c.created_at ?? null, status: 'completed' },
+      { stage: 'Under review', timestamp: null, status: 'pending' },
+      { stage: 'Advisory issued', timestamp: null, status: 'pending' },
+    ],
+  };
 }
 
 export async function fetchScoutingFeed(): Promise<ScoutingFeedItem[]> {
   const data = await apiRequest<PaginatedResults<ScoutingFeedItem> | ScoutingFeedItem[]>(
-    '/api/scouting_reports/?page_size=500',
+    '/api/pest-scouting/scouting-reports/?page_size=500',
   );
   return parseDrfList<ScoutingFeedItem>(data);
 }
 
+export type QuarantineBlockRow = {
+  id: string;
+  blockId: string;
+  farmName: string;
+  county: string;
+  pestType: string;
+  captureRate: number;
+  lastInspection: string;
+  kephisStatus: 'cleared' | 'gated' | 'pending';
+  inspector: string;
+  selected: boolean;
+};
+
+export async function fetchKephisQuarantineBlocks(): Promise<QuarantineBlockRow[]> {
+  const data = await apiRequest<PaginatedResults<QuarantineBlockRow> | QuarantineBlockRow[]>(
+    '/api/kephis-quarantine/management/?page_size=1000',
+  );
+  return parseDrfList<QuarantineBlockRow>(data);
+}
+
 export type CreateCaseFromScoutingPayload = {
-  farmer: string;
-  scouting_report: string;
-  pest_disease: string;
+  weekly_record: string;
+  case_title: string;
   severity: 'high' | 'medium' | 'low' | 'unknown';
   notes?: string;
-  block?: string | null;
-  /** Omit to let the server assign the current user when they are an agronomist; send `null` to leave unassigned. */
-  assigned_agronomist?: string | null;
 };
 
 export async function createCaseFromScouting(
   body: CreateCaseFromScoutingPayload
 ): Promise<CaseManagementCaseRow> {
   const payload: Record<string, unknown> = {
-    farmer: body.farmer,
-    scouting_report: body.scouting_report,
-    pest_disease: body.pest_disease,
+    case_title: body.case_title,
     severity: body.severity,
+    pest_scouting_record: body.weekly_record,
   };
   if (body.notes && body.notes.trim()) payload.notes = body.notes.trim();
-  if (body.block) payload.block = body.block;
-  if (body.assigned_agronomist === null) payload.assigned_agronomist = null;
-  if (typeof body.assigned_agronomist === 'string' && body.assigned_agronomist)
-    payload.assigned_agronomist = body.assigned_agronomist;
-  return apiRequest<CaseManagementCaseRow>('/api/cases/', {
+  const created = await apiRequest<BackendCase>('/api/case-management/cases/', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+  // Return a row compatible with the Case Management table
+  return {
+    id: created.id,
+    severity: created.severity,
+    farm: '—',
+    block: '—',
+    pestDisease: created.case_title,
+    pestDiseaseKiswahili: '—',
+    dateSubmitted: (created.created_at || '').slice(0, 10) || '—',
+    status: 'new',
+    scoutName: '—',
+    location: '—',
+    affectedTrees: 0,
+    symptoms: [],
+    notes: created.notes || '',
+    channel: 'smartphone',
+  };
 }
 

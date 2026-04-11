@@ -90,9 +90,9 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center p-3">
-      <div className="w-full max-w-[1280px] grid md:grid-cols-[0.94fr_1.06fr] gap-6 items-stretch">
-        <div className="bg-white rounded-2xl shadow-sm p-10 flex flex-col justify-center min-h-[760px]">
+    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center px-3 py-10 md:py-14">
+      <div className="w-full max-w-[1280px] grid md:grid-cols-[0.94fr_1.06fr] gap-6 items-start">
+        <div className="bg-white rounded-2xl shadow-sm p-10 flex flex-col justify-center">
           <div className="flex flex-col items-center mb-8">
             <div className="w-14 h-14 rounded-full bg-[#eef5d8] flex items-center justify-center mb-4">
               <img src={avocadoLogo} alt="logo" className="w-8 h-8" />

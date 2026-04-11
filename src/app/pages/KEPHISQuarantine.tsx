@@ -1,9 +1,11 @@
 
 import { KEPHISRiskIntelTab } from '../components/KEPHISRiskIntelTab';
 import { Shield, AlertTriangle, CheckCircle, Clock, Download, FileText, Search, Eye, FileCheck, History, X, Calendar, MoreVertical, XCircle, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TableScroll } from '../components/TableScroll';
 import { OptimizedImage } from '../components/OptimizedImage';
+import { fetchKephisQuarantineBlocks } from '../api/realApi';
+import { getApiErrorMessage } from '../api/errors';
 
 interface QuarantineBlock {
   id: string;
@@ -144,6 +146,8 @@ const mockQuarantineData: QuarantineBlock[] = [
 export function KEPHISQuarantine() {
   const [activeTab, setActiveTab] = useState<'quarantine' | 'risk-intel'>('quarantine');
   const [blocks, setBlocks] = useState<QuarantineBlock[]>(mockQuarantineData);
+  const [blocksLoading, setBlocksLoading] = useState(true);
+  const [blocksError, setBlocksError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -153,6 +157,28 @@ export function KEPHISQuarantine() {
   const [bulkPermitModalOpen, setBulkPermitModalOpen] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<QuarantineBlock | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBlocksLoading(true);
+    setBlocksError(null);
+    fetchKephisQuarantineBlocks()
+      .then((rows) => {
+        if (cancelled) return;
+        // Keep local UI selection flag stable; API may not include it.
+        setBlocks(rows.map((r) => ({ ...r, selected: false })));
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setBlocksError(getApiErrorMessage(e, 'Could not load quarantine blocks.'));
+      })
+      .finally(() => {
+        if (!cancelled) setBlocksLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const gatedCount = blocks.filter(b => b.kephisStatus === 'gated').length;
   const clearedCount = blocks.filter(b => b.kephisStatus === 'cleared').length;
@@ -257,6 +283,16 @@ export function KEPHISQuarantine() {
           >
             Live Oversight of Quarantine Pests (FCM / Fruit Fly)
           </p>
+          {blocksLoading ? (
+            <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              Loading quarantine blocks…
+            </p>
+          ) : null}
+          {blocksError ? (
+            <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#b45309' }}>
+              {blocksError} (showing last known data)
+            </p>
+          ) : null}
         </div>
 
         {/* Tabs */}

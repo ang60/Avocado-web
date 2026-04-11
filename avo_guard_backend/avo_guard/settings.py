@@ -40,6 +40,10 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'accounts',
     'api',
+    'pest_scouting',
+    'case_management',
+    'knowledge_base',
+    'kephis_quarantine',
 ]
 
 MIDDLEWARE = [

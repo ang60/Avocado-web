@@ -31,7 +31,7 @@ function Feature({
 /** Right-hand marketing column used on login and register pages. */
 export function AuthBrandingPanel() {
   return (
-    <div className="rounded-2xl p-12 bg-gradient-to-b from-[#1f5a3d] to-[#184e35] text-white flex flex-col justify-between min-h-[790px]">
+    <div className="rounded-2xl p-12 bg-gradient-to-b from-[#1f5a3d] to-[#184e35] text-white flex flex-col justify-between min-h-[560px] md:min-h-[640px] lg:min-h-[720px]">
       <div>
         <div className="flex items-center gap-5 mb-10">
           <div className="w-28 h-28 rounded-full bg-white flex items-center justify-center">
