@@ -1,1 +1,0 @@
-import{u as e,b as o,j as r,d as a}from"./index-COHCV_Gu.js";import{b as s}from"./recharts-BCZyoldn.js";import"./d3-geo-cGJwCMu6.js";function p(){const t=e();return s.useEffect(()=>{o(),t("/login",{replace:!0})},[t]),r.jsx(a,{})}export{p as Logout};

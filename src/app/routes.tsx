@@ -89,6 +89,11 @@ export const router = createBrowserRouter([
         Component: lazyRoute(() => import('./pages/ScoutingReports'), 'ScoutingReports'),
       },
       {
+        path: 'my-farm-blocks',
+        loader: requireNavPermission('nav.scouting'),
+        Component: lazyRoute(() => import('./pages/MyFarmBlocks'), 'MyFarmBlocks'),
+      },
+      {
         path: 'case-management',
         loader: requireNavPermission('nav.cases'),
         Component: lazyRoute(() => import('./pages/CaseManagement'), 'CaseManagement'),
@@ -147,6 +152,11 @@ export const router = createBrowserRouter([
         path: 'compliance-hub',
         loader: requireNavPermission('nav.reports'),
         Component: lazyRoute(() => import('./pages/ComplianceHub'), 'ComplianceHub'),
+      },
+      {
+        path: 'compliance-permits',
+        loader: requireNavPermission('nav.reports'),
+        Component: lazyRoute(() => import('./pages/CompliancePermits'), 'CompliancePermits'),
       },
       {
         path: 'admin',

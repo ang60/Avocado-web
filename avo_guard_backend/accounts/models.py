@@ -95,6 +95,7 @@ class User(AbstractUser):
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
     county = models.CharField(max_length=100, null=True, blank=True)
     entity = models.ForeignKey(Entity, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
+    managed_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='managed_farmers')
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = []

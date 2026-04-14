@@ -1,17 +1,75 @@
 import { BookOpen, Search, CheckCircle2, Lock, Unlock, AlertTriangle, TrendingUp, Code, Leaf, Beaker, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  computeCategoryCounts,
-  knowledgeBaseArticles,
-  knowledgeBaseCategories,
   ussdSymptomCodesLookup,
 } from '../data/knowledgeBase';
+import { getApiErrorMessage } from '../api/errors';
+import { fetchKnowledgeEntries, type KnowledgeEntryDto } from '../api/realApi';
+
+type UiArticle = {
+  id: string;
+  title: string;
+  category: string;
+  tags: string[];
+  summary: string;
+  lastUpdated: string;
+  views: number;
+  severity: string;
+  activeUses: number;
+  approvedContent: boolean;
+  ussdCode: string | null;
+  chemicalGate: string;
+  ipmLevel: number;
+};
 
 export function KnowledgeBase() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Articles');
+  const [articles, setArticles] = useState<UiArticle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    fetchKnowledgeEntries(searchTerm)
+      .then((rows) => {
+        if (cancelled) return;
+        const mapped: UiArticle[] = rows.map((entry: KnowledgeEntryDto) => {
+          const activeUseNumber = Number(String(entry.active_use_cases ?? '').match(/\d+/)?.[0] ?? 0);
+          const cleanGate = String(entry.chemical_gate ?? '').toLowerCase();
+          const gate = cleanGate === 'gated' ? 'gated' : 'open';
+          return {
+            id: entry.id,
+            title: entry.title,
+            category: entry.category_name || 'Knowledge',
+            tags: Array.isArray(entry.tags) ? entry.tags : [],
+            summary: (entry.content || '').slice(0, 180) + ((entry.content || '').length > 180 ? '...' : ''),
+            lastUpdated: entry.last_updated ? new Date(entry.last_updated).toLocaleDateString() : '-',
+            views: Number(entry.views ?? 0),
+            severity: String(entry.severity ?? 'medium').toLowerCase(),
+            activeUses: activeUseNumber,
+            approvedContent: Boolean(entry.approved_content),
+            ussdCode: null,
+            chemicalGate: gate,
+            ipmLevel: gate === 'gated' ? 3 : 2,
+          };
+        });
+        setArticles(mapped);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setLoadError(getApiErrorMessage(e, 'Could not load knowledge base entries.'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchTerm]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -40,7 +98,7 @@ export function KnowledgeBase() {
   };
 
   const filteredArticles = useMemo(() => {
-    return knowledgeBaseArticles.filter((article) => {
+    return articles.filter((article) => {
       const catOk =
         selectedCategory === 'All Articles' || article.category === selectedCategory;
       if (!catOk) return false;
@@ -53,7 +111,18 @@ export function KnowledgeBase() {
         article.id.toLowerCase().includes(q)
       );
     });
-  }, [searchTerm, selectedCategory]);
+  }, [articles, searchTerm, selectedCategory]);
+
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of articles) {
+      counts.set(a.category, (counts.get(a.category) ?? 0) + 1);
+    }
+    const dynamic = Array.from(counts.keys())
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ name, count: counts.get(name) ?? 0 }));
+    return [{ name: 'All Articles', count: articles.length }, ...dynamic];
+  }, [articles]);
 
   const ussdCodeRows = useMemo(
     () =>
@@ -105,6 +174,12 @@ export function KnowledgeBase() {
         </p>
       </header>
 
+      {loadError ? (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm" style={{ color: '#92400E', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+          {loadError}
+        </div>
+      ) : null}
+
       {/* Search with Symptom Feature */}
       <div className="mb-4 sm:mb-5">
         <div className="relative">
@@ -133,6 +208,11 @@ export function KnowledgeBase() {
       <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-4 lg:gap-5">
         {/* Articles — order-1 on mobile so they appear before filters */}
         <div className="order-1 min-w-0 space-y-4 lg:order-2 lg:col-span-3">
+          {loading ? (
+            <div className="rounded-lg border p-8 text-center" style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}>
+              <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading articles...</p>
+            </div>
+          ) : null}
           {filteredArticles.length === 0 ? (
             <div
               className="rounded-lg border p-8 text-center"
@@ -146,7 +226,8 @@ export function KnowledgeBase() {
               </p>
             </div>
           ) : null}
-          {filteredArticles.map((article) => {
+          {!loading &&
+            filteredArticles.map((article) => {
             const severityStyle = getSeverityColor(article.severity);
             
             return (
@@ -334,7 +415,7 @@ export function KnowledgeBase() {
               Categories
             </h3>
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 touch-pan-x overscroll-x-contain [-webkit-overflow-scrolling:touch]">
-              {knowledgeBaseCategories.map((category) => (
+              {categories.map((category) => (
                 <button
                   key={category.name}
                   type="button"
@@ -350,9 +431,7 @@ export function KnowledgeBase() {
                 >
                   {category.name}{' '}
                   <span style={{ color: '#717182', fontWeight: 400 }}>
-                    ({category.name === 'All Articles'
-                      ? knowledgeBaseArticles.length
-                      : computeCategoryCounts(knowledgeBaseArticles).get(category.name) ?? 0})
+                    ({category.count})
                   </span>
                 </button>
               ))}
@@ -368,7 +447,7 @@ export function KnowledgeBase() {
               Categories
             </h3>
             <div className="space-y-2">
-              {knowledgeBaseCategories.map((category) => (
+              {categories.map((category) => (
                 <button
                   key={category.name}
                   type="button"
@@ -383,9 +462,7 @@ export function KnowledgeBase() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm">{category.name}</span>
                     <span className="text-xs tabular-nums" style={{ color: '#717182' }}>
-                      {category.name === 'All Articles'
-                        ? knowledgeBaseArticles.length
-                        : computeCategoryCounts(knowledgeBaseArticles).get(category.name) ?? 0}
+                      {category.count}
                     </span>
                   </div>
                 </button>

@@ -7,6 +7,7 @@ import type { ScoutingFeedItem, SeverityLevel } from '../api/types';
 import { getApiErrorMessage } from '../api/errors';
 import { createCaseFromScouting, fetchScoutingFeed } from '../api/realApi';
 import { getAuthUser } from '../auth';
+import { FarmerScoutingReports } from './FarmerScoutingReports';
 
 type FilterType = 'all' | 'needs-review' | 'my-assigned' | 'ussd';
 
@@ -32,6 +33,10 @@ function scoutingHoldingNote(item: ScoutingFeedItem): string | null {
 }
 
 export function ScoutingReports() {
+  if (getAuthUser()?.role_details?.role_name === 'Farmer') {
+    return <FarmerScoutingReports />;
+  }
+
   const navigate = useNavigate();
   const [scoutingFeed, setScoutingFeed] = useState<ScoutingFeedItem[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(true);

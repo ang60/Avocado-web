@@ -1,4 +1,6 @@
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from .models import FarmBlock, WeeklyRecord
 from .serializers import FarmBlockSerializer, WeeklyRecordSerializer, ScoutingReportSerializer
 from drf_spectacular.utils import extend_schema
@@ -62,4 +64,41 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
         if user.is_staff or is_agronomist:
             return self.queryset
         return self.queryset.filter(farmer=user)
+
+    @action(detail=True, methods=['post'])
+    def request_reinspection(self, request, pk=None):
+        """
+        Create a case-management ticket from a scouting record to request
+        agronomist re-inspection.
+        """
+        record = self.get_object()
+        title = (request.data.get('case_title') or '').strip()
+        if not title:
+            title = f"Re-inspection request: {record.block.block_name}"
+
+        severity = (request.data.get('severity') or 'medium').strip().lower()
+        if severity not in {'high', 'medium', 'low', 'unknown'}:
+            severity = 'medium'
+
+        notes = (request.data.get('notes') or '').strip()
+        if not notes:
+            notes = f"Farmer requested re-inspection for block {record.block.block_name}."
+
+        from case_management.models import Case
+
+        case = Case.objects.create(
+            case_title=title,
+            severity=severity,
+            pest_scouting_record=record,
+            notes=notes,
+        )
+
+        return Response(
+            {
+                'status': 'reinspection_requested',
+                'message': 'Re-inspection request submitted successfully.',
+                'case_id': str(case.id),
+            },
+            status=status.HTTP_201_CREATED,
+        )
 

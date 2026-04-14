@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+    'django_filters',
     'rest_framework',
     'drf_spectacular',
     'accounts',
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
     'case_management',
     'knowledge_base',
     'kephis_quarantine',
+    'hcda_registry',
 ]
 
 MIDDLEWARE = [

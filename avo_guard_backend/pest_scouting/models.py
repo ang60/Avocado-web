@@ -8,6 +8,9 @@ class FarmBlock(models.Model):
     farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='farm_blocks')
     block_name = models.CharField(max_length=255)
     number_of_trees = models.PositiveIntegerField()
+    # Polygon vertices for the farm block boundary.
+    # Expected shape: [{ "lat": -0.7, "lng": 36.9 }, ...]
+    boundary_points = models.JSONField(default=list, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

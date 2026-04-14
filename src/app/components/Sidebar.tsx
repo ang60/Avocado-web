@@ -3,6 +3,7 @@ import {
   FileText,
   FolderOpen,
   Activity,
+  Map as MapIcon,
   Bell,
   BookOpen,
   Users,
@@ -48,6 +49,14 @@ const navItems: NavItem[] = [
   { name: 'Admin', icon: Settings, path: '/admin', permission: 'nav.admin' },
 ];
 
+const farmerNavItems: NavItem[] = [
+  { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.dashboard' },
+  { name: 'My Farm Blocks', icon: MapIcon, path: '/my-farm-blocks', permission: 'nav.scouting' },
+  { name: 'Scouting Reports', icon: FileText, path: '/scouting-reports', permission: 'nav.scouting' },
+  { name: 'Knowledge Base', icon: BookOpen, path: '/knowledge-base', permission: 'nav.knowledge' },
+  { name: 'Compliance & Permits', icon: ClipboardCheck, path: '/compliance-permits', permission: 'nav.reports' },
+];
+
 function SidebarNavLinks({
   collapsed,
   onNavigate,
@@ -61,7 +70,9 @@ function SidebarNavLinks({
 
   const visibleItems = useMemo(() => {
     const user = getAuthUser();
-    return navItems.filter((item) => hasAppAccess(user, item.permission));
+    const isFarmer = user?.role_details?.role_name === 'Farmer';
+    const source = isFarmer ? farmerNavItems : navItems;
+    return source.filter((item) => hasAppAccess(user, item.permission));
   }, [authEpoch]);
 
   return (
