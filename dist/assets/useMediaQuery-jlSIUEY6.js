@@ -1,0 +1,1 @@
+import{b as s}from"./recharts-BCZyoldn.js";function c(n){const[a,r]=s.useState(!1);return s.useEffect(()=>{const e=window.matchMedia(n),t=()=>r(e.matches);return t(),e.addEventListener("change",t),()=>e.removeEventListener("change",t)},[n]),a}function u(){return c("(max-width: 639px)")}export{u};
