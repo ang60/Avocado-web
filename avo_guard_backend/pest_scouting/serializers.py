@@ -7,7 +7,9 @@ class FarmBlockSerializer(serializers.ModelSerializer):
     class Meta:
         model = FarmBlock
         fields = '__all__'
-        read_only_fields = ('id', 'timestamp')
+        # farmer is set from request.user in the viewset (perform_create),
+        # so clients should not be forced to send it.
+        read_only_fields = ('id', 'timestamp', 'farmer')
 
 
 class WeeklyRecordSerializer(serializers.ModelSerializer):

@@ -14,6 +14,10 @@ from .serializers import (
     VerifyOTPSerializer,
     RegisterSerializer,
     LoginPasswordSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
+    LinkAgronomistSerializer,
+    VerifyLinkSerializer,
     normalize_phone_number,
     EntitySerializer,
     RoleSerializer,
@@ -22,6 +26,9 @@ from .serializers import (
     ConfirmPasswordResetSerializer,
 )
 from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 import random
 from rest_framework_simplejwt.tokens import RefreshToken
 from .sms_utils import send_advanta_sms
@@ -84,6 +91,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ('register', 'request_otp', 'verify_otp', 'login_password', 'request_password_reset', 'confirm_password_reset'):
             return [permissions.AllowAny()]
+        if self.action in ('link_agronomist', 'verify_link', 'linked_farmers'):
+            return [permissions.IsAuthenticated()]
         return [permissions.IsAuthenticated(), IsAdminLikeUser()]
 
     @extend_schema(
@@ -366,3 +375,177 @@ class UserViewSet(viewsets.ModelViewSet):
 
             return Response({"error": "invalid_otp", "detail": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(request=PasswordResetRequestSerializer)
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def request_password_reset(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        identifier = serializer.validated_data['identifier']
+        user = _user_for_login_identifier(identifier)
+        if not user:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        code = str(random.randint(100000, 999999))
+        OTP.objects.create(phone_number=user.phone_number, code=code)
+
+        # SMS fallback/primary delivery
+        if getattr(settings, 'OTP_SKIP_SMS', False):
+            logger.info('[RESET OTP] OTP_SKIP_SMS=1; stored OTP for phone=%s', user.phone_number)
+        else:
+            try:
+                send_advanta_sms(
+                    phone_number=user.phone_number,
+                    message=f"Your AvoGuard password reset code is: {code}",
+                )
+            except Exception:
+                logger.exception('[RESET OTP] SMS sending failed for phone=%s', user.phone_number)
+
+        # Optional email delivery if user has email configured.
+        if user.email:
+            try:
+                html = render_to_string(
+                    'emails/password_reset.html',
+                    {'user': user, 'reset_code': code, 'expiry_minutes': 10},
+                )
+                send_mail(
+                    'AvoGuard Password Reset Code',
+                    strip_tags(html),
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    html_message=html,
+                    fail_silently=True,
+                )
+            except Exception:
+                logger.exception('[RESET OTP] Email sending failed for user=%s', user.id)
+
+        if getattr(settings, 'OTP_ECHO_CODE', False):
+            return Response({'detail': 'ok', 'code': code}, status=status.HTTP_200_OK)
+        return Response({'detail': 'Password reset code sent.'}, status=status.HTTP_200_OK)
+
+    @extend_schema(request=PasswordResetConfirmSerializer)
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def confirm_password_reset(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        identifier = serializer.validated_data['identifier']
+        code = serializer.validated_data['code']
+        new_password = serializer.validated_data['new_password']
+
+        user = _user_for_login_identifier(identifier)
+        if not user:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        otp = (
+            OTP.objects.filter(phone_number=user.phone_number, code=code, is_used=False)
+            .order_by('-created_at')
+            .first()
+        )
+        if not otp:
+            return Response({'detail': 'Invalid or expired code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp.is_used = True
+        otp.save(update_fields=['is_used'])
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+
+        if user.email:
+            try:
+                html = render_to_string('emails/password_reset_success.html', {'user': user})
+                send_mail(
+                    'AvoGuard Password Reset Successful',
+                    strip_tags(html),
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    html_message=html,
+                    fail_silently=True,
+                )
+            except Exception:
+                logger.exception('[RESET OTP] Success email failed for user=%s', user.id)
+
+        return Response({'detail': 'Password reset successful.'}, status=status.HTTP_200_OK)
+
+    @extend_schema(request=LinkAgronomistSerializer)
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def link_agronomist(self, request):
+        serializer = LinkAgronomistSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        farmer_id = serializer.validated_data['farmer_id']
+        try:
+            farmer = User.objects.get(id=farmer_id, role__role_name='Farmer')
+        except User.DoesNotExist:
+            return Response({'detail': 'Farmer not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not request.user.role or request.user.role.role_name != 'Agronomist':
+            return Response({'detail': 'Only agronomists can initiate linking.'}, status=status.HTTP_403_FORBIDDEN)
+
+        code = str(random.randint(100000, 999999))
+        OTP.objects.create(phone_number=farmer.phone_number, code=code)
+
+        if not getattr(settings, 'OTP_SKIP_SMS', False):
+            try:
+                send_advanta_sms(
+                    phone_number=farmer.phone_number,
+                    message=(
+                        f"Agronomist {request.user.first_name} {request.user.last_name} "
+                        f"wants to link to your account. Use code {code} to authorize."
+                    ),
+                )
+            except Exception:
+                logger.exception('[LINK OTP] SMS sending failed for phone=%s', farmer.phone_number)
+
+        if getattr(settings, 'OTP_ECHO_CODE', False):
+            return Response({'status': 'otp_sent', 'code': code}, status=status.HTTP_200_OK)
+        return Response({'status': 'otp_sent'}, status=status.HTTP_200_OK)
+
+    @extend_schema(request=VerifyLinkSerializer)
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def verify_link(self, request):
+        serializer = VerifyLinkSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        farmer_id = serializer.validated_data['farmer_id']
+        otp_code = serializer.validated_data['otp_code']
+
+        try:
+            farmer = User.objects.get(id=farmer_id, role__role_name='Farmer')
+        except User.DoesNotExist:
+            return Response({'detail': 'Farmer not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not request.user.role or request.user.role.role_name != 'Agronomist':
+            return Response({'detail': 'Only agronomists can verify linking.'}, status=status.HTTP_403_FORBIDDEN)
+
+        otp = (
+            OTP.objects.filter(phone_number=farmer.phone_number, code=otp_code, is_used=False)
+            .order_by('-created_at')
+            .first()
+        )
+        if not otp:
+            return Response({'detail': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        farmer.managed_by = request.user
+        farmer.save(update_fields=['managed_by'])
+        otp.is_used = True
+        otp.save(update_fields=['is_used'])
+        return Response({'status': 'linked'}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def linked_farmers(self, request):
+        agronomist = request.user
+        if not agronomist.role or agronomist.role.role_name != 'Agronomist':
+            return Response({'detail': 'Only agronomists can view linked farmers.'}, status=status.HTTP_403_FORBIDDEN)
+
+        qs = agronomist.managed_farmers.all().order_by('first_name', 'last_name')
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = UserSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = UserSerializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

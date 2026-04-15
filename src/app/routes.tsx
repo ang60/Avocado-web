@@ -99,11 +99,6 @@ export const router = createBrowserRouter([
         Component: lazyRoute(() => import('./pages/ScoutingReports'), 'ScoutingReports'),
       },
       {
-        path: 'scouting-reports/:id',
-        loader: requireNavPermission('nav.scouting'),
-        Component: lazyRoute(() => import('./pages/ScoutingReportDetail'), 'ScoutingReportDetail'),
-      },
-      {
         path: 'case-management',
         loader: requireNavPermission('nav.cases'),
         Component: lazyRoute(() => import('./pages/CaseManagement'), 'CaseManagement'),

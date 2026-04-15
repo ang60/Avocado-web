@@ -9,6 +9,8 @@ import { fetchDashboard } from '../api/realApi';
 import { useIsNarrowPhone } from '../hooks/useMediaQuery';
 import { TableScroll } from '../components/TableScroll';
 import type { DashboardPayload } from '../api/types';
+import { getAuthUser } from '../auth';
+import { FarmerDashboard } from './FarmerDashboard';
 
 const METRIC_ICONS = {
   activity: Activity,
@@ -18,6 +20,11 @@ const METRIC_ICONS = {
 } as const;
 
 export function Dashboard() {
+  const roleName = getAuthUser()?.role_details?.role_name;
+  if (roleName === 'Farmer') {
+    return <FarmerDashboard />;
+  }
+
   const narrowPhone = useIsNarrowPhone();
   const chartHeight = narrowPhone ? 220 : 280;
   const pieOuterRadius = narrowPhone ? 62 : 90;
@@ -83,6 +90,7 @@ export function Dashboard() {
     complianceSummary,
     todayLabel,
   } = data;
+
 
   return (
     <>

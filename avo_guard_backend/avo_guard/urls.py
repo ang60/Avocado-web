@@ -16,6 +16,7 @@ urlpatterns = [
     path('api/case-management/', include('case_management.urls')),
     path('api/knowledge-base/', include('knowledge_base.urls')),
     path('api/kephis-quarantine/', include('kephis_quarantine.urls')),
+    path('api/hcda-registry/', include('hcda_registry.urls')),
     # API Schema:
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     # Optional UI:

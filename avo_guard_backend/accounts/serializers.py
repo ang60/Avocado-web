@@ -115,6 +115,7 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'phone_number', 'email', 'first_name', 'last_name',
             'password',
             'role', 'role_name', 'role_details', 'county', 'entity', 'entity_details',
+            'managed_by',
             'last_login', 'is_staff', 'is_active',
             'app_permissions', 'is_privileged',
         ]
@@ -123,6 +124,7 @@ class UserSerializer(serializers.ModelSerializer):
             'password': {'write_only': True, 'required': False},
             'entity': {'write_only': True, 'required': False},
             'role': {'write_only': True, 'required': False},
+            'managed_by': {'write_only': True, 'required': False, 'allow_null': True},
         }
 
     @extend_schema_field(serializers.ListField(child=serializers.CharField()))
@@ -289,3 +291,34 @@ class LoginPasswordSerializer(serializers.Serializer):
         if not s:
             raise serializers.ValidationError('Enter your email or phone number.')
         return s
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    identifier = serializers.CharField(max_length=255, help_text='Email address or phone number')
+
+    def validate_identifier(self, value: str) -> str:
+        s = (value or '').strip()
+        if not s:
+            raise serializers.ValidationError('Enter your email or phone number.')
+        return s
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    identifier = serializers.CharField(max_length=255, help_text='Email address or phone number')
+    code = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
+
+    def validate_identifier(self, value: str) -> str:
+        s = (value or '').strip()
+        if not s:
+            raise serializers.ValidationError('Enter your email or phone number.')
+        return s
+
+
+class LinkAgronomistSerializer(serializers.Serializer):
+    farmer_id = serializers.UUIDField()
+
+
+class VerifyLinkSerializer(serializers.Serializer):
+    farmer_id = serializers.UUIDField()
+    otp_code = serializers.CharField(max_length=6)
