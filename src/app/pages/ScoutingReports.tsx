@@ -1,21 +1,38 @@
-import { Search, Smartphone, Phone, CheckCircle, AlertCircle, Image as ImageIcon, Plus, Eye, X } from 'lucide-react';
+import { Search, Smartphone, Phone, CheckCircle, AlertCircle, Image as ImageIcon, Plus, Eye, X, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { OptimizedImage } from '../components/OptimizedImage';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "../components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
-import type { ScoutingFeedItem, SeverityLevel } from '../api/types';
+import type { SeverityLevel } from '../api/types';
 import { getApiErrorMessage } from '../api/errors';
-import { createCaseFromScouting, fetchScoutingFeed } from '../api/realApi';
+import { fetchScoutingReports, type ScoutingReport } from '../api/scoutingApi';
+import { createCase } from '../api/caseApi';
 import { getAuthUser } from '../auth';
 
 type FilterType = 'all' | 'needs-review' | 'my-assigned' | 'ussd';
 
 /** Feed emphasizes the registered farmer (person), not the orchard/holding trade name. */
-function scoutingPrimaryName(item: ScoutingFeedItem): string {
+function scoutingPrimaryName(item: ScoutingReport): string {
   return item.farmerName?.trim() || 'Farmer';
 }
 
-function scoutingBlockAndCounty(item: ScoutingFeedItem): string {
+function scoutingBlockAndCounty(item: ScoutingReport): string {
   const block = item.blockId?.trim();
   const county = item.county?.trim();
   const parts: string[] = [];
@@ -25,7 +42,7 @@ function scoutingBlockAndCounty(item: ScoutingFeedItem): string {
 }
 
 /** Optional orchard/holding label — only when it adds detail beyond the farmer name. */
-function scoutingHoldingNote(item: ScoutingFeedItem): string | null {
+function scoutingHoldingNote(item: ScoutingReport): string | null {
   const h = item.farmName?.trim();
   if (!h || h === item.farmerName?.trim()) return null;
   return h;
@@ -33,28 +50,36 @@ function scoutingHoldingNote(item: ScoutingFeedItem): string | null {
 
 export function ScoutingReports() {
   const navigate = useNavigate();
-  const [scoutingFeed, setScoutingFeed] = useState<ScoutingFeedItem[]>([]);
+  const [scoutingFeed, setScoutingFeed] = useState<ScoutingReport[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrevious, setHasPrevious] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [reviewModalItem, setReviewModalItem] = useState<ScoutingFeedItem | null>(null);
-  const [createCaseModalItem, setCreateCaseModalItem] = useState<ScoutingFeedItem | null>(null);
+  const [createCaseModalItem, setCreateCaseModalItem] = useState<ScoutingReport | null>(null);
+  const [reviewModalItem, setReviewModalItem] = useState<ScoutingReport | null>(null);
   const [createCaseTitle, setCreateCaseTitle] = useState('');
   const [createCaseSeverity, setCreateCaseSeverity] = useState<SeverityLevel>('medium');
   const [createCaseNotes, setCreateCaseNotes] = useState('');
   const [assignCaseToMe, setAssignCaseToMe] = useState(true);
   const [createCaseError, setCreateCaseError] = useState<string | null>(null);
   const [createCaseSubmitting, setCreateCaseSubmitting] = useState(false);
+  const [createCaseSuccess, setCreateCaseSuccess] = useState<string | null>(null);
 
-  const isAgronomistUser = getAuthUser()?.role_details?.role_name === 'Agronomist';
+  const authUser = getAuthUser();
+  const isAgronomistUser = authUser?.role_details?.role_name === 'Agronomist';
 
   useEffect(() => {
     if (!createCaseModalItem) {
       setCreateCaseError(null);
       setCreateCaseSubmitting(false);
+      setCreateCaseSuccess(null);
       return;
     }
     setCreateCaseTitle(
@@ -76,15 +101,20 @@ export function ScoutingReports() {
     }
     setCreateCaseSubmitting(true);
     setCreateCaseError(null);
+    setCreateCaseSuccess(null);
     try {
-      const row = await createCaseFromScouting({
-        weekly_record: item.id,
+      await createCase({
+        scouting_record_id: item.id,
         case_title: title,
-        severity: createCaseSeverity,
-        notes: createCaseNotes.trim() || undefined,
+        severity: createCaseSeverity as any,
+        notes: createCaseNotes.trim() || '',
+        agronomist_id: authUser?.id || '',
       });
-      setCreateCaseModalItem(null);
-      navigate(`/case-management/${row.id}`);
+      setCreateCaseSuccess('Case created successfully!');
+      setTimeout(() => {
+        setCreateCaseModalItem(null);
+        setCreateCaseSuccess(null);
+      }, 2000);
     } catch (e: unknown) {
       setCreateCaseError(getApiErrorMessage(e, 'Could not create case.'));
     } finally {
@@ -95,36 +125,42 @@ export function ScoutingReports() {
     createCaseTitle,
     createCaseSeverity,
     createCaseNotes,
-    assignCaseToMe,
-    isAgronomistUser,
-    navigate,
+    authUser?.id,
   ]);
 
   const currentUser = useMemo(() => {
-    const u = getAuthUser();
+    const u = authUser;
     if (!u) return '';
     const name = `${u.first_name} ${u.last_name}`.trim();
     return name || u.phone_number || '';
-  }, []);
+  }, [authUser]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadReports = useCallback(async () => {
     setLoadingFeed(true);
     setLoadError(null);
-    fetchScoutingFeed()
-      .then((rows) => {
-        if (!cancelled) setScoutingFeed(rows);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setLoadError(getApiErrorMessage(e, 'Could not load scouting feed.'));
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingFeed(false);
+    try {
+      const data = await fetchScoutingReports({
+        page,
+        page_size: pageSize,
+        search: searchQuery || undefined,
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      setScoutingFeed(data.results);
+      setTotalCount(data.count);
+      setHasNext(!!data.next);
+      setHasPrevious(!!data.previous);
+    } catch (e: unknown) {
+      setLoadError(getApiErrorMessage(e, 'Could not load scouting reports.'));
+    } finally {
+      setLoadingFeed(false);
+    }
+  }, [page, pageSize, searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadReports();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [loadReports]);
 
   const filteredFeed = useMemo(() => {
     return scoutingFeed.filter((item) => {
@@ -135,17 +171,9 @@ export function ScoutingReports() {
         if (!me || a !== me) return false;
       }
       if (activeFilter === 'ussd' && item.source !== 'ussd') return false;
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          item.farmerName.toLowerCase().includes(query) ||
-          item.blockId.toLowerCase().includes(query) ||
-          item.farmName.toLowerCase().includes(query)
-        );
-      }
       return true;
     });
-  }, [scoutingFeed, activeFilter, searchQuery, currentUser]);
+  }, [scoutingFeed, activeFilter, currentUser]);
 
   const allCount = scoutingFeed.length;
   const needsReviewCount = useMemo(
@@ -188,9 +216,8 @@ export function ScoutingReports() {
     alert(`Creating case for submission ${itemId}...`);
   };
 
-  const handleReview = (itemId: string) => {
-    console.log('Reviewing:', itemId);
-    alert(`Opening review for submission ${itemId}...`);
+  const handleReview = (item: ScoutingReport) => {
+    setReviewModalItem(item);
   };
 
   if (loadError) {
@@ -337,9 +364,11 @@ export function ScoutingReports() {
         </div>
 
         {/* Results count */}
-        <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-          Showing {filteredFeed.length} submission{filteredFeed.length !== 1 ? 's' : ''}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            Showing {filteredFeed.length} of {totalCount} submission{totalCount !== 1 ? 's' : ''}
+          </p>
+        </div>
       </div>
 
       {/* Bulk Actions Bar */}
@@ -600,7 +629,7 @@ export function ScoutingReports() {
                   Create Case
                 </button>
                 <button
-                  onClick={() => setReviewModalItem(item)}
+                  onClick={() => handleReview(item)}
                   className="flex items-center gap-1 rounded-lg px-3 py-1 text-xs transition-colors hover:opacity-90"
                   style={{
                     backgroundColor: '#2D6A4F',
@@ -739,7 +768,7 @@ export function ScoutingReports() {
                       Create Case
                     </button>
                     <button
-                      onClick={() => setReviewModalItem(item)}
+                      onClick={() => handleReview(item)}
                       className="flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs transition-colors hover:opacity-90 sm:flex-none"
                       style={{
                         backgroundColor: '#2D6A4F',
@@ -831,6 +860,93 @@ export function ScoutingReports() {
           );
         })}
         </div>
+
+        {/* Pagination Controls */}
+        {totalCount > 0 && (
+          <div className="mt-6 flex flex-col items-center justify-between gap-4 border-t border-[#E0DDD6] pt-6 sm:flex-row">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Show</span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(val) => {
+                    setPageSize(parseInt(val));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px] border-[#E0DDD6] bg-white text-[#1B4332]">
+                    <SelectValue placeholder={pageSize.toString()} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>per page</span>
+              </div>
+
+              <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                Showing <span className="font-semibold text-[#1B4332]">{(page - 1) * pageSize + 1}</span> to{' '}
+                <span className="font-semibold text-[#1B4332]">{Math.min(page * pageSize, totalCount)}</span> of{' '}
+                <span className="font-semibold text-[#1B4332]">{totalCount}</span> results
+              </p>
+            </div>
+
+            <Pagination className="mx-0 w-auto">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (hasPrevious) setPage(p => p - 1);
+                    }}
+                    className={!hasPrevious ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+
+                {/* Simple page numbers */}
+                {Array.from({ length: Math.min(5, Math.ceil(totalCount / pageSize)) }, (_, i) => {
+                  const pageNum = i + 1;
+                  // This is a simple version, ideally it should center around current page
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        href="#"
+                        isActive={page === pageNum}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(pageNum);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+
+                {Math.ceil(totalCount / pageSize) > 5 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (hasNext) setPage(p => p + 1);
+                    }}
+                    className={!hasNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
 
       {/* Empty State */}
@@ -1302,6 +1418,11 @@ export function ScoutingReports() {
               {createCaseError ? (
                 <p className="text-sm sm:order-first sm:flex-1" style={{ color: '#b45309', fontFamily: 'IBM Plex Sans, sans-serif' }}>
                   {createCaseError}
+                </p>
+              ) : null}
+              {createCaseSuccess ? (
+                <p className="text-sm sm:order-first sm:flex-1" style={{ color: '#15803D', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                  {createCaseSuccess}
                 </p>
               ) : null}
               <div className="flex w-full justify-end gap-2 sm:w-auto">

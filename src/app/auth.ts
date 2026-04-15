@@ -9,7 +9,16 @@ export type AuthUser = {
   first_name: string;
   last_name: string;
   county?: string | null;
+  role?: {
+    id: string;
+    role_name: string;
+    description?: string;
+    permissions?: Array<{ id: string; name: string }>;
+    users?: number;
+    permissions_count?: number;
+  } | null;
   role_details?: { id: string; role_name: string } | null;
+  entity?: any | null;
   entity_details?: { id: string; company_name: string } | null;
   /** Permission names from the user's role (omitted on older sessions until next login). */
   app_permissions?: string[];
@@ -60,9 +69,13 @@ function notifyAuthListeners() {
 
 export function setAuthSession(params: { access: string; refresh: string; user: AuthUser }) {
   if (typeof window === 'undefined') return;
+  const user = { ...params.user };
+  if (user.role && !user.role_details) {
+    user.role_details = { id: user.role.id, role_name: user.role.role_name };
+  }
   window.localStorage.setItem(ACCESS_TOKEN_KEY, params.access);
   window.localStorage.setItem(REFRESH_TOKEN_KEY, params.refresh);
-  window.localStorage.setItem(USER_KEY, JSON.stringify(params.user));
+  window.localStorage.setItem(USER_KEY, JSON.stringify(user));
   notifyAuthListeners();
 }
 

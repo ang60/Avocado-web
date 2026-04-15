@@ -60,6 +60,16 @@ export const router = createBrowserRouter([
     Component: lazyRoute(() => import('./pages/Register'), 'Register'),
   },
   {
+    path: '/forgot-password',
+    loader: loginLoader,
+    Component: lazyRoute(() => import('./pages/ForgotPassword'), 'ForgotPassword'),
+  },
+  {
+    path: '/reset-password',
+    loader: loginLoader,
+    Component: lazyRoute(() => import('./pages/ResetPassword'), 'ResetPassword'),
+  },
+  {
     path: '/logout',
     Component: lazyRoute(() => import('./pages/Logout'), 'Logout'),
   },
@@ -87,6 +97,11 @@ export const router = createBrowserRouter([
         path: 'scouting-reports',
         loader: requireNavPermission('nav.scouting'),
         Component: lazyRoute(() => import('./pages/ScoutingReports'), 'ScoutingReports'),
+      },
+      {
+        path: 'scouting-reports/:id',
+        loader: requireNavPermission('nav.scouting'),
+        Component: lazyRoute(() => import('./pages/ScoutingReportDetail'), 'ScoutingReportDetail'),
       },
       {
         path: 'case-management',

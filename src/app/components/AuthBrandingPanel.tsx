@@ -31,23 +31,23 @@ function Feature({
 /** Right-hand marketing column used on login and register pages. */
 export function AuthBrandingPanel() {
   return (
-    <div className="rounded-2xl p-12 bg-gradient-to-b from-[#1f5a3d] to-[#184e35] text-white flex flex-col justify-between min-h-[560px] md:min-h-[640px] lg:min-h-[720px]">
+    <div className="rounded-2xl p-8 md:p-10 lg:p-12 bg-gradient-to-b from-[#1f5a3d] to-[#184e35] text-white flex flex-col justify-between h-full">
       <div>
         <div className="flex items-center gap-5 mb-10">
-          <div className="w-28 h-28 rounded-full bg-white flex items-center justify-center">
-            <img src={avocadoLogo} alt="logo" className="w-20 h-20" />
+          <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+            <img src={avocadoLogo} alt="logo" className="w-14 h-14 lg:w-20 lg:h-20" />
           </div>
           <div>
-            <h2 className="text-6xl font-semibold leading-none" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            <h2 className="text-4xl lg:text-6xl font-semibold leading-none" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
               AvoGuard
             </h2>
-            <p className="mt-2 text-base text-green-200" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            <p className="mt-2 text-sm lg:text-base text-green-200" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
               Pest and Disease Monitoring System
             </p>
           </div>
         </div>
 
-        <div className="space-y-8 mt-10">
+        <div className="space-y-6 lg:space-y-8 mt-10">
           <Feature
             icon={<BarChart3 />}
             title="Real-time Dashboard"

@@ -189,6 +189,24 @@ class UserSerializer(serializers.ModelSerializer):
             user.save(update_fields=['password'])
         return user
 
+
+class RequestPasswordResetSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    email = serializers.EmailField()
+
+    def validate_phone_number(self, value: str) -> str:
+        return normalize_phone_number(value)
+
+
+class ConfirmPasswordResetSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    code = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_phone_number(self, value: str) -> str:
+        return normalize_phone_number(value)
+
+
 class RegisterSerializer(serializers.Serializer):
     """
     Access request only — not phone verification and does not send an OTP.

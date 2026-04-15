@@ -1,4 +1,6 @@
-import { Phone, KeyRound, ArrowRight, ShieldCheck, Mail } from 'lucide-react';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
+import { Phone, KeyRound, ArrowRight, ShieldCheck } from 'lucide-react';
 import { FormEvent, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import avocadoLogo from '../../imports/avocado_logo.svg';
@@ -18,16 +20,16 @@ export function Login() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
 
-  const [identifier, setIdentifier] = useState('');
+  const [phoneIdentifier, setPhoneIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const canSubmitRequest = phoneNumber.trim().length > 0;
-  const canSubmitVerify = phoneNumber.trim().length > 0 && otpCode.trim().length > 0;
-  const canSubmitPassword = identifier.trim().length > 0 && loginPassword.length > 0;
+  const canSubmitRequest = phoneNumber.trim().length >= 10;
+  const canSubmitVerify = phoneNumber.trim().length >= 10 && otpCode.trim().length > 0;
+  const canSubmitPassword = phoneIdentifier.trim().length >= 10 && loginPassword.length > 0;
 
   const canSubmit = useMemo(() => {
     if (signInMode === 'password') return canSubmitPassword;
@@ -59,7 +61,7 @@ export function Login() {
 
     try {
       if (signInMode === 'password') {
-        await loginWithPassword(identifier.trim(), loginPassword);
+        await loginWithPassword(phoneIdentifier.trim(), loginPassword);
         navigate('/dashboard');
         return;
       }
@@ -78,7 +80,7 @@ export function Login() {
         messageFromErr(
           err,
           signInMode === 'password'
-            ? 'Could not sign in. Check your email or phone, password, and that your access request was approved.'
+            ? 'Could not sign in. Check your phone number, password, and that your access request was approved.'
             : step === 'request'
               ? 'Could not send a verification code. Check the phone number and that your access request was approved.'
               : 'Invalid or expired code. Try again.',
@@ -90,9 +92,9 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center px-3 py-10 md:py-14">
-      <div className="w-full max-w-[1280px] grid md:grid-cols-[0.94fr_1.06fr] gap-6 items-start">
-        <div className="bg-white rounded-2xl shadow-sm p-10 flex flex-col justify-center">
+    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center px-3 py-6 md:py-10">
+      <div className="w-full max-w-[1280px] grid md:grid-cols-[0.94fr_1.06fr] gap-6 items-stretch">
+        <div className="bg-white rounded-2xl shadow-sm p-8 md:p-10 flex flex-col justify-center">
           <div className="flex flex-col items-center mb-8">
             <div className="w-14 h-14 rounded-full bg-[#eef5d8] flex items-center justify-center mb-4">
               <img src={avocadoLogo} alt="logo" className="w-8 h-8" />
@@ -102,7 +104,7 @@ export function Login() {
               Sign in
             </h1>
             <p className="text-gray-500 text-sm text-center max-w-md" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              Use your email or phone with the password from registration, or sign in with a code sent to your phone. If you have not registered
+              Use your phone number with the password from registration, or sign in with a code sent to your phone. If you have not registered
               yet, create an account first and wait for admin approval.
             </p>
           </div>
@@ -122,7 +124,7 @@ export function Login() {
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
               onClick={() => switchMode('password')}
             >
-              Email or phone + password
+              Phone + password
             </button>
             <button
               type="button"
@@ -143,23 +145,25 @@ export function Login() {
               <>
                 <div>
                   <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                    Email or phone number
+                    Phone number
                   </label>
-                  <div className="mt-2 relative">
-                    <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="you@example.com or +2547XXXXXXXX"
-                      className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-10 pr-10"
-                      style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-                      autoComplete="username"
-                      required
+                  <div className="mt-2 relative login-phone-input">
+                    <PhoneInput
+                      country={'ke'}
+                      value={phoneIdentifier}
+                      onChange={(phone) => setPhoneIdentifier('+' + phone)}
+                      inputProps={{
+                        name: 'phone',
+                        required: true,
+                        autoComplete: 'username'
+                      }}
+                      containerClass="w-full"
+                      inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-6 !pl-12 !pr-4 !h-auto !text-base"
+                      buttonClass="!bg-transparent !border-transparent !rounded-l-lg"
                     />
                   </div>
                   <p className="mt-1.5 text-xs text-gray-500" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                    We detect email when it contains @; otherwise your number is matched as a phone (same format as when you registered).
+                    Format: +254XXXXXXXXX.
                   </p>
                 </div>
                 <PasswordField
@@ -170,6 +174,15 @@ export function Login() {
                   autoComplete="current-password"
                   inputClassName="bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-3 pr-10"
                 />
+                <div className="flex justify-end">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-green-700 hover:underline font-medium"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </>
             ) : (
               <>
@@ -177,17 +190,19 @@ export function Login() {
                   <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
                     Phone number
                   </label>
-                  <div className="mt-2 relative">
-                    <Phone className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                    <input
-                      type="tel"
+                  <div className="mt-2 relative login-phone-input">
+                    <PhoneInput
+                      country={'ke'}
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="e.g. +2547XXXXXXXX"
-                      className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-10 pr-10"
-                      style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-                      autoComplete="tel"
-                      required
+                      onChange={(phone) => setPhoneNumber('+' + phone)}
+                      inputProps={{
+                        name: 'phone-otp',
+                        required: true,
+                        autoComplete: 'tel'
+                      }}
+                      containerClass="w-full"
+                      inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-6 !pl-12 !pr-4 !h-auto !text-base"
+                      buttonClass="!bg-transparent !border-transparent !rounded-l-lg"
                     />
                   </div>
                 </div>
