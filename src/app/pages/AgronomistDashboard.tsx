@@ -32,7 +32,6 @@ import {
 } from '../api/realApi';
 import type { FarmerListRow, ScoutingFeedItem } from '../api/types';
 import { KEPHISQuarantine } from './KEPHISQuarantine';
-import { AgronomistReports } from './AgronomistReports';
 
 type AgronomistTab =
   | 'overview'
@@ -41,7 +40,6 @@ type AgronomistTab =
   | 'triage'
   | 'my-farmers'
   | 'analytics'
-  | 'reports'
   | 'kb'
   | 'audit';
 type TriageModalAction = 'review' | 'confirm';
@@ -345,7 +343,6 @@ export function AgronomistDashboard() {
           ['triage', `Triage Queue (${triageQueue.length})`],
           ['my-farmers', `My Farmers (${farmers.length})`],
           ['analytics', 'Trend Analytics'],
-          ['reports', 'Reports'],
           ['kb', 'Knowledge Base'],
           ['audit', 'Audit Logs'],
         ].map(([id, label]) => (
@@ -365,7 +362,7 @@ export function AgronomistDashboard() {
         ))}
       </div>
 
-      {loading && activeTab !== 'quarantine' && activeTab !== 'risk-intel' && activeTab !== 'reports' ? (
+      {loading && activeTab !== 'quarantine' && activeTab !== 'risk-intel' ? (
         <div className="p-8 rounded-lg border" style={{ borderColor: '#E0DDD6' }}>
           <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading agronomist modules…</p>
         </div>
@@ -387,8 +384,6 @@ export function AgronomistDashboard() {
           hideAlertsTab
         />
       )}
-
-      {activeTab === 'reports' ? <AgronomistReports /> : null}
 
       {!loading && activeTab === 'overview' ? (
         <>
