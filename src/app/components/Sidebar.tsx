@@ -62,19 +62,10 @@ const kephisNavItems: NavItem[] = [
   { name: 'Export Reports', icon: ClipboardCheck, path: '/kephis-quarantine/export-reports', permission: 'nav.kephis' },
 ];
 
-/** Agronomists: permits + reports on dashboard; sidebar stays minimal. */
-const agronomistNavItems: NavItem[] = [
-  { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.dashboard' },
-  { name: 'Reports', icon: FileText, path: '/agronomist-reports', permission: 'nav.reports' },
-];
-
 function getNavItemsForRole(roleName?: string | null): NavItem[] {
   const normalized = (roleName || '').trim().toLowerCase();
   if (roleName === 'Farmer') {
     return farmerNavItems;
-  }
-  if (roleName === 'Agronomist') {
-    return agronomistNavItems;
   }
   if (normalized.includes('kephis')) {
     return kephisNavItems;
