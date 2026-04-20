@@ -62,10 +62,19 @@ const kephisNavItems: NavItem[] = [
   { name: 'Export Reports', icon: ClipboardCheck, path: '/kephis-quarantine/export-reports', permission: 'nav.kephis' },
 ];
 
+/** Agronomists: full dashboard tabs, plus a dedicated reports page. */
+const agronomistNavItems: NavItem[] = [
+  { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.dashboard' },
+  { name: 'Reports', icon: ClipboardCheck, path: '/agronomist-reports', permission: 'nav.reports' },
+];
+
 function getNavItemsForRole(roleName?: string | null): NavItem[] {
   const normalized = (roleName || '').trim().toLowerCase();
   if (roleName === 'Farmer') {
     return farmerNavItems;
+  }
+  if (roleName === 'Agronomist') {
+    return agronomistNavItems;
   }
   if (normalized.includes('kephis')) {
     return kephisNavItems;
