@@ -8,7 +8,19 @@ const PADDING = 16;
 
 type GeoFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>>;
 
-export function FarmerFarmPointMap({ lat, lng }: { lat?: number | null; lng?: number | null }) {
+type LatLng = { lat: number; lng: number };
+
+export function FarmerFarmPointMap({
+  lat,
+  lng,
+  blockBoundaryPoints,
+  polygonStyle,
+}: {
+  lat?: number | null;
+  lng?: number | null;
+  blockBoundaryPoints?: Array<LatLng> | null;
+  polygonStyle?: { fill: string; stroke: string };
+}) {
   const [geoCollection, setGeoCollection] = useState<
     GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>> | null
   >(null);
@@ -64,6 +76,29 @@ export function FarmerFarmPointMap({ lat, lng }: { lat?: number | null; lng?: nu
     return { x: p[0], y: p[1] };
   }, [projection, lat, lng]);
 
+  const projectedBoundaryPoints = useMemo(() => {
+    if (!projection || !blockBoundaryPoints || !blockBoundaryPoints.length) return [];
+    return blockBoundaryPoints
+      .map((pt) => {
+        const rawLat = (pt as any)?.lat;
+        const rawLng = (pt as any)?.lng;
+        const latNum = rawLat === '' || rawLat == null ? NaN : Number(rawLat);
+        const lngNum = rawLng === '' || rawLng == null ? NaN : Number(rawLng);
+        if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) return null;
+        const p = projection([lngNum, latNum]);
+        if (!p) return null;
+        return { x: p[0], y: p[1] };
+      })
+      .filter((v): v is { x: number; y: number } => Boolean(v));
+  }, [projection, blockBoundaryPoints]);
+
+  const blockPolygonPoints = useMemo(() => {
+    if (!projectedBoundaryPoints || projectedBoundaryPoints.length < 3) return null;
+    return projectedBoundaryPoints.map((pt) => `${pt.x},${pt.y}`).join(' ');
+  }, [projectedBoundaryPoints]);
+
+  const safePolygonStyle = polygonStyle ?? { fill: 'rgba(245, 158, 11, 0.18)', stroke: '#D97706' };
+
   const zoom = pointXY ? 3.2 : 1;
   const tx = pointXY ? WIDTH / 2 - pointXY.x * zoom : 0;
   const ty = pointXY ? HEIGHT / 2 - pointXY.y * zoom : 0;
@@ -86,6 +121,26 @@ export function FarmerFarmPointMap({ lat, lng }: { lat?: number | null; lng?: nu
           {paths.map((p) => (
             <path key={p.key} d={p.d} fill="#d1d5db" stroke="#94a3b8" strokeWidth={0.6 / zoom} />
           ))}
+          {blockPolygonPoints ? (
+            <polygon
+              points={blockPolygonPoints}
+              fill={safePolygonStyle.fill}
+              stroke={safePolygonStyle.stroke}
+              strokeWidth={2 / zoom}
+            />
+          ) : null}
+          {projectedBoundaryPoints.length
+            ? projectedBoundaryPoints.map((pt, idx) => (
+                <circle
+                  key={`bp-${idx}`}
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={8 / zoom}
+                  fill={safePolygonStyle.stroke}
+                  opacity={0.85}
+                />
+              ))
+            : null}
           {pointXY ? <circle cx={pointXY.x} cy={pointXY.y} r={5 / zoom} fill="#DC2626" stroke="#fff" strokeWidth={1 / zoom} /> : null}
         </g>
       </svg>

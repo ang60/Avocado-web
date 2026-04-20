@@ -10,6 +10,12 @@ class Case(models.Model):
         ('low', 'Low'),
         ('unknown', 'Unknown'),
     )
+    STATUS_CHOICES = (
+        ('new', 'New'),
+        ('under_review', 'Under Review'),
+        ('verified', 'Verified'),
+        ('closed', 'Closed'),
+    )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
     case_title = models.CharField(max_length=255)
@@ -22,6 +28,10 @@ class Case(models.Model):
         related_name='cases'
     )
     notes = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    diagnosis = models.TextField(blank=True, null=True)
+    recommended_actions = models.JSONField(default=list, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
     assigned_agronomist = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

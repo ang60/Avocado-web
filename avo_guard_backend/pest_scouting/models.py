@@ -17,6 +17,29 @@ class FarmBlock(models.Model):
         return f"{self.block_name} - {self.farmer.phone_number}"
 
 
+class ScoutingSession(models.Model):
+    STATUS_CHOICES = (
+        ('draft', 'Draft'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='scouting_sessions')
+    session_name = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return self.session_name or f"Scouting Session {self.started_at.date()}"
+
+
 class WeeklyRecord(models.Model):
     YES_NO_CHOICES = (
         ('Yes', 'Yes'),
@@ -106,6 +129,13 @@ class WeeklyRecord(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='weekly_records')
+    scouting_session = models.ForeignKey(
+        ScoutingSession,
+        on_delete=models.SET_NULL,
+        related_name='records',
+        null=True,
+        blank=True,
+    )
     block = models.ForeignKey(FarmBlock, on_delete=models.CASCADE, related_name='weekly_records')
     variety = models.CharField(max_length=100)
     type_of_trap = models.CharField(max_length=100)
@@ -113,28 +143,36 @@ class WeeklyRecord(models.Model):
     traps_replaced = models.PositiveIntegerField()
     any_pests_observed = models.CharField(max_length=3, choices=YES_NO_CHOICES)
     pests_observed = models.CharField(max_length=255, choices=PEST_CHOICES, null=True, blank=True)
+    pests_observed_list = models.JSONField(default=list, blank=True)
     beneficial_insects_observed = models.CharField(max_length=255, choices=BENEFICIAL_INSECT_CHOICES, null=True, blank=True)
+    beneficial_insects_observed_list = models.JSONField(default=list, blank=True)
     number_of_trees_affected = models.PositiveIntegerField()
     pest_plant_part_affected = models.CharField(max_length=100, choices=PLANT_PART_CHOICES, null=True, blank=True)
+    pest_plant_parts_affected_list = models.JSONField(default=list, blank=True)
     pest_crop_stage = models.CharField(max_length=100, choices=CROP_STAGE_CHOICES, null=True, blank=True)
     pest_detection_method = models.CharField(max_length=100, choices=DETECTION_METHOD_CHOICES, null=True, blank=True)
     pests_per_trap = models.DecimalField(max_digits=10, decimal_places=2)
     any_diseases_observed = models.CharField(max_length=3, choices=YES_NO_CHOICES)
     disease = models.CharField(max_length=255, choices=DISEASE_CHOICES, null=True, blank=True)
+    disease_list = models.JSONField(default=list, blank=True)
     disease_plant_part = models.CharField(max_length=100, choices=PLANT_PART_CHOICES, null=True, blank=True)
+    disease_plant_parts_list = models.JSONField(default=list, blank=True)
     disease_crop_stage = models.CharField(max_length=100, choices=CROP_STAGE_CHOICES, null=True, blank=True)
     disease_detection_method = models.CharField(max_length=100, choices=DETECTION_METHOD_CHOICES, null=True, blank=True)
     number_of_photos_taken = models.PositiveIntegerField(default=0)
     voice_note = models.FileField(upload_to='voice_notes/', null=True, blank=True)
     additional_notes = models.TextField(null=True, blank=True)
     actions_taken = models.CharField(max_length=100, choices=ACTION_TAKEN_CHOICES)
+    actions_taken_list = models.JSONField(default=list, blank=True)
     outcome = models.CharField(max_length=100, choices=OUTCOME_CHOICES)
+    outcome_list = models.JSONField(default=list, blank=True)
     remarks = models.TextField(null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField()
     location = models.CharField(max_length=255)
     gps_latitude = models.DecimalField(max_digits=18, decimal_places=15, null=True, blank=True)
     gps_longitude = models.DecimalField(max_digits=18, decimal_places=15, null=True, blank=True)
+    raw_payload = models.JSONField(default=dict, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -142,4 +180,33 @@ class WeeklyRecord(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+
+
+class ScoutingReview(models.Model):
+    REVIEW_STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('needs_follow_up', 'Needs Follow Up'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    record = models.OneToOneField(WeeklyRecord, on_delete=models.CASCADE, related_name='triage_review')
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='scouting_reviews'
+    )
+    identified_label = models.CharField(max_length=255)
+    management_protocol = models.TextField(blank=True, null=True)
+    review_status = models.CharField(max_length=20, choices=REVIEW_STATUS_CHOICES, default='confirmed')
+    training_tagged = models.BooleanField(default=True)
+    review_notes = models.TextField(blank=True, null=True)
+    pushed_to_farmer = models.BooleanField(default=False)
+    reviewed_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-reviewed_at']
 

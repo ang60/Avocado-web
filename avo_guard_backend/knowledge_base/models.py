@@ -37,6 +37,8 @@ class KnowledgeEntry(models.Model):
     )
     source_file = models.FileField(upload_to='knowledge_base/sources/', blank=True, null=True)
     image = models.ImageField(upload_to='knowledge_base/images/', blank=True, null=True)
+    # [{county, alert, active, created_at, created_by}]
+    regional_alerts = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

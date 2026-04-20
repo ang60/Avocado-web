@@ -129,14 +129,14 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center px-3 py-6 md:py-10">
-      <div className="w-full max-w-[1280px] grid md:grid-cols-[1.1fr_0.9fr] gap-6 items-stretch">
-        <div className="bg-white rounded-2xl shadow-sm px-6 py-8 md:p-10 flex flex-col justify-center">
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-14 h-14 rounded-full bg-[#eef5d8] flex items-center justify-center mb-4">
+    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center px-2 py-4 sm:px-4 sm:py-6 md:py-10">
+      <div className="w-full max-w-[1280px] grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4 sm:gap-6 items-stretch">
+        <div className="bg-white rounded-2xl shadow-sm px-4 py-5 sm:px-6 sm:py-8 md:p-10 flex flex-col justify-center">
+          <div className="flex flex-col items-center mb-5 sm:mb-6">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#eef5d8] flex items-center justify-center mb-3 sm:mb-4">
               <img src={avocadoLogo} alt="logo" className="w-8 h-8" />
             </div>
-            <h1 className="text-2xl font-semibold text-gray-800" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-800" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
               Create your account
             </h1>
           </div>
@@ -154,8 +154,8 @@ export function Register() {
             </div>
           ) : null}
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form className="space-y-3 sm:space-y-4" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
                   First name
@@ -167,7 +167,7 @@ export function Register() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     placeholder="e.g. Jane"
-                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-4"
+                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                     autoComplete="given-name"
                     required
@@ -185,7 +185,7 @@ export function Register() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="e.g. Wambui"
-                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-4"
+                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                     autoComplete="family-name"
                     required
@@ -194,7 +194,7 @@ export function Register() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
                   Email
@@ -206,7 +206,7 @@ export function Register() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. name@example.com"
-                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-4"
+                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                     autoComplete="email"
                     required
@@ -228,14 +228,14 @@ export function Register() {
                       autoComplete: 'tel'
                     }}
                     containerClass="!w-full"
-                    inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-5 !pl-12 !pr-4 !h-auto !text-sm"
+                    inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-5 !pl-12 !pr-3 sm:!pr-4 !h-auto !text-sm"
                     buttonClass="!bg-transparent !border-transparent !rounded-l-lg"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
                   Role
@@ -247,13 +247,13 @@ export function Register() {
                     value={roleSearch}
                     onChange={(e) => setRoleSearch(e.target.value)}
                     placeholder="Search roles..."
-                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-4 mb-2 text-sm"
+                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4 mb-2 text-sm"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                   />
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-4 appearance-none"
+                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4 appearance-none"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                     required
                   >
@@ -283,7 +283,7 @@ export function Register() {
                   <select
                     value={county}
                     onChange={(e) => setCounty(e.target.value)}
-                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-4 appearance-none"
+                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4 appearance-none"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                     required
                   >
@@ -299,7 +299,7 @@ export function Register() {
             </div>
 
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <PasswordField
                 label={`Password (min ${MIN_PASSWORD}) *`}
                 value={password}
@@ -337,7 +337,7 @@ export function Register() {
               <button
                 type="submit"
                 disabled={!canSubmit || submitting}
-                className="w-full bg-gradient-to-r from-[#4fa36c] to-[#3c8f5a] text-white py-2.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+                className="w-full bg-gradient-to-r from-[#4fa36c] to-[#3c8f5a] text-white py-2.5 rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed mt-1 sm:mt-2"
                 style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
               >
                 {submitting ? 'Submitting...' : 'Create account'}
@@ -346,7 +346,7 @@ export function Register() {
             ) : null}
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600 space-y-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+          <div className="mt-5 sm:mt-6 text-center text-xs sm:text-sm text-gray-600 space-y-2 sm:space-y-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
             <div>
               Already have an account?{' '}
               <Link to="/login" className="text-green-600 font-medium hover:underline">
@@ -361,7 +361,9 @@ export function Register() {
           </div>
         </div>
 
-        <AuthBrandingPanel />
+        <div className="hidden lg:block">
+          <AuthBrandingPanel />
+        </div>
       </div>
     </div>
   );

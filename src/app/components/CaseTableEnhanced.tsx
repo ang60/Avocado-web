@@ -4,6 +4,7 @@ import { CaseDetailModal, CaseDetailData } from './CaseDetailModal';
 import { useNavigate } from 'react-router';
 import { TableScroll } from './TableScroll';
 import type { CaseManagementCaseRow } from '../api/types';
+import { getAuthUser } from '../auth';
 
 type CaseData = CaseManagementCaseRow;
 
@@ -39,8 +40,9 @@ function SeverityBadge({ severity }: { severity: CaseData['severity'] }) {
 function StatusPill({ status }: { status: CaseData['status'] }) {
   const config = {
     'new': { label: 'New', bg: '#DBEAFE', text: '#1E40AF' },
-    'under-review': { label: 'Under Review', bg: '#E0E7FF', text: '#4338CA' },
-    'advisory-issued': { label: 'Advisory Issued', bg: '#74C69D20', text: '#2D6A4F' },
+    'under_review': { label: 'Under Review', bg: '#FEF3C7', text: '#B45309' },
+    'verified': { label: 'Advisory Issued', bg: '#DBEAFE', text: '#1D4ED8' },
+    'closed': { label: 'Closed', bg: '#DCFCE7', text: '#166534' },
   };
 
   const { label, bg, text } = config[status];
@@ -62,6 +64,11 @@ function StatusPill({ status }: { status: CaseData['status'] }) {
 }
 
 export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] }) {
+  const user = getAuthUser();
+  const roleName = user?.role_details?.role_name ?? user?.role?.role_name ?? '';
+  const canAssignAgronomist = Boolean(
+    user?.is_privileged || roleName === 'Administrator' || roleName === 'System Administrator'
+  );
   const [sortField, setSortField] = useState<SortField>('dateSubmitted');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
@@ -159,8 +166,9 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
           >
             <option value="all">All Statuses</option>
             <option value="new">New</option>
-            <option value="under-review">Under Review</option>
-            <option value="advisory-issued">Advisory Issued</option>
+            <option value="under_review">Under Review</option>
+            <option value="verified">Advisory Issued</option>
+            <option value="closed">Closed</option>
           </select>
 
           <div className="w-full text-sm sm:ml-auto sm:w-auto" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
@@ -335,22 +343,24 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
                         <Eye className="w-3 h-3" />
                         Review Diagnosis
                       </button>
-                      <button
-                        className="px-3 py-1 rounded text-xs hover:opacity-80 transition-opacity whitespace-nowrap flex items-center gap-1"
-                        style={{
-                          backgroundColor: '#74C69D20',
-                          color: '#2D6A4F',
-                          fontFamily: 'IBM Plex Sans, sans-serif',
-                          borderRadius: '8px',
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAssignModalCase(caseItem);
-                        }}
-                      >
-                        <UserPlus className="w-3 h-3" />
-                        Assign Agronomist
-                      </button>
+                      {canAssignAgronomist ? (
+                        <button
+                          className="px-3 py-1 rounded text-xs hover:opacity-80 transition-opacity whitespace-nowrap flex items-center gap-1"
+                          style={{
+                            backgroundColor: '#74C69D20',
+                            color: '#2D6A4F',
+                            fontFamily: 'IBM Plex Sans, sans-serif',
+                            borderRadius: '8px',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAssignModalCase(caseItem);
+                          }}
+                        >
+                          <UserPlus className="w-3 h-3" />
+                          Assign Agronomist
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -367,7 +377,7 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
       />
 
       {/* Assign Agronomist Modal */}
-      {assignModalCase && (
+      {assignModalCase && canAssignAgronomist ? (
         <div 
           className="fixed inset-0 flex items-center justify-center z-50 p-4"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
@@ -561,7 +571,7 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

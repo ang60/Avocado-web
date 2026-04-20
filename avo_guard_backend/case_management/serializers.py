@@ -12,7 +12,8 @@ class CaseSerializer(serializers.ModelSerializer):
         model = Case
         fields = [
             'id', 'case_title', 'severity', 'pest_scouting_record',
-            'notes', 'assigned_agronomist', 'created_at', 'updated_at'
+            'notes', 'status', 'diagnosis', 'recommended_actions', 'closed_at',
+            'assigned_agronomist', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -21,7 +22,28 @@ class CaseSerializer(serializers.ModelSerializer):
         if instance.assigned_agronomist:
             representation['assigned_agronomist'] = UserSerializer(instance.assigned_agronomist).data
         if instance.pest_scouting_record:
-            representation['pest_scouting_record'] = WeeklyRecordSerializer(instance.pest_scouting_record).data
+            # `WeeklyRecordSerializer` outputs foreign keys as primary keys by default.
+            # Case-management UI expects `pest_scouting_record.farmer.*` and `pest_scouting_record.block.block_name`,
+            # so we replace those FK values with minimal nested objects.
+            record = instance.pest_scouting_record
+            weekly = WeeklyRecordSerializer(record).data
+
+            if getattr(record, 'farmer', None):
+                weekly['farmer'] = {
+                    'id': str(record.farmer.id),
+                    'phone_number': record.farmer.phone_number,
+                    'first_name': record.farmer.first_name,
+                    'last_name': record.farmer.last_name,
+                    'county': getattr(record.farmer, 'county', None),
+                }
+
+            if getattr(record, 'block', None):
+                weekly['block'] = {
+                    'id': str(record.block.id),
+                    'block_name': record.block.block_name,
+                }
+
+            representation['pest_scouting_record'] = weekly
         return representation
 
     def validate_assigned_agronomist(self, value):

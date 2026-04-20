@@ -13,7 +13,7 @@ from .serializers import FarmerRegistrationSerializer, FarmerStatisticsSerialize
 
 
 class FarmerRegistrationViewSet(viewsets.ModelViewSet):
-    queryset = FarmerRegistration.objects.all()
+    queryset = FarmerRegistration.objects.all().order_by('-updated_at', '-created_at')
     serializer_class = FarmerRegistrationSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['globalGAPStatus', 'primaryExporter']

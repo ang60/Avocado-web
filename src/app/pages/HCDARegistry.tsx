@@ -2,8 +2,12 @@
 import { Building2, MapPin, TrendingUp, CheckCircle, XCircle, Clock, Search, Download, FileCheck, Eye, X, User, Phone, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { TableScroll } from '../components/TableScroll';
-import { fetchFarmersList } from '../api/realApi';
-import type { FarmerListRow } from '../api/types';
+import {
+  fetchHcdaFarmers,
+  fetchHcdaStatistics,
+  openHcdaExcelExport,
+  type HcdaStatisticsDto,
+} from '../api/realApi';
 import { getApiErrorMessage } from '../api/errors';
 
 interface FarmerRegistration {
@@ -179,35 +183,9 @@ const mockFarmers: FarmerRegistration[] = [
   },
 ];
 
-const exporters = [
-  'Kakuzi PLC',
-  'Sunripe Ltd',
-  'Kenya Horticultural Exporters',
-  'Fresh Produce Exporters',
-];
-
-function mapApiFarmerToHcdaRow(r: FarmerListRow): FarmerRegistration {
-  let globalGAPStatus: FarmerRegistration['globalGAPStatus'] = 'compliant';
-  if (r.exportEligibility === 'at-risk') globalGAPStatus = 'expired';
-  if (r.exportEligibility === 'suspended') globalGAPStatus = 'non-compliant';
-  const countyKey = (r.county || 'UNK').slice(0, 3).toUpperCase().replace(/\s/g, '');
-  return {
-    id: r.id,
-    farmerName: r.name,
-    hcdaRegNumber: `HCDA-${countyKey}-${String(r.id).replace(/-/g, '').slice(0, 8)}`,
-    ward: r.ward || '—',
-    county: r.county || '—',
-    acreage: r.totalAcres,
-    globalGAPStatus,
-    globalGAPExpiry: r.lastInspection || '—',
-    primaryExporter: r.linkedExporter ? `Linked ${String(r.linkedExporter).slice(0, 8)}…` : '—',
-    lat: 0,
-    lng: 0,
-  };
-}
-
 export function HCDARegistry() {
   const [farmers, setFarmers] = useState<FarmerRegistration[]>([]);
+  const [stats, setStats] = useState<HcdaStatisticsDto | null>(null);
   const [registryLoading, setRegistryLoading] = useState(true);
   const [registryError, setRegistryError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -219,14 +197,20 @@ export function HCDARegistry() {
   useEffect(() => {
     let cancelled = false;
     setRegistryLoading(true);
-    fetchFarmersList()
-      .then((rows) => {
+    Promise.all([fetchHcdaFarmers(), fetchHcdaStatistics()])
+      .then(([rows, summary]) => {
         if (cancelled) return;
+        setStats(summary);
         if (rows.length === 0) {
           setFarmers(mockFarmers);
           setRegistryError('No farmers returned from the API — showing demo rows. Add farmer profiles in Django or seed data.');
         } else {
-          setFarmers(rows.map(mapApiFarmerToHcdaRow));
+          setFarmers(
+            rows.map((r) => ({
+              ...r,
+              globalGAPStatus: (String(r.globalGAPStatus || '').toLowerCase() as FarmerRegistration['globalGAPStatus']) || 'non-compliant',
+            }))
+          );
           setRegistryError(null);
         }
       })
@@ -246,7 +230,8 @@ export function HCDARegistry() {
   const compliantCount = farmers.filter(f => f.globalGAPStatus === 'compliant').length;
   const expiredCount = farmers.filter(f => f.globalGAPStatus === 'expired').length;
   const nonCompliantCount = farmers.filter(f => f.globalGAPStatus === 'non-compliant').length;
-  const totalAcreage = farmers.reduce((sum, f) => sum + f.acreage, 0);
+  const totalAcreage = stats?.total_acreage ?? farmers.reduce((sum, f) => sum + f.acreage, 0);
+  const exporters = Array.from(new Set(farmers.map((f) => f.primaryExporter).filter(Boolean))).sort();
 
   const filteredFarmers = farmers.filter(farmer => {
     const matchesSearch = 
@@ -821,6 +806,7 @@ export function HCDARegistry() {
                 />
               </div>
               <button
+                onClick={openHcdaExcelExport}
                 className="flex w-full flex-shrink-0 items-center justify-center gap-2 rounded-lg border px-4 py-2 transition-all hover:bg-gray-50 sm:w-auto"
                 style={{
                   backgroundColor: '#FFFFFF',

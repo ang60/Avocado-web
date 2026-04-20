@@ -23,6 +23,19 @@ export interface ScoutingFeedItem {
   reviewed: ReviewStatus;
   county: string;
   assignedTo?: string;
+  triageStatus?: 'pending' | 'confirmed' | 'needs_follow_up';
+  triageLabel?: string | null;
+  triagedAt?: string | null;
+  auditFlags?: string[];
+  rawTimestamp?: string;
+  pestsObservedList?: string[];
+  diseasesObservedList?: string[];
+  beneficialInsectsObservedList?: string[];
+  pestPlantPartsAffectedList?: string[];
+  diseasePlantPartsAffectedList?: string[];
+  actionsTakenList?: string[];
+  outcomeList?: string[];
+  rawPayload?: Record<string, unknown>;
 }
 
 export interface DashboardMetricCard {
@@ -129,7 +142,7 @@ export interface CaseManagementCaseRow {
   pestDisease: string;
   pestDiseaseKiswahili: string;
   dateSubmitted: string;
-  status: 'new' | 'under-review' | 'advisory-issued';
+  status: 'new' | 'under_review' | 'verified' | 'closed';
   scoutName: string;
   location: string;
   affectedTrees: number;
@@ -230,6 +243,7 @@ export interface FarmerListRow {
   overdueScouts: boolean;
   /** Placeholder: linked exporter id from `data/exporters.ts` */
   linkedExporter?: string;
+  complianceStatus?: 'compliant' | 'needs-follow-up';
 }
 
 export interface ComplianceFarmerRow {
@@ -367,6 +381,7 @@ export interface KnowledgeBaseListPayload {
 /** Case detail page (rich case view) */
 export interface CaseDetailPayload {
   id: string;
+  caseStatus?: string;
   farmerName: string;
   farmerPhone: string;
   location: string;

@@ -110,10 +110,10 @@ export async function verifyOtp(phoneNumber: string, code: string): Promise<Veri
 
 /** Sign in with phone plus password (account must be approved). */
 export async function loginWithPassword(phoneNumber: string, password: string): Promise<VerifyOtpResponse> {
-  const res = await apiRequest<VerifyOtpResponse>('/api/users/login/', {
+  const res = await apiRequest<VerifyOtpResponse>('/api/users/login_password/', {
     method: 'POST',
     auth: false,
-    body: JSON.stringify({ phone_number: phoneNumber.trim(), password }),
+    body: JSON.stringify({ identifier: phoneNumber.trim(), password }),
   });
   setAuthSession({ access: res.access, refresh: res.refresh, user: res.user });
   return res;

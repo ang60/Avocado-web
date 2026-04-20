@@ -5,12 +5,24 @@ from .models import Case
 from .serializers import CaseSerializer, CaseAssignmentSerializer, CaseCloseSerializer
 from accounts.sms_utils import send_advanta_sms
 from django.db import transaction
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
+from api.rbac import is_admin_like
+from api.rbac import ROLE_FARMER, role_name
 
 
 @extend_schema(tags=['Case Management'])
 class CaseViewSet(viewsets.ModelViewSet):
-    queryset = Case.objects.all()
+    queryset = (
+        Case.objects.all()
+        .select_related(
+            'assigned_agronomist',
+            'pest_scouting_record',
+            'pest_scouting_record__farmer',
+            'pest_scouting_record__block',
+        )
+        .order_by('-created_at')
+    )
     serializer_class = CaseSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter]
@@ -28,9 +40,21 @@ class CaseViewSet(viewsets.ModelViewSet):
         else:
             serializer.save()
 
+    def get_queryset(self):
+        qs = self.queryset
+        # Farmer accounts should only see cases created from their own scouting records.
+        if role_name(self.request.user) == ROLE_FARMER:
+            qs = qs.filter(pest_scouting_record__farmer=self.request.user)
+        return qs
+
     @extend_schema(request=CaseAssignmentSerializer)
     @action(detail=True, methods=['post'])
     def assign_agronomist(self, request, pk=None):
+        if not is_admin_like(request.user):
+            return Response(
+                {'error': 'Only administrators can assign or reassign agronomists.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         case = self.get_object()
         serializer = CaseAssignmentSerializer(data=request.data)
         if serializer.is_valid():
@@ -39,6 +63,8 @@ class CaseViewSet(viewsets.ModelViewSet):
 
             with transaction.atomic():
                 case.assigned_agronomist = agronomist
+                if case.status == 'new':
+                    case.status = 'under_review'
                 if notes:
                     case.notes += f"\n\nAssignment notes: {notes}"
                 case.save()
@@ -85,7 +111,34 @@ class CaseViewSet(viewsets.ModelViewSet):
 
             actions_text = " ".join([f"{i+1}. {action}" for i, action in enumerate(recommended_actions)])
 
+            farmer_name = "N/A"
+            block_name = "N/A"
+            location = "N/A"
+            farmer_phone = None
+            if case.pest_scouting_record:
+                record = case.pest_scouting_record
+                if record.farmer:
+                    first = record.farmer.first_name or ""
+                    last = record.farmer.last_name or ""
+                    farmer_name = f"{first} {last}".strip() or record.farmer.phone_number
+                    farmer_phone = record.farmer.phone_number
+                if record.block:
+                    block_name = record.block.block_name
+                location = getattr(record, 'location', None) or "—"
+
+            farmer_phone = farmer_phone or None
+            if not farmer_phone:
+                return Response(
+                    {'error': 'Farmer phone number not found for this case.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             message = (
+                f"Case ID: {case.id}\n"
+                f"Severity: {case.severity}\n"
+                f"Farmer: {farmer_name}\n"
+                f"Block: {block_name}\n"
+                f"Location: {location}\n\n"
                 f"Diagnosis: {diagnosis}\n\n"
                 f"Recommended Actions:\n"
                 f"{actions_text}\n"
@@ -93,18 +146,23 @@ class CaseViewSet(viewsets.ModelViewSet):
                 f"- SAFIC Team"
             )
 
-            farmer_phone = None
-            if case.pest_scouting_record and case.pest_scouting_record.farmer:
-                farmer_phone = case.pest_scouting_record.farmer.phone_number
-
-            if not farmer_phone:
-                return Response({'error': 'Farmer phone number not found for this case.'}, status=status.HTTP_400_BAD_REQUEST)
-
             try:
                 send_advanta_sms(farmer_phone, message)
             except Exception:
                 pass
 
-            return Response({'status': 'case verified and farmer notified'}, status=status.HTTP_200_OK)
+            case.status = 'closed'
+            case.diagnosis = diagnosis
+            case.recommended_actions = recommended_actions
+            case.closed_at = timezone.now()
+            case.save(update_fields=['status', 'diagnosis', 'recommended_actions', 'closed_at', 'updated_at'])
+
+            return Response(
+                {
+                    'status': 'case verified and farmer notified',
+                    'case': CaseSerializer(case, context={'request': request}).data,
+                },
+                status=status.HTTP_200_OK,
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

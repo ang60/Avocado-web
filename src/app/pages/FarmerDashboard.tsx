@@ -8,6 +8,8 @@ import {
   fetchHcdaStatistics,
   fetchKnowledgeEntries,
   fetchMyFarmBlocks,
+  fetchFarmerCaseAdvisories,
+  fetchScoutingBlockOverview,
   fetchScoutingFeed,
   openHcdaPdfExport,
 } from '../api/realApi';
@@ -21,6 +23,13 @@ type UiBlock = {
   treeCount: number;
   lastScoutDate: string;
   status: BlockStatus;
+  latestFinding?: string;
+  pests?: string[];
+  diseases?: string[];
+  actionsTaken?: string[];
+  outcomes?: string[];
+  historyCount?: number;
+  boundaryPoints?: Array<{ lat: number; lng: number }>;
 };
 
 function statusStyle(status: BlockStatus) {
@@ -29,12 +38,37 @@ function statusStyle(status: BlockStatus) {
   return { bg: '#DCFCE7', text: '#166534' };
 }
 
+type AdvisoryStatus = 'under_review' | 'verified' | 'closed' | 'new' | string;
+
+type FarmerAdvisory = {
+  id: string;
+  diagnosisName: string;
+  blockName: string;
+  location: string;
+  issuedAt: string;
+  recommendedActions: string[];
+  chemicalGuidanceIncluded: boolean;
+  status: AdvisoryStatus;
+  statusLabel: string;
+};
+
+function advisoryStatusStyle(status: AdvisoryStatus) {
+  if (status === 'under_review') return { bg: '#FEF3C7', text: '#B45309' };
+  if (status === 'verified') return { bg: '#DCFCE7', text: '#166534' };
+  if (status === 'closed') return { bg: '#E0E7FF', text: '#4338CA' };
+  return { bg: '#F3F4F6', text: '#6B7280' };
+}
+
 export function FarmerDashboard() {
   const user = getAuthUser();
   const farmName = user?.entity_details?.company_name || 'My Avocado Farm';
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<UiBlock[]>([]);
+  const [advisories, setAdvisories] = useState<FarmerAdvisory[]>([]);
+  const [latestAdvisory, setLatestAdvisory] = useState<FarmerAdvisory | null>(null);
+  const [advisoryTab, setAdvisoryTab] = useState<'history' | 'latest'>('history');
+  const [expandedAdvisoryId, setExpandedAdvisoryId] = useState<string | null>(null);
   const [recentAlerts, setRecentAlerts] = useState<string[]>([]);
   const [recentActivity, setRecentActivity] = useState<string[]>([]);
   const [kbSuggestion, setKbSuggestion] = useState('Loading recommendation...');
@@ -50,10 +84,31 @@ export function FarmerDashboard() {
   const [selectedBlock, setSelectedBlock] = useState<UiBlock | null>(null);
   const [protocolOpen, setProtocolOpen] = useState(false);
 
+  const handleViewAffectedBlock = () => {
+    const restrictedBlocks = blocks.filter((b) => b.status === 'Restricted');
+    const currentId = selectedBlock?.id;
+
+    const candidate =
+      restrictedBlocks.find((b) => b.id !== currentId) ??
+      restrictedBlocks[0] ??
+      blocks.find((b) => b.id !== currentId) ??
+      blocks[0] ??
+      null;
+
+    setSelectedBlock(candidate);
+  };
+
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchMyFarmBlocks(), fetchScoutingFeed(), fetchHcdaFarmers(), fetchHcdaStatistics()])
-      .then(async ([farmBlocks, scouting, hcdaRows, hcdaStats]) => {
+    Promise.all([
+      fetchMyFarmBlocks(),
+      fetchScoutingFeed(),
+      fetchScoutingBlockOverview(),
+      fetchFarmerCaseAdvisories(),
+      fetchHcdaFarmers(),
+      fetchHcdaStatistics(),
+    ])
+      .then(async ([farmBlocks, scouting, blockOverview, farmerCases, hcdaRows, hcdaStats]) => {
         if (cancelled) return;
         const userCounty = (user?.county || '').toLowerCase();
         const userName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim().toLowerCase();
@@ -70,7 +125,19 @@ export function FarmerDashboard() {
           setFarmCoordinates(null);
         }
 
-        const byBlock: Record<string, { status: BlockStatus; lastScoutDate: string }> = {};
+        const byBlock: Record<
+          string,
+          {
+            status: BlockStatus;
+            lastScoutDate: string;
+            latestFinding?: string;
+            pests?: string[];
+            diseases?: string[];
+            actionsTaken?: string[];
+            outcomes?: string[];
+            historyCount?: number;
+          }
+        > = {};
         const alerts: string[] = [];
         const activities: string[] = [];
         const detectedFindings: string[] = [];
@@ -81,12 +148,33 @@ export function FarmerDashboard() {
           byBlock[row.blockId] = {
             status,
             lastScoutDate: row.timestamp || '—',
+            latestFinding: row.finding,
+            pests: row.pestsObservedList || [],
+            diseases: row.diseasesObservedList || [],
+            actionsTaken: row.actionsTakenList || [],
+            outcomes: row.outcomeList || [],
+            historyCount: 1,
           };
           if (row.status === 'detected') {
             alerts.push(`Block ${row.blockId} detected: ${row.finding}.`);
             detectedFindings.push(row.finding);
           }
           activities.push(`${row.farmerName} submitted a scouting report for ${row.blockId}.`);
+        }
+
+        for (const row of blockOverview) {
+          const status: BlockStatus =
+            row.status === 'detected' ? (row.severity === 'high' ? 'Restricted' : 'Under Observation') : 'Cleared';
+          byBlock[row.block_name] = {
+            status,
+            lastScoutDate: row.last_scouted_at || '—',
+            latestFinding: row.latest_finding,
+            pests: row.pests,
+            diseases: row.diseases,
+            actionsTaken: row.actions_taken,
+            outcomes: row.outcomes,
+            historyCount: row.history_count,
+          };
         }
 
         if (myHcda?.globalGAPExpiry) {
@@ -99,12 +187,63 @@ export function FarmerDashboard() {
           treeCount: b.number_of_trees,
           status: byBlock[b.block_name]?.status ?? 'Cleared',
           lastScoutDate: byBlock[b.block_name]?.lastScoutDate ?? '—',
+          latestFinding: byBlock[b.block_name]?.latestFinding ?? 'No scouting history yet',
+          pests: byBlock[b.block_name]?.pests ?? [],
+          diseases: byBlock[b.block_name]?.diseases ?? [],
+          actionsTaken: byBlock[b.block_name]?.actionsTaken ?? [],
+          outcomes: byBlock[b.block_name]?.outcomes ?? [],
+          historyCount: byBlock[b.block_name]?.historyCount ?? 0,
+          boundaryPoints: Array.isArray(b.boundary_points) ? b.boundary_points : [],
         }));
 
         setBlocks(mappedBlocks);
         setSelectedBlock(mappedBlocks[0] ?? null);
         setRecentAlerts(alerts.slice(0, 3).length ? alerts.slice(0, 3) : ['No active pest alerts right now.']);
         setRecentActivity(activities.slice(0, 3).length ? activities.slice(0, 3) : ['No recent scouting activity yet.']);
+
+        const mappedAdvisories: FarmerAdvisory[] = (farmerCases ?? []).map((c) => {
+          const record = c.pest_scouting_record ?? null;
+          const blockValue = record?.block;
+          const blockName =
+            typeof blockValue === 'string'
+              ? blockValue
+              : typeof blockValue === 'object' && blockValue
+                ? blockValue.block_name
+                : '—';
+          const location = record?.location ?? '—';
+          const diagnosisName = (c.diagnosis ?? c.case_title ?? record?.disease ?? record?.pests_observed ?? '—') as string;
+          const recommendedActions = Array.isArray(c.recommended_actions) ? c.recommended_actions : [];
+          const chemicalGuidanceIncluded = recommendedActions.some((a) =>
+            (a || '').toLowerCase().includes('chemical') || (a || '').toLowerCase().includes('active ingredient'),
+          );
+          const issuedAt = c.closed_at || c.created_at || '';
+          const status = (c.status ?? 'new') as AdvisoryStatus;
+          const statusLabel =
+            status === 'under_review'
+              ? 'Under Review'
+              : status === 'verified'
+                ? 'Advisory Issued'
+                : status === 'closed'
+                  ? 'Closed'
+                  : 'New';
+
+          return {
+            id: c.id,
+            diagnosisName,
+            blockName,
+            location,
+            issuedAt,
+            recommendedActions,
+            chemicalGuidanceIncluded,
+            status,
+            statusLabel,
+          };
+        });
+
+        mappedAdvisories.sort((a, b) => (b.issuedAt || '').localeCompare(a.issuedAt || ''));
+        setAdvisories(mappedAdvisories);
+        setLatestAdvisory(mappedAdvisories[0] ?? null);
+        setExpandedAdvisoryId(null);
 
         const recent = scouting.slice(0, 4).reverse();
         if (recent.length) {
@@ -181,7 +320,7 @@ export function FarmerDashboard() {
           </div>
           <button
             type="button"
-            onClick={() => setSelectedBlock(blocks.find((b) => b.status === 'Restricted') ?? blocks[0] ?? null)}
+            onClick={handleViewAffectedBlock}
             className="rounded-lg bg-white/15 px-3 py-2 text-sm hover:bg-white/25"
             style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
           >
@@ -189,6 +328,93 @@ export function FarmerDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Latest Advisory */}
+      <section className="mb-4 rounded-xl border bg-white p-4" style={{ borderColor: '#E0DDD6' }}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2E7D32' }}>
+              Latest Advisory
+            </h3>
+            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+              Latest diagnosis and remedies for your farm
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAdvisoryTab('history')}
+              className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+              style={{ borderColor: '#E0DDD6', color: '#2E7D32', fontFamily: 'IBM Plex Sans, sans-serif' }}
+            >
+              View History
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <p className="mt-3 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            Loading latest advisory...
+          </p>
+        ) : latestAdvisory ? (
+          <div className="mt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="inline-flex rounded-full px-3 py-1 text-xs"
+                style={{
+                  backgroundColor: advisoryStatusStyle(latestAdvisory.status).bg,
+                  color: advisoryStatusStyle(latestAdvisory.status).text,
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  fontWeight: 600,
+                }}
+              >
+                {latestAdvisory.statusLabel}
+              </span>
+              {latestAdvisory.chemicalGuidanceIncluded ? (
+                <span
+                  className="inline-flex rounded-full px-3 py-1 text-xs"
+                  style={{ backgroundColor: '#FEF3C7', color: '#B45309', fontFamily: 'IBM Plex Sans, sans-serif', fontWeight: 600 }}
+                >
+                  Chemical guidance included
+                </span>
+              ) : null}
+            </div>
+
+            <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+              Diagnosis: <span style={{ color: '#1B4332', fontWeight: 700 }}>{latestAdvisory.diagnosisName}</span>
+            </p>
+            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+              Affected: {latestAdvisory.blockName} · Location: {latestAdvisory.location}
+            </p>
+            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+              Issued: {latestAdvisory.issuedAt ? latestAdvisory.issuedAt.slice(0, 10) : '—'}
+            </p>
+
+            <div className="mt-3 rounded-lg border p-3" style={{ borderColor: '#E0DDD6', backgroundColor: '#F8FAFC' }}>
+              <p className="text-xs font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2E7D32' }}>
+                Recommended actions
+              </p>
+              {latestAdvisory.recommendedActions.length ? (
+                <ul className="mt-2 space-y-1">
+                  {latestAdvisory.recommendedActions.slice(0, 4).map((a, idx) => (
+                    <li key={`${idx}-${a}`} className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                  No remedies recorded yet.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            No advisories yet.
+          </p>
+        )}
+      </section>
 
       <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
         <div className="rounded-lg border bg-white p-4" style={{ borderColor: '#E0DDD6' }}>
@@ -234,6 +460,177 @@ export function FarmerDashboard() {
         </div>
       </div>
 
+      {/* Diagnoses & Remedies */}
+      <section className="mb-4 rounded-xl border bg-white p-4" style={{ borderColor: '#E0DDD6' }}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-base font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2E7D32' }}>
+            Diagnoses & Remedies
+          </h3>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAdvisoryTab('history')}
+              className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+              style={{
+                borderColor: '#E0DDD6',
+                color: advisoryTab === 'history' ? '#2E7D32' : '#455A64',
+                backgroundColor: advisoryTab === 'history' ? '#F0FDF4' : '#FFFFFF',
+                fontFamily: 'IBM Plex Sans, sans-serif',
+                fontWeight: advisoryTab === 'history' ? 700 : 600,
+              }}
+            >
+              History
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdvisoryTab('latest')}
+              className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+              style={{
+                borderColor: '#E0DDD6',
+                color: advisoryTab === 'latest' ? '#2E7D32' : '#455A64',
+                backgroundColor: advisoryTab === 'latest' ? '#F0FDF4' : '#FFFFFF',
+                fontFamily: 'IBM Plex Sans, sans-serif',
+                fontWeight: advisoryTab === 'latest' ? 700 : 600,
+              }}
+            >
+              Latest
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {loading ? (
+            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              Loading diagnoses & remedies...
+            </p>
+          ) : advisoryTab === 'latest' ? (
+            latestAdvisory ? (
+              <div className="rounded-lg border p-3" style={{ borderColor: '#E0DDD6', backgroundColor: '#F8FAFC' }}>
+                <div className="flex flex-wrap items-center gap-2 justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className="inline-flex rounded-full px-3 py-1 text-xs"
+                      style={{
+                        backgroundColor: advisoryStatusStyle(latestAdvisory.status).bg,
+                        color: advisoryStatusStyle(latestAdvisory.status).text,
+                        fontFamily: 'IBM Plex Sans, sans-serif',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {latestAdvisory.statusLabel}
+                    </span>
+                    {latestAdvisory.chemicalGuidanceIncluded ? (
+                      <span
+                        className="inline-flex rounded-full px-3 py-1 text-xs"
+                        style={{ backgroundColor: '#FEF3C7', color: '#B45309', fontFamily: 'IBM Plex Sans, sans-serif', fontWeight: 700 }}
+                      >
+                        Chemical guidance included
+                      </span>
+                    ) : null}
+                  </div>
+                  <span className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    {latestAdvisory.issuedAt ? latestAdvisory.issuedAt.slice(0, 10) : '—'}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+                  <span style={{ color: '#1B4332', fontWeight: 800 }}>{latestAdvisory.diagnosisName}</span>
+                  <span> · {latestAdvisory.blockName}</span>
+                  <span> · {latestAdvisory.location}</span>
+                </p>
+                {latestAdvisory.recommendedActions.length ? (
+                  <ul className="mt-2 space-y-1">
+                    {latestAdvisory.recommendedActions.slice(0, 4).map((a, idx) => (
+                      <li key={`${latestAdvisory.id}-${idx}`} className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    No remedies recorded yet.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                No advisories yet.
+              </p>
+            )
+          ) : advisories.length ? (
+            advisories.map((a) => {
+              const isExpanded = expandedAdvisoryId === a.id;
+              const shown = isExpanded ? a.recommendedActions : a.recommendedActions.slice(0, 2);
+              return (
+                <div key={a.id} className="rounded-lg border p-3" style={{ borderColor: '#E0DDD6', backgroundColor: '#FFFFFF' }}>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className="inline-flex rounded-full px-3 py-1 text-xs"
+                        style={{
+                          backgroundColor: advisoryStatusStyle(a.status).bg,
+                          color: advisoryStatusStyle(a.status).text,
+                          fontFamily: 'IBM Plex Sans, sans-serif',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {a.statusLabel}
+                      </span>
+                      {a.chemicalGuidanceIncluded ? (
+                        <span
+                          className="inline-flex rounded-full px-3 py-1 text-xs"
+                          style={{ backgroundColor: '#FEF3C7', color: '#B45309', fontFamily: 'IBM Plex Sans, sans-serif', fontWeight: 700 }}
+                        >
+                          Chemical guidance
+                        </span>
+                      ) : null}
+                    </div>
+                    <span className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                      {a.issuedAt ? a.issuedAt.slice(0, 10) : '—'}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+                    <span style={{ color: '#1B4332', fontWeight: 800 }}>{a.diagnosisName}</span>
+                    <span> · {a.blockName}</span>
+                    <span> · {a.location}</span>
+                  </p>
+
+                  {a.recommendedActions.length ? (
+                    <>
+                      <ul className="mt-2 space-y-1">
+                        {shown.map((act, idx) => (
+                          <li key={`${a.id}-act-${idx}`} className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+                            {act}
+                          </li>
+                        ))}
+                      </ul>
+                      {a.recommendedActions.length > 2 ? (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedAdvisoryId(isExpanded ? null : a.id)}
+                          className="mt-2 text-sm rounded-lg border px-3 py-2 hover:bg-gray-50"
+                          style={{ borderColor: '#E0DDD6', color: '#2E7D32', fontFamily: 'IBM Plex Sans, sans-serif', fontWeight: 700 }}
+                        >
+                          {isExpanded ? 'Show less' : 'Show more'}
+                        </button>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                      No remedies recorded yet.
+                    </p>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              No diagnoses/remedies history yet.
+            </p>
+          )}
+        </div>
+      </section>
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <section className="rounded-xl border bg-white p-4 xl:col-span-6" style={{ borderColor: '#E0DDD6' }}>
           <h3 className="mb-1 text-base font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2E7D32' }}>
@@ -242,7 +639,18 @@ export function FarmerDashboard() {
           <p className="mb-3 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
             Click a block to view quick stats
           </p>
-          <FarmerFarmPointMap lat={farmCoordinates?.lat ?? null} lng={farmCoordinates?.lng ?? null} />
+          <FarmerFarmPointMap
+            lat={farmCoordinates?.lat ?? null}
+            lng={farmCoordinates?.lng ?? null}
+            blockBoundaryPoints={selectedBlock?.boundaryPoints ?? null}
+            polygonStyle={
+              selectedBlock?.status === 'Restricted'
+                ? { fill: 'rgba(239, 68, 68, 0.18)', stroke: '#DC2626' }
+                : selectedBlock?.status === 'Under Observation'
+                  ? { fill: 'rgba(245, 158, 11, 0.18)', stroke: '#D97706' }
+                  : { fill: 'rgba(22, 163, 74, 0.18)', stroke: '#15803D' }
+            }
+          />
           <div className="mt-3 rounded-lg border p-3" style={{ borderColor: '#E0DDD6', backgroundColor: '#F8FAFC' }}>
             <p className="font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2E7D32' }}>
               Block Quick Stats: {selectedBlock?.id ?? '—'}
@@ -250,6 +658,18 @@ export function FarmerDashboard() {
             <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
               Variety: {selectedBlock?.variety ?? '—'} · Trees: {selectedBlock?.treeCount ?? 0} · Last scout: {selectedBlock?.lastScoutDate ?? '—'}
             </p>
+            <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+              Latest finding: {selectedBlock?.latestFinding ?? '—'}
+            </p>
+            {selectedBlock?.boundaryPoints && selectedBlock.boundaryPoints.length >= 3 ? (
+              <p className="mt-1 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#94A3B8' }}>
+                Boundary polygon loaded ({selectedBlock.boundaryPoints.length} points)
+              </p>
+            ) : (
+              <p className="mt-1 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#94A3B8' }}>
+                No boundary polygon available for this block.
+              </p>
+            )}
           </div>
         </section>
 
@@ -375,9 +795,25 @@ export function FarmerDashboard() {
               <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
                 {b.variety} · Last scout {b.lastScoutDate}
               </p>
+              <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+                {b.latestFinding || 'No scouting history yet'}
+              </p>
+              {b.pests?.length || b.diseases?.length ? (
+                <p className="mt-1 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#64748B' }}>
+                  {(b.pests || []).concat(b.diseases || []).join(', ')}
+                </p>
+              ) : null}
+              {b.actionsTaken?.length ? (
+                <p className="mt-1 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#64748B' }}>
+                  Action: {b.actionsTaken.join(', ')}
+                </p>
+              ) : null}
               <span className="mt-2 inline-flex rounded-full px-2 py-1 text-xs" style={{ backgroundColor: style.bg, color: style.text, fontFamily: 'IBM Plex Sans, sans-serif' }}>
                 {b.status}
               </span>
+              <p className="mt-1 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#94A3B8' }}>
+                {b.historyCount || 0} scouting entr{(b.historyCount || 0) === 1 ? 'y' : 'ies'}
+              </p>
             </div>
           );
         })}

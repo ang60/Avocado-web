@@ -21,7 +21,7 @@ class KnowledgeEntrySerializer(serializers.ModelSerializer):
             'id', 'category', 'category_name', 'title', 'content',
             'severity', 'tags', 'views', 'active_use_cases',
             'approved_content', 'chemical_gate', 'source_file',
-            'image', 'created_at', 'last_updated'
+            'image', 'regional_alerts', 'created_at', 'last_updated'
         ]
         read_only_fields = ['id', 'created_at', 'last_updated', 'views']
 

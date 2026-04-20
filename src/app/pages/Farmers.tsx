@@ -11,6 +11,7 @@ import { LinkExporterModal } from '../components/LinkExporterModal';
 import { exporters } from '../data/exporters';
 import { useNavigate } from 'react-router';
 import { AppToast } from '../components/AppToast';
+import { getAuthUser } from '../auth';
 
 
 type SortField = 'id' | 'name' | 'county' | 'exportEligibility';
@@ -121,6 +122,8 @@ function ExportEligibilityPill({ status }: { status: 'ready' | 'at-risk' | 'susp
 }
 
 export function Farmers() {
+  const roleName = getAuthUser()?.role_details?.role_name;
+  const isAgronomist = roleName === 'Agronomist';
   const [farmersList, setFarmersList] = useState<FarmerListRow[]>([]);
   const [farmersLoading, setFarmersLoading] = useState(true);
   const [farmersError, setFarmersError] = useState<string | null>(null);
@@ -261,6 +264,22 @@ export function Farmers() {
           {farmersError}
         </div>
       )}
+      {!farmersLoading && isAgronomist && farmersList.length === 0 ? (
+        <div
+          className="mb-4 p-6 rounded-lg border text-center"
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderColor: '#E0DDD6',
+          }}
+        >
+          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 700 }}>
+            No assigned farmers found
+          </p>
+          <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            Your Agronomist portfolio is currently empty. If you just received new assignments, refresh after the next sync.
+          </p>
+        </div>
+      ) : null}
       <div className="grid grid-cols-1 gap-6 min-w-0 lg:grid-cols-12">
         {/* Main Content */}
         <div className="min-w-0 lg:col-span-9">
@@ -272,10 +291,12 @@ export function Farmers() {
                 color: '#1B4332'
               }}
             >
-              Farmer Traceability Registry
+              {isAgronomist ? 'My Farmers' : 'Farmer Traceability Registry'}
             </h1>
             <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-              Compliance tracking & export eligibility monitoring / Ufuatiliaji wa Uzingatiaji
+              {isAgronomist
+                ? 'Assigned farmer portfolio with compliance tracking and export readiness.'
+                : 'Compliance tracking & export eligibility monitoring / Ufuatiliaji wa Uzingatiaji'}
             </p>
           </header>
 
@@ -297,7 +318,7 @@ export function Farmers() {
                   color: '#717182',
                 }}
               >
-                Compliance Filter:
+                {isAgronomist ? 'My Farmers Filter:' : 'Compliance Filter:'}
               </span>
             </div>
             
@@ -312,7 +333,7 @@ export function Farmers() {
                 color: '#1B4332',
               }}
             >
-              <option value="all">All Farmers</option>
+              <option value="all">{isAgronomist ? 'All Assigned Farmers' : 'All Farmers'}</option>
               <option value="overdue-scouts">Overdue Scouts Only</option>
               <option value="high-severity">High Severity Cases</option>
             </select>

@@ -92,25 +92,25 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center px-3 py-6 md:py-10">
-      <div className="w-full max-w-[1280px] grid md:grid-cols-[0.94fr_1.06fr] gap-6 items-stretch">
-        <div className="bg-white rounded-2xl shadow-sm p-8 md:p-10 flex flex-col justify-center">
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 rounded-full bg-[#eef5d8] flex items-center justify-center mb-4">
+    <div className="min-h-screen bg-[#f5f6f4] flex items-center justify-center px-2 py-4 sm:px-4 sm:py-6 md:py-10">
+      <div className="w-full max-w-[1280px] grid grid-cols-1 lg:grid-cols-[0.94fr_1.06fr] gap-4 sm:gap-6 items-stretch">
+        <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col justify-center">
+          <div className="flex flex-col items-center mb-5 sm:mb-6 md:mb-8">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#eef5d8] flex items-center justify-center mb-3 sm:mb-4">
               <img src={avocadoLogo} alt="logo" className="w-8 h-8" />
             </div>
 
-            <h1 className="text-2xl font-semibold text-gray-800" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-800" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
               Sign in
             </h1>
-            <p className="text-gray-500 text-sm text-center max-w-md" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            <p className="text-gray-500 text-xs sm:text-sm text-center max-w-md mt-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
               Use your phone number with the password from registration, or sign in with a code sent to your phone. If you have not registered
               yet, create an account first and wait for admin approval.
             </p>
           </div>
 
           <div
-            className="mb-6 flex rounded-xl border border-[#e5e7eb] p-1 bg-[#f9fafb]"
+            className="mb-5 sm:mb-6 flex rounded-xl border border-[#e5e7eb] p-1 bg-[#f9fafb]"
             role="tablist"
             aria-label="Sign-in method"
           >
@@ -118,7 +118,7 @@ export function Login() {
               type="button"
               role="tab"
               aria-selected={signInMode === 'password'}
-              className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition ${
+              className={`flex-1 rounded-lg py-2 text-xs sm:py-2.5 sm:text-sm font-medium transition ${
                 signInMode === 'password' ? 'bg-white text-[#1B4332] shadow-sm' : 'text-gray-600 hover:text-gray-800'
               }`}
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
@@ -130,7 +130,7 @@ export function Login() {
               type="button"
               role="tab"
               aria-selected={signInMode === 'otp'}
-              className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition ${
+              className={`flex-1 rounded-lg py-2 text-xs sm:py-2.5 sm:text-sm font-medium transition ${
                 signInMode === 'otp' ? 'bg-white text-[#1B4332] shadow-sm' : 'text-gray-600 hover:text-gray-800'
               }`}
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
@@ -140,7 +140,7 @@ export function Login() {
             </button>
           </div>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
             {signInMode === 'password' ? (
               <>
                 <div>
@@ -158,7 +158,7 @@ export function Login() {
                         autoComplete: 'username'
                       }}
                       containerClass="w-full"
-                      inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-6 !pl-12 !pr-4 !h-auto !text-base"
+                      inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-5 sm:!py-6 !pl-12 !pr-3 sm:!pr-4 !h-auto !text-sm sm:!text-base"
                       buttonClass="!bg-transparent !border-transparent !rounded-l-lg"
                     />
                   </div>
@@ -177,7 +177,7 @@ export function Login() {
                 <div className="flex justify-end">
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-green-700 hover:underline font-medium"
+                    className="text-xs sm:text-sm text-green-700 hover:underline font-medium"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                   >
                     Forgot password?
@@ -201,7 +201,7 @@ export function Login() {
                         autoComplete: 'tel'
                       }}
                       containerClass="w-full"
-                      inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-6 !pl-12 !pr-4 !h-auto !text-base"
+                      inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-5 sm:!py-6 !pl-12 !pr-3 sm:!pr-4 !h-auto !text-sm sm:!text-base"
                       buttonClass="!bg-transparent !border-transparent !rounded-l-lg"
                     />
                   </div>
@@ -285,7 +285,7 @@ export function Login() {
             <button
               type="submit"
               disabled={!canSubmit || submitting}
-              className="w-full bg-gradient-to-r from-[#4fa36c] to-[#3c8f5a] text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-[#4fa36c] to-[#3c8f5a] text-white py-2.5 sm:py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
             >
               {submitting
@@ -303,14 +303,14 @@ export function Login() {
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+          <div className="mt-5 sm:mt-6 text-center text-xs sm:text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
             New here?{' '}
             <Link to="/register" className="text-green-600 font-medium hover:underline">
               Create an account
             </Link>
           </div>
 
-          <p className="mt-3 text-center text-xs text-gray-500" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+          <p className="mt-2 sm:mt-3 text-center text-[11px] sm:text-xs text-gray-500" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
             To sign out or use another account, open your profile menu (top right) → <strong>Sign out</strong> or{' '}
             <strong>Switch account</strong>.
           </p>
@@ -326,7 +326,9 @@ export function Login() {
           ) : null}
         </div>
 
-        <AuthBrandingPanel />
+        <div className="hidden lg:block">
+          <AuthBrandingPanel />
+        </div>
       </div>
     </div>
   );

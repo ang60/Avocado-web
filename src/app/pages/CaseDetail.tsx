@@ -5,19 +5,24 @@ import {
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router';
 import { getApiErrorMessage } from '../api/errors';
-import { fetchCaseDetail } from '../api/realApi';
+import { fetchCaseDetail, mapVerifiedCaseResponseToDetail, verifyAndCloseCase } from '../api/realApi';
 import type { CaseDetailPayload } from '../api/types';
 
 export function CaseDetail() {
   const { caseId } = useParams();
   const navigate = useNavigate();
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState('avocado-thrips');
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
   const [chemicalGateUnlocked, setChemicalGateUnlocked] = useState(false);
   const [selectedIPMSteps, setSelectedIPMSteps] = useState<string[]>([]);
   const [phiDays, setPhiDays] = useState('14');
+  const [recommendedChemical, setRecommendedChemical] = useState('');
+  const [applicationRate, setApplicationRate] = useState('');
   const [showDraftModal, setShowDraftModal] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'kiswahili'>('english');
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [showVerifySuccessModal, setShowVerifySuccessModal] = useState(false);
+  const [verifySubmitting, setVerifySubmitting] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
   const [data, setData] = useState<CaseDetailPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +45,69 @@ export function CaseDetail() {
       cancelled = true;
     };
   }, [caseId]);
+
+  // Keep diagnosis selection in sync with the currently opened case.
+  // This must be declared BEFORE early returns (loading/error), otherwise
+  // React throws "Rendered more hooks than during the previous render".
+  const pestDiseaseKnowledgeBaseForSelection = [
+    { value: 'false-codling-moth', label: 'False Codling Moth' },
+    { value: 'avocado-thrips', label: 'Avocado Thrips' },
+    { value: 'phytophthora-root-rot', label: 'Phytophthora Root Rot' },
+    { value: 'anthracnose', label: 'Anthracnose' },
+    { value: 'persea-mite', label: 'Persea Mite' },
+  ];
+
+  const normalizeDiagnosisTextForSelection = (input: string) => {
+    return (input || '')
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+      .replace(/[^a-zA-Z0-9]+/g, ' ')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  };
+
+  useEffect(() => {
+    if (!data?.id) return;
+
+    const caseDiagnosisText = String(data.pestDisease ?? '').trim();
+    const fallbackDiagnosisValue = pestDiseaseKnowledgeBaseForSelection[1]?.value ?? 'avocado-thrips';
+    const normalizedCaseDiagnosis = normalizeDiagnosisTextForSelection(caseDiagnosisText);
+
+    const matchedDiagnosisOption =
+      pestDiseaseKnowledgeBaseForSelection.find(
+        (o) =>
+          normalizeDiagnosisTextForSelection(o.value) === normalizedCaseDiagnosis ||
+          normalizeDiagnosisTextForSelection(o.label) === normalizedCaseDiagnosis,
+      ) ?? null;
+
+    const nextDiagnosisValue = caseDiagnosisText
+      ? matchedDiagnosisOption
+        ? matchedDiagnosisOption.value
+        : '__custom__'
+      : fallbackDiagnosisValue;
+
+    setSelectedDiagnosis(nextDiagnosisValue);
+    // Reset UI when switching between cases.
+    setSelectedIPMSteps([]);
+    setChemicalGateUnlocked(false);
+    setPhiDays('14');
+    setRecommendedChemical('');
+    setApplicationRate('');
+    setShowDraftModal(false);
+    setShowVerifyModal(false);
+    setShowVerifySuccessModal(false);
+    setVerifyError(null);
+  }, [data?.id, data?.pestDisease]);
+
+  useEffect(() => {
+    if (!showVerifySuccessModal) return;
+    const timeoutId = window.setTimeout(() => {
+      navigate('/case-management');
+    }, 1600);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [navigate, showVerifySuccessModal]);
 
   if (loading) {
     return (
@@ -68,6 +136,62 @@ export function CaseDetail() {
     { value: 'anthracnose', label: 'Anthracnose' },
     { value: 'persea-mite', label: 'Persea Mite' },
   ];
+
+  const normalizeDiagnosisText = (input: string) => {
+    // Remove emoji characters and normalize to a comparable “words-only” string.
+    return (input || '')
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+      .replace(/[^a-zA-Z0-9]+/g, ' ')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  };
+
+  const caseDiagnosisText = String(caseData.pestDisease ?? '').trim();
+  const fallbackDiagnosisValue = pestDiseaseKnowledgeBase[1]?.value ?? 'avocado-thrips';
+  const normalizedCaseDiagnosis = normalizeDiagnosisText(caseDiagnosisText);
+
+  const matchedDiagnosisOption =
+    pestDiseaseKnowledgeBase.find(
+      (o) =>
+        normalizeDiagnosisText(o.value) === normalizedCaseDiagnosis ||
+        normalizeDiagnosisText(o.label) === normalizedCaseDiagnosis,
+    ) ?? null;
+
+  const selectedDiagnosisValue = caseDiagnosisText
+    ? matchedDiagnosisOption
+      ? matchedDiagnosisOption.value
+      : '__custom__'
+    : fallbackDiagnosisValue;
+
+  const diagnosisOptions =
+    caseDiagnosisText && !matchedDiagnosisOption
+      ? [...pestDiseaseKnowledgeBase, { value: '__custom__', label: caseDiagnosisText }]
+      : pestDiseaseKnowledgeBase;
+
+  const selectedDiagnosisLabel =
+    diagnosisOptions.find((p) => p.value === selectedDiagnosis)?.label ??
+    caseDiagnosisText ??
+    'Field diagnosis';
+
+  const currentMatchedDiagnosisOption =
+    pestDiseaseKnowledgeBase.find((o) => o.value === selectedDiagnosis) ?? null;
+
+  const severityBadge = (() => {
+    const severity = String(caseData.severity ?? 'unknown').toLowerCase();
+    if (severity === 'high') return { label: 'High Severity', bg: '#FEE2E2', text: '#DC2626' };
+    if (severity === 'medium') return { label: 'Medium Severity', bg: '#FEF3C7', text: '#B45309' };
+    if (severity === 'low') return { label: 'Low Severity', bg: '#DCFCE7', text: '#166534' };
+    return { label: 'Unknown Severity', bg: '#F3F4F6', text: '#6B7280' };
+  })();
+
+  const statusBadge = (() => {
+    const status = String(caseData.caseStatus ?? 'new').toLowerCase();
+    if (status === 'under_review') return { label: 'Under Review', bg: '#FEF3C7', text: '#B45309' };
+    if (status === 'verified') return { label: 'Advisory Issued', bg: '#DBEAFE', text: '#1D4ED8' };
+    if (status === 'closed') return { label: 'Closed', bg: '#DCFCE7', text: '#166534' };
+    return { label: 'New', bg: '#E0E7FF', text: '#4338CA' };
+  })();
 
   const ipmSteps = [
     { id: 'pruning', label: 'Pruning affected branches', category: 'Cultural Control' },
@@ -102,7 +226,7 @@ export function CaseDetail() {
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <h1 
                     className="text-3xl"
                     style={{ 
@@ -115,14 +239,26 @@ export function CaseDetail() {
                   <span
                     className="px-3 py-1 rounded text-xs uppercase"
                     style={{
-                      backgroundColor: '#FEE2E2',
-                      color: '#DC2626',
+                      backgroundColor: severityBadge.bg,
+                      color: severityBadge.text,
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       borderRadius: '8px',
                       fontWeight: '600',
                     }}
                   >
-                    HIGH SEVERITY
+                    {severityBadge.label}
+                  </span>
+                  <span
+                    className="px-3 py-1 rounded text-xs uppercase"
+                    style={{
+                      backgroundColor: statusBadge.bg,
+                      color: statusBadge.text,
+                      fontFamily: 'IBM Plex Sans, sans-serif',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                    }}
+                  >
+                    {statusBadge.label}
                   </span>
                 </div>
                 
@@ -360,7 +496,7 @@ export function CaseDetail() {
               </label>
               <div className="relative mb-4">
                 <select
-                  value={selectedDiagnosis}
+                  value={selectedDiagnosis || selectedDiagnosisValue}
                   onChange={(e) => setSelectedDiagnosis(e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border outline-none appearance-none"
                   style={{
@@ -371,7 +507,7 @@ export function CaseDetail() {
                     color: '#1B4332',
                   }}
                 >
-                  {pestDiseaseKnowledgeBase.map((item) => (
+                  {diagnosisOptions.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
@@ -392,7 +528,9 @@ export function CaseDetail() {
                   Knowledge Base Match
                 </p>
                 <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1E40AF' }}>
-                  Based on symptoms, this matches False Codling Moth profile with 94% confidence.
+                  {currentMatchedDiagnosisOption
+                    ? `Based on symptoms, this matches ${currentMatchedDiagnosisOption.label} profile.`
+                    : `Using case pest/disease value: ${caseDiagnosisText || 'Field diagnosis'}.`}
                 </p>
               </div>
             </div>
@@ -539,6 +677,8 @@ export function CaseDetail() {
                   <input
                     type="text"
                     placeholder="e.g., Spinosad 480 g/L SC"
+                      value={recommendedChemical}
+                      onChange={(e) => setRecommendedChemical(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg border outline-none"
                     style={{
                       fontFamily: 'IBM Plex Sans, sans-serif',
@@ -558,6 +698,8 @@ export function CaseDetail() {
                     <input
                       type="text"
                       placeholder="e.g., 100ml per 20L water"
+                      value={applicationRate}
+                      onChange={(e) => setApplicationRate(e.target.value)}
                       className="w-full px-4 py-3 rounded-lg border outline-none"
                       style={{
                         fontFamily: 'IBM Plex Sans, sans-serif',
@@ -899,7 +1041,7 @@ export function CaseDetail() {
                     <p className="text-sm leading-relaxed" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                       <strong>AvoGuard Advisory - {caseData.id}</strong><br /><br />
                       
-                      Diagnosis: {pestDiseaseKnowledgeBase.find(p => p.value === selectedDiagnosis)?.label || 'Avocado Thrips'}<br /><br />
+                      Diagnosis: {selectedDiagnosisLabel}<br /><br />
                       
                       Recommended Actions:<br />
                       {selectedIPMSteps.length > 0 ? (
@@ -994,6 +1136,17 @@ export function CaseDetail() {
                   </div>
                 </div>
               </div>
+
+              {verifyError ? (
+                <div
+                  className="p-3 rounded-lg border-l-4"
+                  style={{ backgroundColor: '#FEF2F2', borderLeftColor: '#DC2626' }}
+                >
+                  <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#991B1B' }}>
+                    {verifyError}
+                  </p>
+                </div>
+              ) : null}
             </div>
 
             {/* Modal Footer */}
@@ -1185,7 +1338,7 @@ export function CaseDetail() {
                     <p className="text-sm leading-relaxed" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                       <strong>AvoGuard Advisory - {caseData.id}</strong><br /><br />
                       
-                      Diagnosis: {pestDiseaseKnowledgeBase.find(p => p.value === selectedDiagnosis)?.label || 'Avocado Thrips'}<br /><br />
+                      Diagnosis: {selectedDiagnosisLabel}<br /><br />
                       
                       Recommended Actions:<br />
                       {selectedIPMSteps.length > 0 ? (
@@ -1299,22 +1452,88 @@ export function CaseDetail() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // Simulate sending SMS
-                  alert(`Advisory sent to ${caseData.farmerName} at ${caseData.farmerPhone}`);
-                  setShowVerifyModal(false);
+                disabled={verifySubmitting}
+                onClick={async () => {
+                  const diagnosis =
+                    diagnosisOptions.find((p) => p.value === selectedDiagnosis)?.label ??
+                    selectedDiagnosisLabel ??
+                    'Field diagnosis';
+                  let recommended_actions = selectedIPMSteps.length
+                    ? selectedIPMSteps
+                        .map((stepId) => ipmSteps.find((s) => s.id === stepId)?.label)
+                        .filter((x): x is string => Boolean(x))
+                    : ['Conduct follow-up scouting and reinforce farm sanitation.'];
+
+                  // Keep SMS details aligned with the dashboard chemical gate.
+                  if (chemicalGateUnlocked) {
+                    const chem = recommendedChemical.trim();
+                    const rate = applicationRate.trim();
+                    const chemicalAction = chem && rate
+                      ? `Chemical Treatment (Gated): Active ingredient: ${chem}. Application rate: ${rate}. PHI: ${phiDays} days before harvest.`
+                      : `Chemical Treatment (Gated): Follow label instructions. PHI: ${phiDays} days before harvest.`;
+
+                    recommended_actions = [...recommended_actions, chemicalAction];
+                  }
+                  try {
+                    setVerifySubmitting(true);
+                    setVerifyError(null);
+                    const result = await verifyAndCloseCase({
+                      caseId: caseData.id,
+                      diagnosis,
+                      recommended_actions,
+                    });
+                    setData(mapVerifiedCaseResponseToDetail(result.case));
+                    setShowVerifyModal(false);
+                    setShowVerifySuccessModal(true);
+                  } catch (e: unknown) {
+                    setVerifyError(getApiErrorMessage(e, 'Could not verify and close this case.'));
+                  } finally {
+                    setVerifySubmitting(false);
+                  }
                 }}
                 className="px-6 py-3 rounded-lg transition-colors hover:opacity-90 flex items-center gap-2"
                 style={{
-                  backgroundColor: '#2D6A4F',
+                  backgroundColor: verifySubmitting ? '#9CA3AF' : '#2D6A4F',
                   color: '#FFFFFF',
                   fontFamily: 'IBM Plex Sans, sans-serif',
                 }}
               >
                 <Send className="w-4 h-4" />
-                Send Advisory to Farmer
+                {verifySubmitting ? 'Sending...' : 'Send Advisory to Farmer'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showVerifySuccessModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+        >
+          <div
+            className="w-full max-w-md rounded-lg p-6 text-center"
+            style={{ backgroundColor: '#FFFFFF', borderRadius: '12px' }}
+          >
+            <div
+              className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+              style={{ backgroundColor: '#DCFCE7' }}
+            >
+              <CheckCircle className="h-7 w-7" style={{ color: '#166534' }} />
+            </div>
+            <h3
+              className="mb-2 text-xl"
+              style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
+            >
+              Case closed successfully
+            </h3>
+            <p
+              className="text-sm"
+              style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}
+            >
+              The diagnosis and remedies have been saved, the farmer has been notified, and you will be returned to
+              Case Management shortly.
+            </p>
           </div>
         </div>
       )}

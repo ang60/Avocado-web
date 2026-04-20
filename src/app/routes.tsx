@@ -89,6 +89,11 @@ export const router = createBrowserRouter([
         Component: lazyRoute(() => import('./pages/Dashboard'), 'Dashboard'),
       },
       {
+        path: 'agronomist-reports',
+        loader: requireNavPermission('nav.reports'),
+        Component: lazyRoute(() => import('./pages/AgronomistReports'), 'AgronomistReports'),
+      },
+      {
         path: 'no-access',
         loader: requireAuthLoader,
         Component: lazyRoute(() => import('./pages/NoAccess'), 'NoAccess'),
@@ -116,7 +121,77 @@ export const router = createBrowserRouter([
       {
         path: 'kephis-quarantine',
         loader: requireNavPermission('nav.kephis'),
-        Component: lazyRoute(() => import('./pages/KEPHISQuarantine'), 'KEPHISQuarantine'),
+        Component: lazyRoute(() => import('./pages/KEPHISDashboard'), 'KEPHISDashboard'),
+      },
+      {
+        path: 'kephis-quarantine/surveillance',
+        loader: () => {
+          const gate = requireNavPermission('nav.kephis')();
+          if (gate) return gate;
+          return redirect('/kephis-quarantine');
+        },
+        Component: lazyRoute(() => import('./pages/KEPHISDashboard'), 'KEPHISDashboard'),
+      },
+      {
+        path: 'kephis-quarantine/incidents',
+        loader: () => {
+          const gate = requireNavPermission('nav.kephis')();
+          if (gate) return gate;
+          return redirect('/kephis-quarantine');
+        },
+        Component: lazyRoute(() => import('./pages/KEPHISDashboard'), 'KEPHISDashboard'),
+      },
+      {
+        path: 'kephis-quarantine/traceability',
+        loader: () => {
+          const gate = requireNavPermission('nav.kephis')();
+          if (gate) return gate;
+          return redirect('/kephis-quarantine');
+        },
+        Component: lazyRoute(() => import('./pages/KEPHISDashboard'), 'KEPHISDashboard'),
+      },
+      {
+        path: 'kephis-quarantine/standards',
+        loader: () => {
+          const gate = requireNavPermission('nav.kephis')();
+          if (gate) return gate;
+          return redirect('/kephis-quarantine');
+        },
+        Component: lazyRoute(() => import('./pages/KEPHISDashboard'), 'KEPHISDashboard'),
+      },
+      {
+        path: 'kephis-quarantine/human-audit',
+        loader: () => {
+          const gate = requireNavPermission('nav.kephis')();
+          if (gate) return gate;
+          return redirect('/kephis-quarantine');
+        },
+        Component: lazyRoute(() => import('./pages/KEPHISDashboard'), 'KEPHISDashboard'),
+      },
+      {
+        path: 'kephis-quarantine/export-reports',
+        loader: requireNavPermission('nav.kephis'),
+        Component: lazyRoute(() => import('./pages/KEPHISExportReports'), 'KEPHISExportReports'),
+      },
+      {
+        path: 'kephis-quarantine/risk-intelligence',
+        loader: requireNavPermission('nav.kephis'),
+        Component: lazyRoute(() => import('./pages/KEPHISDashboard'), 'KEPHISDashboard'),
+      },
+      {
+        path: 'kephis-quarantine/alerts',
+        loader: requireNavPermission('nav.kephis'),
+        Component: lazyRoute(() => import('./pages/KEPHISAlerts'), 'KEPHISAlerts'),
+      },
+      {
+        path: 'kephis-quarantine/chain-of-custody',
+        loader: requireNavPermission('nav.kephis'),
+        Component: lazyRoute(() => import('./pages/KEPHISChainOfCustody'), 'KEPHISChainOfCustody'),
+      },
+      {
+        path: 'kephis-quarantine/threshold-settings',
+        loader: requireNavPermission('nav.kephis'),
+        Component: lazyRoute(() => import('./pages/KEPHISThresholdSettings'), 'KEPHISThresholdSettings'),
       },
       {
         path: 'hcda-registry',
@@ -137,6 +212,16 @@ export const router = createBrowserRouter([
         path: 'knowledge-base/:articleId',
         loader: requireNavPermission('nav.knowledge'),
         Component: lazyRoute(() => import('./pages/KBArticleDetail'), 'KBArticleDetail'),
+      },
+      {
+        path: 'my-farm-blocks',
+        loader: requireNavPermission('nav.scouting'),
+        Component: lazyRoute(() => import('./pages/MyFarmBlocks'), 'MyFarmBlocks'),
+      },
+      {
+        path: 'compliance-permits',
+        loader: requireNavPermission('nav.reports'),
+        Component: lazyRoute(() => import('./pages/CompliancePermits'), 'CompliancePermits'),
       },
       {
         path: 'symptom-codebook',

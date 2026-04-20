@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import FarmBlock, WeeklyRecord
+from .models import FarmBlock, WeeklyRecord, ScoutingReview, ScoutingSession
 from drf_spectacular.utils import extend_schema_field
 
 
@@ -12,14 +12,31 @@ class FarmBlockSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'timestamp', 'farmer')
 
 
+class ScoutingSessionSerializer(serializers.ModelSerializer):
+    block_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        write_only=True,
+        required=False,
+        allow_empty=True,
+    )
+    record_count = serializers.IntegerField(source='records.count', read_only=True)
+
+    class Meta:
+        model = ScoutingSession
+        fields = '__all__'
+        read_only_fields = ('id', 'farmer', 'started_at', 'completed_at', 'updated_at', 'record_count')
+
+
 class WeeklyRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = WeeklyRecord
         fields = '__all__'
-        read_only_fields = ('id', 'timestamp')
+        read_only_fields = ('id', 'timestamp', 'farmer')
 
 
 class ScoutingReportSerializer(serializers.ModelSerializer):
+    farmerId = serializers.UUIDField(source='farmer.id', read_only=True)
+    blockUuid = serializers.UUIDField(source='block.id', read_only=True)
     farmName = serializers.CharField(source='farmer.entity.company_name', default='Individual Farmer')
     blockId = serializers.CharField(source='block.block_name')
     farmerName = serializers.SerializerMethodField()
@@ -29,16 +46,36 @@ class ScoutingReportSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     mediaPreview = serializers.SerializerMethodField()
     timestamp = serializers.SerializerMethodField()
-    reviewed = serializers.CharField(default='new')
+    # UI uses `reviewed` as a workflow state:
+    # - 'new' => needs review (no triage_review yet)
+    # - 'under-review' => review exists but not confirmed
+    # - 'reviewed' => confirmed review exists
+    reviewed = serializers.SerializerMethodField()
     county = serializers.CharField(source='farmer.county')
     assignedTo = serializers.SerializerMethodField()
+    triageStatus = serializers.SerializerMethodField()
+    triageLabel = serializers.SerializerMethodField()
+    triagedAt = serializers.SerializerMethodField()
+    auditFlags = serializers.SerializerMethodField()
+    rawTimestamp = serializers.SerializerMethodField()
+    pestsObservedList = serializers.ListField(source='pests_observed_list', child=serializers.CharField(), read_only=True)
+    diseasesObservedList = serializers.ListField(source='disease_list', child=serializers.CharField(), read_only=True)
+    beneficialInsectsObservedList = serializers.ListField(source='beneficial_insects_observed_list', child=serializers.CharField(), read_only=True)
+    pestPlantPartsAffectedList = serializers.ListField(source='pest_plant_parts_affected_list', child=serializers.CharField(), read_only=True)
+    diseasePlantPartsAffectedList = serializers.ListField(source='disease_plant_parts_list', child=serializers.CharField(), read_only=True)
+    actionsTakenList = serializers.ListField(source='actions_taken_list', child=serializers.CharField(), read_only=True)
+    outcomeList = serializers.ListField(source='outcome_list', child=serializers.CharField(), read_only=True)
+    rawPayload = serializers.JSONField(source='raw_payload', read_only=True)
 
     class Meta:
         model = WeeklyRecord
         fields = [
-            'id', 'farmName', 'blockId', 'farmerName', 'severity', 'source',
+            'id', 'farmerId', 'blockUuid', 'farmName', 'blockId', 'farmerName', 'severity', 'source',
             'finding', 'status', 'mediaPreview', 'timestamp', 'reviewed',
-            'county', 'assignedTo'
+            'county', 'assignedTo', 'triageStatus', 'triageLabel', 'triagedAt', 'auditFlags', 'rawTimestamp',
+            'pestsObservedList', 'diseasesObservedList', 'beneficialInsectsObservedList',
+            'pestPlantPartsAffectedList', 'diseasePlantPartsAffectedList',
+            'actionsTakenList', 'outcomeList', 'rawPayload'
         ]
 
     @extend_schema_field(serializers.CharField())
@@ -57,10 +94,14 @@ class ScoutingReportSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.CharField())
     def get_finding(self, obj):
         findings = []
-        if obj.any_pests_observed == 'Yes' and obj.pests_observed:
-            findings.append(obj.pests_observed)
-        if obj.any_diseases_observed == 'Yes' and obj.disease:
-            findings.append(obj.disease)
+        if obj.any_pests_observed == 'Yes':
+            findings.extend([x for x in (obj.pests_observed_list or []) if x])
+            if obj.pests_observed and obj.pests_observed not in findings:
+                findings.append(obj.pests_observed)
+        if obj.any_diseases_observed == 'Yes':
+            findings.extend([x for x in (obj.disease_list or []) if x and x not in findings])
+            if obj.disease and obj.disease not in findings:
+                findings.append(obj.disease)
 
         if not findings:
             return "No Pests Found"
@@ -88,4 +129,75 @@ class ScoutingReportSerializer(serializers.ModelSerializer):
         if obj.farmer.entity and obj.farmer.entity.head_agronomist:
             return obj.farmer.entity.head_agronomist
         return None
+
+    @extend_schema_field(serializers.CharField())
+    def get_triageStatus(self, obj):
+        review = getattr(obj, 'triage_review', None)
+        return review.review_status if review else 'pending'
+
+    @extend_schema_field(serializers.CharField())
+    def get_reviewed(self, obj):
+        review = getattr(obj, 'triage_review', None)
+        if not review:
+            return 'new'
+
+        if review.review_status in ('pending', 'needs_follow_up'):
+            return 'under-review'
+
+        if review.review_status == 'confirmed':
+            return 'reviewed'
+
+        # Fallback for any unexpected state values.
+        return 'under-review'
+
+    @extend_schema_field(serializers.CharField())
+    def get_triageLabel(self, obj):
+        review = getattr(obj, 'triage_review', None)
+        return review.identified_label if review else None
+
+    @extend_schema_field(serializers.CharField())
+    def get_triagedAt(self, obj):
+        review = getattr(obj, 'triage_review', None)
+        if not review:
+            return None
+        return review.reviewed_at.isoformat()
+
+    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    def get_auditFlags(self, obj):
+        flags = []
+        if not obj.voice_note:
+            flags.append('missing_media')
+        if obj.end_date < obj.start_date:
+            flags.append('invalid_window')
+        if obj.gps_latitude is None or obj.gps_longitude is None:
+            flags.append('missing_gps')
+        if obj.pests_per_trap == 0 and obj.any_pests_observed == 'Yes':
+            flags.append('inconsistent_capture')
+        return flags
+
+    @extend_schema_field(serializers.CharField())
+    def get_rawTimestamp(self, obj):
+        return obj.timestamp.isoformat()
+
+
+class ScoutingReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScoutingReview
+        fields = [
+            'id',
+            'record',
+            'reviewed_by',
+            'identified_label',
+            'management_protocol',
+            'review_status',
+            'training_tagged',
+            'review_notes',
+            'pushed_to_farmer',
+            'reviewed_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'reviewed_by', 'reviewed_at', 'updated_at']
+        extra_kwargs = {
+            'record': {'read_only': True},
+        }
 

@@ -1,11 +1,23 @@
 
 import { KEPHISRiskIntelTab } from '../components/KEPHISRiskIntelTab';
-import { Shield, AlertTriangle, CheckCircle, Clock, Download, FileText, Search, Eye, FileCheck, History, X, Calendar, MoreVertical, XCircle, TrendingUp } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Clock, Download, FileText, Search, Eye, FileCheck, History, X, Calendar, MoreVertical, XCircle, TrendingUp, Bell } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { TableScroll } from '../components/TableScroll';
 import { OptimizedImage } from '../components/OptimizedImage';
-import { fetchKephisQuarantineBlocks } from '../api/realApi';
+import { fetchKephisQuarantineBlocks, openKephisExportCsv } from '../api/realApi';
 import { getApiErrorMessage } from '../api/errors';
+import { getAuthUser } from '../auth';
+
+export type KEPHISQuarantineEmbedTab = 'quarantine' | 'risk-intel' | 'alerts';
+
+export type KEPHISQuarantineProps = {
+  /** When true, tab switches do not navigate to /kephis-quarantine/* (for Agronomist dashboard embed). */
+  embedMode?: boolean;
+  embedActiveTab?: KEPHISQuarantineEmbedTab;
+  onEmbedTabChange?: (tab: KEPHISQuarantineEmbedTab) => void;
+  hideAlertsTab?: boolean;
+};
 
 interface QuarantineBlock {
   id: string;
@@ -143,8 +155,16 @@ const mockQuarantineData: QuarantineBlock[] = [
   },
 ];
 
-export function KEPHISQuarantine() {
-  const [activeTab, setActiveTab] = useState<'quarantine' | 'risk-intel'>('quarantine');
+export function KEPHISQuarantine(props?: KEPHISQuarantineProps) {
+  const {
+    embedMode = false,
+    embedActiveTab = 'quarantine',
+    onEmbedTabChange,
+    hideAlertsTab = false,
+  } = props ?? {};
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'quarantine' | 'risk-intel' | 'alerts'>('quarantine');
   const [blocks, setBlocks] = useState<QuarantineBlock[]>(mockQuarantineData);
   const [blocksLoading, setBlocksLoading] = useState(true);
   const [blocksError, setBlocksError] = useState<string | null>(null);
@@ -157,6 +177,15 @@ export function KEPHISQuarantine() {
   const [bulkPermitModalOpen, setBulkPermitModalOpen] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<QuarantineBlock | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const authUser = getAuthUser();
+  const roleName = (authUser?.role_details?.role_name || authUser?.role?.role_name || '').toLowerCase();
+  const canManageKephis = Boolean(
+    authUser?.is_privileged ||
+      roleName.includes('kephis') ||
+      roleName.includes('administrator') ||
+      roleName.includes('admin')
+  );
+  const canIssuePermits = Boolean(canManageKephis || roleName.includes('agronomist'));
 
   useEffect(() => {
     let cancelled = false;
@@ -179,6 +208,25 @@ export function KEPHISQuarantine() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (embedMode) {
+      setActiveTab(embedActiveTab);
+    }
+  }, [embedMode, embedActiveTab]);
+
+  useEffect(() => {
+    if (embedMode) return;
+    if (location.pathname === '/kephis-quarantine/risk-intelligence') {
+      setActiveTab('risk-intel');
+      return;
+    }
+    if (location.pathname === '/kephis-quarantine/alerts') {
+      setActiveTab('alerts');
+      return;
+    }
+    setActiveTab('quarantine');
+  }, [location.pathname, embedMode]);
 
   const gatedCount = blocks.filter(b => b.kephisStatus === 'gated').length;
   const clearedCount = blocks.filter(b => b.kephisStatus === 'cleared').length;
@@ -234,11 +282,11 @@ export function KEPHISQuarantine() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'gated':
-        return { bg: '#C0392B', text: '#FFFFFF' };
+        return { bg: '#C7372F', text: '#FFFFFF' };
       case 'cleared':
-        return { bg: '#2D6A4F', text: '#FFFFFF' };
+        return { bg: '#2F7A5A', text: '#FFFFFF' };
       case 'pending':
-        return { bg: '#F39C12', text: '#FFFFFF' };
+        return { bg: '#E8A21A', text: '#FFFFFF' };
       default:
         return { bg: '#717182', text: '#FFFFFF' };
     }
@@ -293,13 +341,27 @@ export function KEPHISQuarantine() {
               {blocksError} (showing last known data)
             </p>
           ) : null}
+          {!canIssuePermits ? (
+            <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#b45309' }}>
+              KEPHIS data is locked in read-only mode for your account.
+            </p>
+          ) : null}
+          {canIssuePermits && !canManageKephis ? (
+            <p className="mt-2 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              You can issue digital movement permits for export-cleared blocks. Regulatory restrictions are managed by KEPHIS.
+            </p>
+          ) : null}
         </div>
 
         {/* Tabs */}
         <div className="mb-4 border-b sm:mb-5" style={{ borderColor: '#E0DDD6' }}>
           <div className="flex gap-1">
             <button
-              onClick={() => setActiveTab('quarantine')}
+              onClick={() => {
+                setActiveTab('quarantine');
+                if (embedMode) onEmbedTabChange?.('quarantine');
+                else navigate('/kephis-quarantine');
+              }}
               className="px-6 py-3 font-semibold transition-all relative"
               style={{
                 fontFamily: 'IBM Plex Sans, sans-serif',
@@ -312,7 +374,11 @@ export function KEPHISQuarantine() {
               Quarantine Management
             </button>
             <button
-              onClick={() => setActiveTab('risk-intel')}
+              onClick={() => {
+                setActiveTab('risk-intel');
+                if (embedMode) onEmbedTabChange?.('risk-intel');
+                else navigate('/kephis-quarantine/risk-intelligence');
+              }}
               className="px-6 py-3 font-semibold transition-all relative"
               style={{
                 fontFamily: 'IBM Plex Sans, sans-serif',
@@ -324,6 +390,25 @@ export function KEPHISQuarantine() {
               <TrendingUp className="w-4 h-4 inline mr-2" />
               Risk Intelligence
             </button>
+            {!hideAlertsTab ? (
+              <button
+                onClick={() => {
+                  setActiveTab('alerts');
+                  if (embedMode) onEmbedTabChange?.('alerts');
+                  else navigate('/kephis-quarantine/alerts');
+                }}
+                className="px-6 py-3 font-semibold transition-all relative"
+                style={{
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  color: activeTab === 'alerts' ? '#1B4332' : '#717182',
+                  backgroundColor: 'transparent',
+                  borderBottom: activeTab === 'alerts' ? '3px solid #2D6A4F' : '3px solid transparent',
+                }}
+              >
+                <Bell className="w-4 h-4 inline mr-2" />
+                Alerts
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -477,14 +562,15 @@ export function KEPHISQuarantine() {
 
         {/* Filters and Actions */}
         <div 
-          className="p-6 rounded-lg mb-6"
+          className="p-4 rounded-lg mb-6"
           style={{ 
             backgroundColor: '#FFFFFF',
             border: '1px solid #E0DDD6',
+            borderRadius: '12px',
           }}
         >
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1">
               {/* Search */}
               <div className="relative flex-1 max-w-md">
                 <Search 
@@ -509,7 +595,7 @@ export function KEPHISQuarantine() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 rounded-lg border"
+                className="px-3 py-2 rounded-lg border"
                 style={{
                   fontFamily: 'IBM Plex Sans, sans-serif',
                   borderColor: '#E0DDD6',
@@ -523,19 +609,19 @@ export function KEPHISQuarantine() {
               </select>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Bulk Action Button */}
               <button
                 onClick={handleBulkAction}
-                disabled={selectedCount === 0}
-                className="px-4 py-2 rounded-lg flex items-center gap-2 transition-all"
+                disabled={!canIssuePermits || selectedCount === 0}
+                className="px-3 py-2 rounded-lg flex items-center gap-2 transition-all"
                 style={{
-                  backgroundColor: selectedCount > 0 ? '#2D6A4F' : '#E0DDD6',
+                  backgroundColor: canIssuePermits && selectedCount > 0 ? '#2D6A4F' : '#E0DDD6',
                   color: '#FFFFFF',
                   fontFamily: 'IBM Plex Sans, sans-serif',
                   border: 'none',
-                  cursor: selectedCount > 0 ? 'pointer' : 'not-allowed',
-                  opacity: selectedCount > 0 ? 1 : 0.6,
+                  cursor: canIssuePermits && selectedCount > 0 ? 'pointer' : 'not-allowed',
+                  opacity: canIssuePermits && selectedCount > 0 ? 1 : 0.6,
                 }}
               >
                 <FileText className="w-4 h-4" />
@@ -544,7 +630,8 @@ export function KEPHISQuarantine() {
 
               {/* Export Button */}
               <button
-                className="px-4 py-2 rounded-lg flex items-center gap-2 border transition-all hover:bg-gray-50"
+                onClick={openKephisExportCsv}
+                className="px-3 py-2 rounded-lg flex items-center gap-2 border transition-all hover:bg-gray-50"
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderColor: '#E0DDD6',
@@ -565,24 +652,27 @@ export function KEPHISQuarantine() {
           style={{ 
             backgroundColor: '#FFFFFF',
             borderColor: '#E0DDD6',
+            borderRadius: '12px',
           }}
         >
           <TableScroll>
             <table className="w-full min-w-[1000px]">
               <thead>
                 <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '2px solid #E0DDD6' }}>
-                  <th className="p-4 text-left" style={{ width: '50px' }}>
+                  <th className="p-3 text-left" style={{ width: '50px' }}>
                     <input
                       type="checkbox"
                       checked={blocks.length > 0 && blocks.every(b => b.selected)}
                       onChange={toggleSelectAll}
+                      disabled={!canIssuePermits}
                       className="w-4 h-4"
                       style={{ cursor: 'pointer' }}
                     />
                   </th>
                   <th 
-                    className="p-4 text-left"
+                    className="p-3 text-left"
                     style={{ 
+                      width: '112px',
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -594,8 +684,9 @@ export function KEPHISQuarantine() {
                     Block ID
                   </th>
                   <th 
-                    className="p-4 text-left"
+                    className="p-3 text-left"
                     style={{ 
+                      width: '220px',
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -607,8 +698,9 @@ export function KEPHISQuarantine() {
                     Farm Name
                   </th>
                   <th 
-                    className="p-4 text-left"
+                    className="p-3 text-left"
                     style={{ 
+                      width: '96px',
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -620,8 +712,9 @@ export function KEPHISQuarantine() {
                     County
                   </th>
                   <th 
-                    className="p-4 text-left"
+                    className="p-3 text-left"
                     style={{ 
+                      width: '86px',
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -633,8 +726,9 @@ export function KEPHISQuarantine() {
                     Pest Type
                   </th>
                   <th 
-                    className="p-4 text-left"
+                    className="p-3 text-left"
                     style={{ 
+                      width: '108px',
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -646,8 +740,9 @@ export function KEPHISQuarantine() {
                     Capture Rate
                   </th>
                   <th 
-                    className="p-4 text-left"
+                    className="p-3 text-left"
                     style={{ 
+                      width: '148px',
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -659,8 +754,9 @@ export function KEPHISQuarantine() {
                     Last Visual Inspection
                   </th>
                   <th 
-                    className="p-4 text-left"
+                    className="p-3 text-left"
                     style={{ 
+                      width: '122px',
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -672,8 +768,9 @@ export function KEPHISQuarantine() {
                     Inspector
                   </th>
                   <th 
-                    className="p-4 text-left"
+                    className="p-3 text-left"
                     style={{ 
+                      width: '186px',
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -685,7 +782,7 @@ export function KEPHISQuarantine() {
                     KEPHIS Clearance Status
                   </th>
                   <th 
-                    className="p-4 text-center"
+                    className="p-3 text-center"
                     style={{ 
                       fontFamily: 'IBM Plex Sans, sans-serif',
                       fontSize: '12px',
@@ -701,7 +798,7 @@ export function KEPHISQuarantine() {
                 </tr>
               </thead>
               <tbody>
-                {filteredBlocks.map((block) => {
+                {filteredBlocks.map((block, index) => {
                   const statusColors = getStatusColor(block.kephisStatus);
                   const isFCM = block.pestType === 'FCM';
                   
@@ -711,19 +808,24 @@ export function KEPHISQuarantine() {
                       className="transition-colors hover:bg-gray-50"
                       style={{ 
                         borderBottom: '1px solid #E0DDD6',
-                        backgroundColor: block.selected ? 'rgba(45, 106, 79, 0.05)' : 'transparent',
+                        backgroundColor: block.selected
+                          ? 'rgba(45, 106, 79, 0.05)'
+                          : index % 2 === 0
+                            ? '#FFFFFF'
+                            : '#FCFBF8',
                       }}
                     >
-                      <td className="p-4">
+                      <td className="p-3">
                         <input
                           type="checkbox"
                           checked={block.selected}
                           onChange={() => toggleSelect(block.id)}
+                          disabled={!canIssuePermits}
                           className="w-4 h-4"
                           style={{ cursor: 'pointer' }}
                         />
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <span 
                           style={{ 
                             fontFamily: 'IBM Plex Mono, monospace',
@@ -735,7 +837,7 @@ export function KEPHISQuarantine() {
                           {block.blockId}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <span 
                           style={{ 
                             fontFamily: 'IBM Plex Sans, sans-serif',
@@ -746,7 +848,7 @@ export function KEPHISQuarantine() {
                           {block.farmName}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <span 
                           style={{ 
                             fontFamily: 'IBM Plex Sans, sans-serif',
@@ -757,7 +859,7 @@ export function KEPHISQuarantine() {
                           {block.county}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <span 
                           className="px-3 py-1 rounded-full text-xs font-semibold"
                           style={{ 
@@ -769,7 +871,7 @@ export function KEPHISQuarantine() {
                           {block.pestType}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <span 
                           className="font-mono font-semibold"
                           style={{ 
@@ -780,7 +882,7 @@ export function KEPHISQuarantine() {
                           {block.captureRate.toFixed(1)} per trap
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <span 
                           style={{ 
                             fontFamily: 'IBM Plex Sans, sans-serif',
@@ -795,7 +897,7 @@ export function KEPHISQuarantine() {
                           })}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <span 
                           style={{ 
                             fontFamily: 'IBM Plex Sans, sans-serif',
@@ -806,13 +908,14 @@ export function KEPHISQuarantine() {
                           {block.inspector}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className="p-3">
                         <span 
-                          className="px-4 py-2 rounded-full text-xs font-semibold inline-flex items-center gap-2"
+                          className="px-3 py-1.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1.5"
                           style={{ 
                             fontFamily: 'IBM Plex Sans, sans-serif',
                             backgroundColor: statusColors.bg,
                             color: statusColors.text,
+                            lineHeight: '1',
                           }}
                         >
                           {block.kephisStatus === 'gated' && <AlertTriangle className="w-3 h-3" />}
@@ -821,7 +924,7 @@ export function KEPHISQuarantine() {
                           {getStatusLabel(block.kephisStatus)}
                         </span>
                       </td>
-                      <td className="p-4 text-center">
+                      <td className="p-3 text-center">
                         <div className="relative flex items-center justify-center">
                           <button
                             onClick={(e) => {
@@ -830,8 +933,8 @@ export function KEPHISQuarantine() {
                             }}
                             className="p-2 rounded-lg transition-all"
                             style={{
-                              backgroundColor: openMenuId === block.id ? '#74C69D30' : 'transparent',
-                              color: '#2D6A4F',
+                              backgroundColor: openMenuId === block.id ? '#EAF4EE' : 'transparent',
+                              color: '#1B4332',
                             }}
                             onMouseEnter={(e) => {
                               if (openMenuId !== block.id) {
@@ -870,7 +973,7 @@ export function KEPHISQuarantine() {
                                     handleViewDetails(block);
                                     setOpenMenuId(null);
                                   }}
-                                  className="w-full px-4 py-3 flex items-center gap-3 transition-all text-left"
+                                className="w-full px-4 py-2.5 flex items-center gap-3 transition-all text-left"
                                   style={{
                                     fontFamily: 'IBM Plex Sans, sans-serif',
                                     fontSize: '14px',
@@ -893,7 +996,7 @@ export function KEPHISQuarantine() {
                                     handleViewHistory(block);
                                     setOpenMenuId(null);
                                   }}
-                                  className="w-full px-4 py-3 flex items-center gap-3 transition-all text-left"
+                                className="w-full px-4 py-2.5 flex items-center gap-3 transition-all text-left"
                                   style={{
                                     fontFamily: 'IBM Plex Sans, sans-serif',
                                     fontSize: '14px',
@@ -913,29 +1016,29 @@ export function KEPHISQuarantine() {
                                 
                                 <button
                                   onClick={() => {
-                                    if (block.kephisStatus !== 'gated' && block.kephisStatus !== 'pending') {
+                                    if (canIssuePermits && block.kephisStatus !== 'gated' && block.kephisStatus !== 'pending') {
                                       handleIssuePermit(block);
                                       setOpenMenuId(null);
                                     }
                                   }}
-                                  disabled={block.kephisStatus === 'gated' || block.kephisStatus === 'pending'}
-                                  className="w-full px-4 py-3 flex items-center gap-3 transition-all text-left"
+                                  disabled={!canIssuePermits || block.kephisStatus === 'gated' || block.kephisStatus === 'pending'}
+                                className="w-full px-4 py-2.5 flex items-center gap-3 transition-all text-left"
                                   style={{
                                     fontFamily: 'IBM Plex Sans, sans-serif',
                                     fontSize: '14px',
-                                    color: block.kephisStatus === 'gated' || block.kephisStatus === 'pending' ? '#B0B0B0' : '#1B4332',
+                                    color: !canIssuePermits || block.kephisStatus === 'gated' || block.kephisStatus === 'pending' ? '#B0B0B0' : '#1B4332',
                                     borderBottom: '1px solid #F7F4EF',
                                     backgroundColor: block.kephisStatus === 'cleared' ? 'rgba(45, 106, 79, 0.05)' : 'transparent',
-                                    cursor: block.kephisStatus === 'gated' || block.kephisStatus === 'pending' ? 'not-allowed' : 'pointer',
-                                    opacity: block.kephisStatus === 'gated' || block.kephisStatus === 'pending' ? 0.5 : 1,
+                                    cursor: !canIssuePermits || block.kephisStatus === 'gated' || block.kephisStatus === 'pending' ? 'not-allowed' : 'pointer',
+                                    opacity: !canIssuePermits || block.kephisStatus === 'gated' || block.kephisStatus === 'pending' ? 0.5 : 1,
                                   }}
                                   onMouseEnter={(e) => {
-                                    if (block.kephisStatus !== 'gated' && block.kephisStatus !== 'pending') {
+                                    if (canIssuePermits && block.kephisStatus !== 'gated' && block.kephisStatus !== 'pending') {
                                       e.currentTarget.style.backgroundColor = block.kephisStatus === 'cleared' ? 'rgba(45, 106, 79, 0.15)' : '#F7F4EF';
                                     }
                                   }}
                                   onMouseLeave={(e) => {
-                                    if (block.kephisStatus !== 'gated' && block.kephisStatus !== 'pending') {
+                                    if (canIssuePermits && block.kephisStatus !== 'gated' && block.kephisStatus !== 'pending') {
                                       e.currentTarget.style.backgroundColor = block.kephisStatus === 'cleared' ? 'rgba(45, 106, 79, 0.05)' : 'transparent';
                                     }
                                   }}
@@ -952,7 +1055,7 @@ export function KEPHISQuarantine() {
                                     handleViewEvidence(block);
                                     setOpenMenuId(null);
                                   }}
-                                  className="w-full px-4 py-3 flex items-center gap-3 transition-all text-left"
+                                className="w-full px-4 py-2.5 flex items-center gap-3 transition-all text-left"
                                   style={{
                                     fontFamily: 'IBM Plex Sans, sans-serif',
                                     fontSize: '14px',
@@ -1041,16 +1144,16 @@ export function KEPHISQuarantine() {
         {/* View Details Modal */}
         {detailsModalOpen && selectedBlock && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
             onClick={() => setDetailsModalOpen(false)}
           >
             <div 
-              className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4"
+              className="rounded-lg p-7 max-w-2xl w-full mx-4"
               onClick={(e) => e.stopPropagation()}
-              style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+              style={{ fontFamily: 'IBM Plex Sans, sans-serif', backgroundColor: '#F7F4EF' }}
             >
               <h2 
-                className="text-2xl font-bold mb-6"
+                className="text-[28px] font-bold mb-5"
                 style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
               >
                 Block Details
@@ -1093,14 +1196,18 @@ export function KEPHISQuarantine() {
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-3 mt-7">
                 <button
                   onClick={() => setDetailsModalOpen(false)}
-                  className="px-6 py-2 rounded-lg"
+                  className="px-6 rounded-lg"
                   style={{
                     backgroundColor: '#2D6A4F',
                     color: '#FFFFFF',
                     fontFamily: 'IBM Plex Sans, sans-serif',
+                    height: '40px',
+                    lineHeight: '40px',
+                    paddingTop: 0,
+                    paddingBottom: 0,
                   }}
                 >
                   Close
@@ -1113,16 +1220,16 @@ export function KEPHISQuarantine() {
         {/* View History Modal */}
         {historyModalOpen && selectedBlock && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
             onClick={() => setHistoryModalOpen(false)}
           >
             <div 
-              className="bg-white rounded-lg p-8 max-w-3xl w-full mx-4"
+              className="rounded-lg p-7 max-w-3xl w-full mx-4"
               onClick={(e) => e.stopPropagation()}
-              style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+              style={{ fontFamily: 'IBM Plex Sans, sans-serif', backgroundColor: '#F7F4EF' }}
             >
               <h2 
-                className="text-2xl font-bold mb-6"
+                className="text-[28px] font-bold mb-5"
                 style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}
               >
                 Inspection History - {selectedBlock.blockId}
@@ -1166,14 +1273,18 @@ export function KEPHISQuarantine() {
                   <p className="text-sm text-gray-600">Trap data submitted for analysis.</p>
                 </div>
               </div>
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-3 mt-7">
                 <button
                   onClick={() => setHistoryModalOpen(false)}
-                  className="px-6 py-2 rounded-lg"
+                  className="px-6 rounded-lg"
                   style={{
                     backgroundColor: '#2D6A4F',
                     color: '#FFFFFF',
                     fontFamily: 'IBM Plex Sans, sans-serif',
+                    height: '40px',
+                    lineHeight: '40px',
+                    paddingTop: 0,
+                    paddingBottom: 0,
                   }}
                 >
                   Close

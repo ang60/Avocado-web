@@ -21,6 +21,7 @@ from .serializers import (
     CaseCreateSerializer,
     CaseDetailSerializer,
     CaseManagementRowSerializer,
+    FarmerComplianceStatusPatchSerializer,
     FarmerDetailSerializer,
     FarmerListSerializer,
     ScoutingFeedItemSerializer,
@@ -111,7 +112,7 @@ class FarmerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = FarmerProfile.objects.all().select_related('user')
     serializer_class = FarmerListSerializer
     pagination_class = StandardResultsSetPagination
-    http_method_names = ['get']
+    http_method_names = ['get', 'patch']
     permission_classes = [permissions.IsAuthenticated, require_permission('nav.farmers')]
 
     def get_serializer_class(self):
@@ -119,6 +120,14 @@ class FarmerViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return _scoped_farmers_qs(self.request.user).select_related('user').prefetch_related('blocks')
+
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated, require_permission('nav.farmers')])
+    def compliance_status(self, request, pk=None):
+        farmer = self.get_object()
+        serializer = FarmerComplianceStatusPatchSerializer(farmer, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(FarmerListSerializer(farmer, context={'request': request}).data, status=status.HTTP_200_OK)
 
 
 class CaseViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -321,8 +330,8 @@ class ScoutingReportViewSet(viewsets.ModelViewSet):
         farmer.save(update_fields=['last_scouting_status', 'last_scouting_finding', 'last_scouting_date', 'last_scouting_scout_name'])
 
     def create(self, request, *args, **kwargs):
-        super().create(request, *args, **kwargs)
-        # DRF already returns serialized object; keep default behavior.
+        # Preserve DRF response payload/status for frontend create flows.
+        return super().create(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)

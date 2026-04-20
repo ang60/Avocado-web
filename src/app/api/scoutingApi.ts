@@ -1,5 +1,8 @@
 import { apiRequest } from './client';
 
+export type ReviewStatus = 'new' | 'under-review' | 'reviewed';
+export type TriageStatus = 'pending' | 'confirmed' | 'needs_follow_up';
+
 export type ScoutingReport = {
   id: string;
   farmName: string;
@@ -11,9 +14,13 @@ export type ScoutingReport = {
   status: string;
   mediaPreview: string | null;
   timestamp: string;
-  reviewed: string;
+  reviewed: ReviewStatus;
   county: string | null;
   assignedTo: string | null;
+
+  triageStatus?: TriageStatus;
+  triageLabel?: string | null;
+  ussdCode?: string;
 };
 
 export type ScoutingReportListResponse = {

@@ -21,6 +21,7 @@ export function KBArticleDetail() {
   const defaultId = knowledgeBaseArticles[0]?.id ?? 'KB-045';
   const article = articleData[articleId || defaultId];
   const pdfMedia = pdfMediaByArticleId[articleId || ''] ?? [];
+  const safeArticle = article ?? null;
 
   useEffect(() => {
     if (!articleId) return;
@@ -43,19 +44,21 @@ export function KBArticleDetail() {
   }, [articleId]);
 
   const identificationSigns =
-    selectedLanguage === 'sw' && Array.isArray(article.identificationSignsSW)
-      ? article.identificationSignsSW
-      : article.identificationSigns;
+    selectedLanguage === 'sw' && Array.isArray(safeArticle?.identificationSignsSW)
+      ? safeArticle.identificationSignsSW
+      : Array.isArray(safeArticle?.identificationSigns)
+        ? safeArticle.identificationSigns
+        : [];
   const lifeCycle =
-    selectedLanguage === 'sw' && typeof article.lifeCycleSW === 'string'
-      ? article.lifeCycleSW
-      : article.lifeCycle;
+    selectedLanguage === 'sw' && typeof safeArticle?.lifeCycleSW === 'string'
+      ? safeArticle.lifeCycleSW
+      : (safeArticle?.lifeCycle ?? '');
   const economicImpact =
-    selectedLanguage === 'sw' && typeof article.economicImpactSW === 'string'
-      ? article.economicImpactSW
-      : article.economicImpact;
+    selectedLanguage === 'sw' && typeof safeArticle?.economicImpactSW === 'string'
+      ? safeArticle.economicImpactSW
+      : (safeArticle?.economicImpact ?? '');
   const ipmLadder =
-    selectedLanguage === 'sw' && article.ipmLadderSW ? article.ipmLadderSW : article.ipmLadder;
+    selectedLanguage === 'sw' && safeArticle?.ipmLadderSW ? safeArticle.ipmLadderSW : safeArticle?.ipmLadder;
   
   if (!article && (liveLoading || liveArticle || liveError)) {
     return (
@@ -122,7 +125,7 @@ export function KBArticleDetail() {
   }
 
   const copyToClipboard = () => {
-    const snippet = selectedLanguage === 'en' ? article.advisorySnippetEN : article.advisorySnippetSW;
+    const snippet = selectedLanguage === 'en' ? (safeArticle?.advisorySnippetEN ?? '') : (safeArticle?.advisorySnippetSW ?? '');
     navigator.clipboard.writeText(snippet);
     setCopiedSnippet(true);
     setTimeout(() => setCopiedSnippet(false), 2000);
@@ -141,7 +144,7 @@ export function KBArticleDetail() {
     }
   };
 
-  const severityStyle = getSeverityColor(article.severity);
+  const severityStyle = getSeverityColor(safeArticle?.severity ?? 'medium');
 
   const liveSeverityStyle = getSeverityColor((liveArticle?.severity || 'medium').toLowerCase());
   const liveTags = Array.isArray(liveArticle?.tags) ? liveArticle?.tags : [];

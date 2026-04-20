@@ -23,6 +23,7 @@ import type { SeverityLevel } from '../api/types';
 import { getApiErrorMessage } from '../api/errors';
 import { fetchScoutingReports, type ScoutingReport } from '../api/scoutingApi';
 import { createCase } from '../api/caseApi';
+import { confirmScoutingIdentification } from '../api/realApi';
 import { getAuthUser } from '../auth';
 import { FarmerScoutingReports } from './FarmerScoutingReports';
 
@@ -76,6 +77,7 @@ export function ScoutingReports() {
   const [createCaseError, setCreateCaseError] = useState<string | null>(null);
   const [createCaseSubmitting, setCreateCaseSubmitting] = useState(false);
   const [createCaseSuccess, setCreateCaseSuccess] = useState<string | null>(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
   const authUser = getAuthUser();
   const isAgronomistUser = authUser?.role_details?.role_name === 'Agronomist';
@@ -213,7 +215,43 @@ export function ScoutingReports() {
   };
 
   const handleMarkAsReviewed = () => {
-    alert(`Marked ${selectedItems.length} submission(s) as reviewed (API batch review not wired yet).`);
+    void (async () => {
+      if (!selectedItems.length) return;
+
+      setReviewSubmitting(true);
+      try {
+        const itemsToMark = scoutingFeed.filter((it) => selectedItems.includes(it.id));
+        const labelById = new Map<string, string>(
+          itemsToMark.map((r) => [
+            r.id,
+            (r.triageLabel ?? r.finding ?? '').toString().trim() || 'No Pests Found',
+          ])
+        );
+
+        await Promise.all(
+          itemsToMark.map((r) =>
+            confirmScoutingIdentification({
+              reportId: r.id,
+              identified_label: labelById.get(r.id) || 'No Pests Found',
+              review_status: 'confirmed',
+              review_notes: '',
+              pushed_to_farmer: false,
+            })
+          )
+        );
+
+        // Optimistic update: backend serializer now derives `reviewed` from the ScoutingReview record.
+        setScoutingFeed((prev) =>
+          prev.map((item) => (selectedItems.includes(item.id) ? { ...item, reviewed: 'reviewed', triageStatus: 'confirmed' } : item))
+        );
+        setSelectedItems([]);
+        alert(`Marked ${selectedItems.length} submission(s) as Reviewed.`);
+      } catch (e: unknown) {
+        alert(getApiErrorMessage(e, 'Could not mark submissions as reviewed.'));
+      } finally {
+        setReviewSubmitting(false);
+      }
+    })();
   };
 
   const handleCreateCase = (itemId: string) => {
@@ -267,6 +305,7 @@ export function ScoutingReports() {
         {selectedItems.length > 0 && (
           <button
             onClick={handleMarkAsReviewed}
+            disabled={reviewSubmitting}
             className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center gap-2"
             style={{
               backgroundColor: '#2D6A4F',
@@ -274,6 +313,7 @@ export function ScoutingReports() {
               fontFamily: 'IBM Plex Sans, sans-serif',
               borderRadius: '8px',
               fontWeight: '600',
+              opacity: reviewSubmitting ? 0.7 : 1,
             }}
           >
             <CheckCircle className="w-4 h-4" />
@@ -1208,10 +1248,37 @@ export function ScoutingReports() {
                   Create Case
                 </button>
                 <button
-                  onClick={() => {
-                    console.log('Marking as reviewed:', reviewModalItem.id);
-                    alert(`Submission ${reviewModalItem.id} marked as reviewed`);
-                    setReviewModalItem(null);
+                  disabled={reviewSubmitting}
+                  onClick={async () => {
+                    if (!reviewModalItem) return;
+                    setReviewSubmitting(true);
+                    try {
+                      const identifiedLabel =
+                        (reviewModalItem.triageLabel ?? reviewModalItem.finding ?? '').toString().trim() ||
+                        'No Pests Found';
+
+                      await confirmScoutingIdentification({
+                        reportId: reviewModalItem.id,
+                        identified_label: identifiedLabel,
+                        review_status: 'confirmed',
+                        review_notes: '',
+                        pushed_to_farmer: false,
+                      });
+
+                      setScoutingFeed((prev) =>
+                        prev.map((item) =>
+                          item.id === reviewModalItem.id
+                            ? { ...item, reviewed: 'reviewed', triageStatus: 'confirmed', triageLabel: identifiedLabel }
+                            : item
+                        )
+                      );
+                      setReviewModalItem(null);
+                      alert(`Submission ${reviewModalItem.id} marked as Reviewed.`);
+                    } catch (e: unknown) {
+                      alert(getApiErrorMessage(e, 'Could not mark submission as reviewed.'));
+                    } finally {
+                      setReviewSubmitting(false);
+                    }
                   }}
                   className="px-4 py-2 rounded-lg transition-colors hover:opacity-90"
                   style={{

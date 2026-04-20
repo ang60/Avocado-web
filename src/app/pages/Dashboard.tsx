@@ -11,6 +11,8 @@ import { TableScroll } from '../components/TableScroll';
 import type { DashboardPayload } from '../api/types';
 import { getAuthUser } from '../auth';
 import { FarmerDashboard } from './FarmerDashboard';
+import { AgronomistDashboard } from './AgronomistDashboard';
+import { KEPHISDashboard } from './KEPHISDashboard';
 
 const METRIC_ICONS = {
   activity: Activity,
@@ -20,9 +22,22 @@ const METRIC_ICONS = {
 } as const;
 
 export function Dashboard() {
-  const roleName = getAuthUser()?.role_details?.role_name;
+  const roleName = (
+    getAuthUser()?.role_details?.role_name ||
+    getAuthUser()?.role?.role_name ||
+    ''
+  ).trim();
+  const normalizedRoleName = roleName.toLowerCase();
+  const isKephisUser = normalizedRoleName.includes('kephis');
+
   if (roleName === 'Farmer') {
     return <FarmerDashboard />;
+  }
+  if (roleName === 'Agronomist') {
+    return <AgronomistDashboard />;
+  }
+  if (isKephisUser) {
+    return <KEPHISDashboard />;
   }
 
   const narrowPhone = useIsNarrowPhone();

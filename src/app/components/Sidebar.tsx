@@ -10,11 +10,14 @@ import {
   Settings,
   ClipboardCheck,
   Phone,
+  Search,
   Menu,
   X,
   Shield,
   Building2,
   Package,
+  TrendingUp,
+  History as HistoryIcon,
 } from 'lucide-react';
 import { useLocation } from 'react-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -49,6 +52,36 @@ const navItems: NavItem[] = [
   { name: 'Admin', icon: Settings, path: '/admin', permission: 'nav.admin' },
 ];
 
+const kephisNavItems: NavItem[] = [
+  { name: 'Dashboard Home', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.kephis' },
+  { name: 'Quarantine Management', icon: Shield, path: '/kephis-quarantine', permission: 'nav.kephis' },
+  { name: 'Risk Intelligence', icon: TrendingUp, path: '/kephis-quarantine/risk-intelligence', permission: 'nav.kephis' },
+  { name: 'Alerts', icon: Bell, path: '/kephis-quarantine/alerts', permission: 'nav.kephis' },
+  { name: 'Chain of Custody', icon: HistoryIcon, path: '/kephis-quarantine/chain-of-custody', permission: 'nav.kephis' },
+  { name: 'Threshold Settings', icon: Settings, path: '/kephis-quarantine/threshold-settings', permission: 'nav.kephis' },
+  { name: 'Export Reports', icon: ClipboardCheck, path: '/kephis-quarantine/export-reports', permission: 'nav.kephis' },
+];
+
+/** Agronomists: permits + reports on dashboard; sidebar stays minimal. */
+const agronomistNavItems: NavItem[] = [
+  { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.dashboard' },
+  { name: 'Reports', icon: FileText, path: '/agronomist-reports', permission: 'nav.reports' },
+];
+
+function getNavItemsForRole(roleName?: string | null): NavItem[] {
+  const normalized = (roleName || '').trim().toLowerCase();
+  if (roleName === 'Farmer') {
+    return farmerNavItems;
+  }
+  if (roleName === 'Agronomist') {
+    return agronomistNavItems;
+  }
+  if (normalized.includes('kephis')) {
+    return kephisNavItems;
+  }
+  return navItems;
+}
+
 const farmerNavItems: NavItem[] = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.dashboard' },
   { name: 'My Farm Blocks', icon: MapIcon, path: '/my-farm-blocks', permission: 'nav.scouting' },
@@ -70,8 +103,8 @@ function SidebarNavLinks({
 
   const visibleItems = useMemo(() => {
     const user = getAuthUser();
-    const isFarmer = user?.role_details?.role_name === 'Farmer';
-    const source = isFarmer ? farmerNavItems : navItems;
+    const roleName = user?.role_details?.role_name || user?.role?.role_name || '';
+    const source = getNavItemsForRole(roleName);
     return source.filter((item) => hasAppAccess(user, item.permission));
   }, [authEpoch]);
 

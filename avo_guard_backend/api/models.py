@@ -27,6 +27,10 @@ class FarmerProfile(models.Model):
         AT_RISK = 'at-risk', 'at-risk'
         SUSPENDED = 'suspended', 'suspended'
 
+    class ComplianceStatus(models.TextChoices):
+        COMPLIANT = 'compliant', 'compliant'
+        NEEDS_FOLLOW_UP = 'needs-follow-up', 'needs-follow-up'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -61,6 +65,11 @@ class FarmerProfile(models.Model):
 
     weekly_scouting_logs_4w = models.JSONField(default=list)  # expected length 4 ints
     overdue_scouts = models.BooleanField(default=False)
+    agronomist_compliance_status = models.CharField(
+        max_length=32,
+        choices=ComplianceStatus.choices,
+        default=ComplianceStatus.COMPLIANT,
+    )
     last_inspection = models.CharField(max_length=64, blank=True, default='')
 
     last_scouting_status = models.CharField(max_length=32, blank=True, default='no-pests')

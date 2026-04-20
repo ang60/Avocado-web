@@ -46,6 +46,7 @@ class FarmerListSerializer(serializers.ModelSerializer):
     lastInspection = serializers.CharField(source='last_inspection')
     overdueScouts = serializers.BooleanField(source='overdue_scouts')
     linkedExporter = serializers.SerializerMethodField()
+    complianceStatus = serializers.CharField(source='agronomist_compliance_status')
 
     class Meta:
         model = FarmerProfile
@@ -65,6 +66,7 @@ class FarmerListSerializer(serializers.ModelSerializer):
             'lastInspection',
             'overdueScouts',
             'linkedExporter',
+            'complianceStatus',
         )
 
     def get_weeklyScoutingLogs(self, obj):
@@ -101,6 +103,7 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
     activeCases = serializers.SerializerMethodField()
     recentActivities = serializers.SerializerMethodField()
     blocks = serializers.SerializerMethodField()
+    complianceStatus = serializers.CharField(source='agronomist_compliance_status')
 
     class Meta:
         model = FarmerProfile
@@ -123,10 +126,73 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
             'lastScoutingResult',
             'weeklyScoutingLogs',
             'complianceScore',
+            'complianceStatus',
             'activeCases',
             'recentActivities',
             'blocks',
         )
+
+    def get_registrationDate(self, obj):
+        return obj.registration_date.isoformat() if obj.registration_date else ''
+
+    def get_lastScoutingResult(self, obj):
+        return {
+            'status': obj.last_scouting_status or 'no-pests',
+            'finding': obj.last_scouting_finding or '',
+            'date': obj.last_scouting_date or '',
+            'scoutName': obj.last_scouting_scout_name or '',
+        }
+
+    def get_weeklyScoutingLogs(self, obj):
+        logs = list(obj.weekly_scouting_logs_4w or [])[:4]
+        out = []
+        for i, v in enumerate(logs):
+            out.append({'week': f'W-{4 - i}', 'completed': bool(v), 'date': '', 'scout': ''})
+        while len(out) < 4:
+            out.append({'week': f'W-{4 - len(out)}', 'completed': False, 'date': '', 'scout': ''})
+        return out
+
+    def get_complianceScore(self, obj):
+        logs = list(obj.weekly_scouting_logs_4w or [])[:4]
+        if not logs:
+            return 0
+        completed = sum(1 for x in logs[:4] if int(x) == 1)
+        return int(round((completed / 4) * 100))
+
+    def get_activeCases(self, obj):
+        qs = obj.cases.all()[:10]
+        return [
+            {
+                'id': str(c.id),
+                'issue': c.pest_disease,
+                'severity': c.severity,
+                'status': c.status,
+                'date': c.date_submitted.isoformat() if c.date_submitted else '',
+            }
+            for c in qs
+        ]
+
+    def get_recentActivities(self, obj):
+        return []
+
+    def get_blocks(self, obj):
+        return [
+            {
+                'id': str(b.id),
+                'name': b.name,
+                'acres': b.acres,
+                'trees': b.trees,
+                'status': b.status,
+                'lastInspection': b.last_inspection,
+            }
+            for b in obj.blocks.all()
+        ]
+
+
+class FarmerComplianceStatusPatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FarmerProfile
+        fields = ('agronomist_compliance_status',)
 
     def get_registrationDate(self, obj):
         return obj.registration_date.isoformat() if obj.registration_date else ''

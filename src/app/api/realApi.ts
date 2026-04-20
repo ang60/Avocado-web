@@ -25,6 +25,18 @@ export async function fetchFarmersList(): Promise<FarmerListRow[]> {
   return parseDrfList<FarmerListRow>(data);
 }
 
+export async function updateFarmerComplianceStatus(params: {
+  farmerId: string;
+  agronomist_compliance_status: 'compliant' | 'needs-follow-up';
+}): Promise<FarmerListRow> {
+  return apiRequest<FarmerListRow>(`/api/farmers/${params.farmerId}/compliance_status/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      agronomist_compliance_status: params.agronomist_compliance_status,
+    }),
+  });
+}
+
 export async function fetchFarmerDetail(farmerId: string | undefined): Promise<FarmerDetailPayload> {
   const id = String(farmerId ?? '').trim();
   return apiRequest<FarmerDetailPayload>(`/api/farmers/${id}/`);
@@ -54,6 +66,10 @@ type BackendCase = {
   case_title: string;
   severity: 'high' | 'medium' | 'low' | 'unknown';
   notes: string;
+  status?: string;
+  diagnosis?: string | null;
+  recommended_actions?: string[];
+  closed_at?: string | null;
   assigned_agronomist?: BackendUser | null;
   pest_scouting_record?: BackendWeeklyRecord | null;
   created_at?: string;
@@ -90,7 +106,10 @@ export async function fetchCaseManagement(): Promise<CaseManagementPayload> {
       pestDisease: finding,
       pestDiseaseKiswahili: '—',
       dateSubmitted: (c.created_at || '').slice(0, 10) || '—',
-      status: 'new',
+      status:
+        c.status === 'under_review' || c.status === 'verified' || c.status === 'closed'
+          ? c.status
+          : 'new',
       scoutName: (c.assigned_agronomist?.phone_number ?? '—') as string,
       location,
       affectedTrees,
@@ -119,6 +138,10 @@ export async function fetchCaseManagement(): Promise<CaseManagementPayload> {
 export async function fetchCaseDetail(caseId: string | undefined): Promise<CaseDetailPayload> {
   const id = String(caseId ?? '').trim();
   const c = await apiRequest<BackendCase>(`/api/case-management/cases/${id}/`);
+  return mapBackendCaseToCaseDetail(c);
+}
+
+function mapBackendCaseToCaseDetail(c: BackendCase): CaseDetailPayload {
   const rec = c.pest_scouting_record ?? null;
 
   const farmerName =
@@ -136,8 +159,44 @@ export async function fetchCaseDetail(caseId: string | undefined): Promise<CaseD
         ? rec.block
         : '—';
 
+  const caseStatus = String(c.status ?? 'new').trim().toLowerCase();
+  const submittedTimestamp = c.created_at ?? null;
+  const underReviewTimestamp =
+    caseStatus === 'under_review' || caseStatus === 'verified' || caseStatus === 'closed'
+      ? (c.updated_at ?? c.created_at ?? null)
+      : null;
+  const advisoryIssuedTimestamp =
+    caseStatus === 'verified' || caseStatus === 'closed'
+      ? (c.closed_at ?? c.updated_at ?? c.created_at ?? null)
+      : null;
+
+  const timeline = [
+    { stage: 'Submitted', timestamp: submittedTimestamp, status: 'completed' as const },
+    {
+      stage: 'Under review',
+      timestamp: underReviewTimestamp,
+      status:
+        caseStatus === 'under_review'
+          ? ('current' as const)
+          : caseStatus === 'verified' || caseStatus === 'closed'
+            ? ('completed' as const)
+            : ('pending' as const),
+    },
+    {
+      stage: 'Advisory issued',
+      timestamp: advisoryIssuedTimestamp,
+      status:
+        caseStatus === 'verified'
+          ? ('current' as const)
+          : caseStatus === 'closed'
+            ? ('completed' as const)
+            : ('pending' as const),
+    },
+  ];
+
   return {
     id: c.id,
+    caseStatus: caseStatus,
     farmerName,
     farmerPhone,
     location,
@@ -164,12 +223,36 @@ export async function fetchCaseDetail(caseId: string | undefined): Promise<CaseD
       duration: '—',
       url: (rec?.voice_note as string) || '',
     },
-    timeline: [
-      { stage: 'Submitted', timestamp: c.created_at ?? null, status: 'completed' },
-      { stage: 'Under review', timestamp: null, status: 'pending' },
-      { stage: 'Advisory issued', timestamp: null, status: 'pending' },
-    ],
+    timeline,
   };
+}
+
+export function mapVerifiedCaseResponseToDetail(c: BackendCase): CaseDetailPayload {
+  return mapBackendCaseToCaseDetail(c);
+}
+
+type FarmerCaseForDashboard = {
+  id: string;
+  case_title: string;
+  status: string;
+  diagnosis?: string | null;
+  recommended_actions?: string[];
+  created_at?: string;
+  closed_at?: string | null;
+  pest_scouting_record?: {
+    block?: { id: string; block_name: string } | string | null;
+    location?: string;
+    disease?: string | null;
+    pests_observed?: string | null;
+  } | null;
+};
+
+/** Farmer dashboard advisory history (scoped by backend to the logged-in farmer). */
+export async function fetchFarmerCaseAdvisories(): Promise<FarmerCaseForDashboard[]> {
+  const data = await apiRequest<PaginatedResults<FarmerCaseForDashboard> | FarmerCaseForDashboard[]>(
+    '/api/case-management/cases/?page_size=1000',
+  );
+  return parseDrfList<FarmerCaseForDashboard>(data);
 }
 
 export async function fetchScoutingFeed(): Promise<ScoutingFeedItem[]> {
@@ -177,6 +260,65 @@ export async function fetchScoutingFeed(): Promise<ScoutingFeedItem[]> {
     '/api/pest-scouting/scouting-reports/?page_size=500',
   );
   return parseDrfList<ScoutingFeedItem>(data);
+}
+
+export async function fetchAgronomistAnalytics(): Promise<{
+  county_pressure: Array<{ county: string; detections: number; reports: number; avg_pests_per_trap: number }>;
+  protocol_performance: Array<{ action: string; outcome: string; count: number }>;
+}> {
+  return apiRequest('/api/pest-scouting/scouting-reports/agronomist_analytics/');
+}
+
+export async function fetchScoutingAuditLog(): Promise<
+  Array<{ id: string; scout: string; block: string; county: string; timestamp: string; flags: string[]; status: string }>
+> {
+  return apiRequest('/api/pest-scouting/scouting-reports/audit_log/');
+}
+
+export type ScoutingBlockOverviewRow = {
+  farmer_id: string;
+  farmer_name: string;
+  county: string;
+  block_id: string;
+  block_name: string;
+  last_scouted_at: string;
+  latest_finding: string;
+  status: 'detected' | 'clean';
+  severity: 'high' | 'medium' | 'low' | string;
+  pests: string[];
+  diseases: string[];
+  actions_taken: string[];
+  outcomes: string[];
+  history_count: number;
+};
+
+export async function fetchScoutingBlockOverview(): Promise<ScoutingBlockOverviewRow[]> {
+  const data = await apiRequest<PaginatedResults<ScoutingBlockOverviewRow> | ScoutingBlockOverviewRow[]>(
+    '/api/pest-scouting/scouting-reports/block_overview/'
+  );
+  return parseDrfList<ScoutingBlockOverviewRow>(data);
+}
+
+export async function confirmScoutingIdentification(params: {
+  reportId: string;
+  identified_label: string;
+  management_protocol?: string;
+  review_status?: 'confirmed' | 'needs_follow_up' | 'pending';
+  training_tagged?: boolean;
+  review_notes?: string;
+  pushed_to_farmer?: boolean;
+}): Promise<{ status: string; message: string; linked_case_id?: string | null }> {
+  return apiRequest(`/api/pest-scouting/scouting-reports/${params.reportId}/confirm_identification/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      identified_label: params.identified_label,
+      management_protocol: params.management_protocol,
+      review_status: params.review_status ?? 'confirmed',
+      training_tagged: params.training_tagged ?? true,
+      review_notes: params.review_notes ?? '',
+      pushed_to_farmer: params.pushed_to_farmer ?? true,
+    }),
+  });
 }
 
 export type QuarantineBlockRow = {
@@ -190,13 +332,166 @@ export type QuarantineBlockRow = {
   kephisStatus: 'cleared' | 'gated' | 'pending';
   inspector: string;
   selected: boolean;
+  evidenceUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
+export type QuarantineActionLogRow = {
+  id: string;
+  quarantineId: string;
+  blockId: string;
+  actionType: 'issue_restriction' | 'request_lift' | 'recommend_lift' | 'approve_lift' | 'manual_update';
+  fromStatus: string;
+  toStatus: string;
+  actorName: string;
+  notes?: string;
+  createdAt: string;
+};
+
+export type KephisAlertRow = {
+  id: string;
+  blockId: string;
+  farmName: string;
+  county: string;
+  pestType: string;
+  captureRate: number;
+  threshold: number;
+  kephisStatus: 'cleared' | 'gated' | 'pending';
+  severity: 'critical' | 'warning';
+  lastInspection: string;
+  inspector: string;
+};
+
+function mapQuarantineRow(row: Record<string, unknown>): QuarantineBlockRow {
+  const captureRateNum = Number(row.captureRate ?? 0);
+  return {
+    id: String(row.id ?? ''),
+    blockId: String(row.blockId ?? ''),
+    farmName: String(row.farmName ?? ''),
+    county: String(row.county ?? ''),
+    pestType: String(row.pestType ?? ''),
+    captureRate: Number.isFinite(captureRateNum) ? captureRateNum : 0,
+    lastInspection: String(row.lastInspection ?? ''),
+    kephisStatus:
+      row.kephisStatus === 'cleared' || row.kephisStatus === 'gated' || row.kephisStatus === 'pending'
+        ? row.kephisStatus
+        : 'pending',
+    inspector: String(row.inspector ?? ''),
+    selected: Boolean(row.selected),
+    evidenceUrl: row.evidence_url ? String(row.evidence_url) : undefined,
+    createdAt: row.created_at ? String(row.created_at) : undefined,
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+  };
+}
+
 export async function fetchKephisQuarantineBlocks(): Promise<QuarantineBlockRow[]> {
-  const data = await apiRequest<PaginatedResults<QuarantineBlockRow> | QuarantineBlockRow[]>(
+  const data = await apiRequest<PaginatedResults<Record<string, unknown>> | Record<string, unknown>[]>(
     '/api/kephis-quarantine/management/?page_size=1000',
   );
-  return parseDrfList<QuarantineBlockRow>(data);
+  const rows = parseDrfList<Record<string, unknown>>(data);
+  return rows.map((row) => mapQuarantineRow(row));
+}
+
+export async function updateKephisQuarantineBlock(
+  id: string,
+  body: Partial<{
+    kephisStatus: 'cleared' | 'gated' | 'pending';
+    pestType: string;
+    captureRate: number;
+    evidence_url: string;
+    inspector: string;
+  }>
+): Promise<QuarantineBlockRow> {
+  const row = await apiRequest<Record<string, unknown>>(`/api/kephis-quarantine/management/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  return mapQuarantineRow(row);
+}
+
+export async function issueKephisRestriction(id: string, notes?: string): Promise<QuarantineBlockRow> {
+  const row = await apiRequest<Record<string, unknown>>(`/api/kephis-quarantine/management/${id}/issue_restriction/`, {
+    method: 'POST',
+    body: JSON.stringify({ notes: notes ?? '' }),
+  });
+  return mapQuarantineRow(row);
+}
+
+export async function requestKephisLift(id: string, notes?: string): Promise<QuarantineBlockRow> {
+  const row = await apiRequest<Record<string, unknown>>(`/api/kephis-quarantine/management/${id}/request_lift/`, {
+    method: 'POST',
+    body: JSON.stringify({ notes: notes ?? '' }),
+  });
+  return mapQuarantineRow(row);
+}
+
+export async function recommendKephisLift(id: string, notes?: string): Promise<QuarantineBlockRow> {
+  const row = await apiRequest<Record<string, unknown>>(`/api/kephis-quarantine/management/${id}/recommend_lift/`, {
+    method: 'POST',
+    body: JSON.stringify({ notes: notes ?? '' }),
+  });
+  return mapQuarantineRow(row);
+}
+
+export async function approveKephisLift(id: string, notes?: string): Promise<QuarantineBlockRow> {
+  const row = await apiRequest<Record<string, unknown>>(`/api/kephis-quarantine/management/${id}/approve_lift/`, {
+    method: 'POST',
+    body: JSON.stringify({ notes: notes ?? '' }),
+  });
+  return mapQuarantineRow(row);
+}
+
+export async function fetchKephisChainOfCustody(blockId?: string): Promise<QuarantineActionLogRow[]> {
+  const query = blockId ? `?blockId=${encodeURIComponent(blockId)}` : '';
+  const data = await apiRequest<{ results: Record<string, unknown>[] }>(
+    `/api/kephis-quarantine/management/chain_of_custody/${query}`
+  );
+  const rows = Array.isArray(data.results) ? data.results : [];
+  return rows.map((row) => ({
+    id: String(row.id ?? ''),
+    quarantineId: String(row.quarantine ?? ''),
+    blockId: String(row.blockId ?? ''),
+    actionType:
+      row.action_type === 'issue_restriction' ||
+      row.action_type === 'request_lift' ||
+      row.action_type === 'recommend_lift' ||
+      row.action_type === 'approve_lift'
+        ? row.action_type
+        : 'manual_update',
+    fromStatus: String(row.from_status ?? ''),
+    toStatus: String(row.to_status ?? ''),
+    actorName: String(row.actor_name ?? 'Unknown'),
+    notes: row.notes ? String(row.notes) : undefined,
+    createdAt: String(row.created_at ?? ''),
+  }));
+}
+
+export async function fetchKephisAlerts(): Promise<KephisAlertRow[]> {
+  const data = await apiRequest<{ results: Record<string, unknown>[] }>(
+    '/api/kephis-quarantine/management/alerts/'
+  );
+  const rows = Array.isArray(data.results) ? data.results : [];
+  return rows.map((row) => {
+    const captureRateNum = Number(row.captureRate ?? 0);
+    const thresholdNum = Number(row.threshold ?? 0);
+    return {
+      id: String(row.id ?? ''),
+      blockId: String(row.blockId ?? ''),
+      farmName: String(row.farmName ?? ''),
+      county: String(row.county ?? ''),
+      pestType: String(row.pestType ?? ''),
+      captureRate: Number.isFinite(captureRateNum) ? captureRateNum : 0,
+      threshold: Number.isFinite(thresholdNum) ? thresholdNum : 0,
+      kephisStatus:
+        row.kephisStatus === 'cleared' || row.kephisStatus === 'gated' || row.kephisStatus === 'pending'
+          ? row.kephisStatus
+          : 'pending',
+      severity: row.severity === 'critical' ? 'critical' : 'warning',
+      lastInspection: String(row.lastInspection ?? ''),
+      inspector: String(row.inspector ?? ''),
+    };
+  });
 }
 
 export type CreateCaseFromScoutingPayload = {
@@ -209,12 +504,14 @@ export type CreateCaseFromScoutingPayload = {
 export async function createCaseFromScouting(
   body: CreateCaseFromScoutingPayload
 ): Promise<CaseManagementCaseRow> {
+  const normalizedNotes = String(body.notes ?? '').trim();
   const payload: Record<string, unknown> = {
     case_title: body.case_title,
     severity: body.severity,
     pest_scouting_record: body.weekly_record,
+    // Backend requires notes; always provide a non-empty value.
+    notes: normalizedNotes || 'Created from agronomist triage review.',
   };
-  if (body.notes && body.notes.trim()) payload.notes = body.notes.trim();
   const created = await apiRequest<BackendCase>('/api/case-management/cases/', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -271,6 +568,56 @@ export type FarmBlockDto = {
   timestamp?: string;
 };
 
+export type ScoutingSessionDto = {
+  id: string;
+  session_name?: string;
+  notes?: string | null;
+  status: 'draft' | 'in_progress' | 'completed' | string;
+  started_at?: string;
+  completed_at?: string | null;
+  updated_at?: string;
+  record_count?: number;
+};
+
+export type CreateScoutingSessionPayload = {
+  session_name?: string;
+  notes?: string;
+  status?: 'draft' | 'in_progress' | 'completed';
+  block_ids?: string[];
+};
+
+export type CreateWeeklyRecordPayload = {
+  scouting_session?: string;
+  block: string;
+  variety: string;
+  type_of_trap: string;
+  number_of_trap: number;
+  traps_replaced: number;
+  any_pests_observed: 'Yes' | 'No';
+  pests_observed?: string | null;
+  beneficial_insects_observed?: string | null;
+  number_of_trees_affected: number;
+  pest_plant_part_affected?: string | null;
+  pest_crop_stage?: string | null;
+  pest_detection_method?: string | null;
+  pests_per_trap: number;
+  any_diseases_observed: 'Yes' | 'No';
+  disease?: string | null;
+  disease_plant_part?: string | null;
+  disease_crop_stage?: string | null;
+  disease_detection_method?: string | null;
+  number_of_photos_taken?: number;
+  additional_notes?: string | null;
+  actions_taken: string;
+  outcome: string;
+  remarks?: string | null;
+  start_date: string;
+  end_date: string;
+  location: string;
+  gps_latitude?: number | null;
+  gps_longitude?: number | null;
+};
+
 export type KnowledgeEntryDto = {
   id: string;
   category_name?: string;
@@ -282,6 +629,13 @@ export type KnowledgeEntryDto = {
   active_use_cases?: string;
   approved_content?: boolean;
   chemical_gate?: string;
+  regional_alerts?: Array<{
+    county: string;
+    alert: string;
+    active?: boolean;
+    created_by?: string;
+    created_at?: string;
+  }>;
   created_at?: string;
   last_updated?: string;
 };
@@ -307,11 +661,69 @@ export type HcdaStatisticsDto = {
   total_acreage: number;
 };
 
+export type KephisRiskExporterDto = {
+  id: string;
+  exporterName: string;
+  farmerCount: number;
+  restrictedBlocks: number;
+  riskScore: number;
+  county: string;
+};
+
+export type KephisInfectionClusterDto = {
+  county: string;
+  intensity: 'low' | 'medium' | 'high';
+  farmerCount: number;
+  pestCount: number;
+};
+
+export type KephisRiskSummaryDto = {
+  total_pest_detections: number;
+  active_quarantine_zones: number;
+  affected_farmers: number;
+  compliance_rate: number;
+};
+
+export type KephisRiskIntelligenceDto = {
+  exporterCompliance: KephisRiskExporterDto[];
+  infectionClusters: KephisInfectionClusterDto[];
+  summary: KephisRiskSummaryDto;
+};
+
+export type KephisThresholdsDto = {
+  fruit_fly_limit: number;
+  fcm_limit: number;
+  thrips_limit: number;
+  updated_at?: string;
+};
+
 export async function fetchMyFarmBlocks(): Promise<FarmBlockDto[]> {
   const data = await apiRequest<PaginatedResults<FarmBlockDto> | FarmBlockDto[]>(
     '/api/pest-scouting/farm-blocks/?page_size=1000',
   );
   return parseDrfList<FarmBlockDto>(data);
+}
+
+export async function createScoutingSession(
+  body: CreateScoutingSessionPayload
+): Promise<ScoutingSessionDto> {
+  return apiRequest<ScoutingSessionDto>('/api/pest-scouting/scouting-sessions/', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function completeScoutingSession(sessionId: string): Promise<ScoutingSessionDto> {
+  return apiRequest<ScoutingSessionDto>(`/api/pest-scouting/scouting-sessions/${sessionId}/complete/`, {
+    method: 'POST',
+  });
+}
+
+export async function createWeeklyRecord(body: CreateWeeklyRecordPayload) {
+  return apiRequest('/api/pest-scouting/weekly-records/', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 export async function createFarmBlock(body: {
@@ -351,6 +763,35 @@ export async function fetchKnowledgeEntryById(id: string): Promise<KnowledgeEntr
   return apiRequest<KnowledgeEntryDto>(`/api/knowledge-base/entries/${id}/`);
 }
 
+export async function fetchContextualKnowledgeLinks(params: {
+  finding: string;
+  county?: string;
+}): Promise<KnowledgeEntryDto[]> {
+  const query = new URLSearchParams();
+  query.set('finding', params.finding);
+  if (params.county) query.set('county', params.county);
+  const data = await apiRequest<{ results: KnowledgeEntryDto[] }>(
+    `/api/knowledge-base/entries/contextual-links/?${query.toString()}`
+  );
+  return data.results || [];
+}
+
+export async function addKnowledgeRegionalAlert(params: {
+  entryId: string;
+  county: string;
+  alert: string;
+  active?: boolean;
+}): Promise<KnowledgeEntryDto> {
+  return apiRequest<KnowledgeEntryDto>(`/api/knowledge-base/entries/${params.entryId}/add_regional_alert/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      county: params.county,
+      alert: params.alert,
+      active: params.active ?? true,
+    }),
+  });
+}
+
 export async function fetchHcdaFarmers(): Promise<HcdaFarmerDto[]> {
   const data = await apiRequest<PaginatedResults<HcdaFarmerDto> | HcdaFarmerDto[]>(
     '/api/hcda-registry/farmers/?page_size=1000',
@@ -366,5 +807,58 @@ export async function fetchHcdaStatistics(): Promise<HcdaStatisticsDto> {
 export function openHcdaPdfExport() {
   if (typeof window === 'undefined') return;
   window.open(`${API_BASE_URL}/api/hcda-registry/farmers/export/?format=pdf`, '_blank', 'noopener,noreferrer');
+}
+
+/** Opens excel export generated by backend. */
+export function openHcdaExcelExport() {
+  if (typeof window === 'undefined') return;
+  window.open(
+    `${API_BASE_URL}/api/hcda-registry/farmers/export/?format=excel`,
+    '_blank',
+    'noopener,noreferrer'
+  );
+}
+
+export async function fetchKephisRiskIntelligence(): Promise<KephisRiskIntelligenceDto> {
+  return apiRequest<KephisRiskIntelligenceDto>('/api/kephis-quarantine/management/risk_intelligence/');
+}
+
+export async function fetchKephisThresholds(): Promise<KephisThresholdsDto> {
+  return apiRequest<KephisThresholdsDto>('/api/kephis-quarantine/management/thresholds/');
+}
+
+export async function updateKephisThresholds(
+  body: Partial<Pick<KephisThresholdsDto, 'fruit_fly_limit' | 'fcm_limit' | 'thrips_limit'>>
+): Promise<KephisThresholdsDto> {
+  return apiRequest<KephisThresholdsDto>('/api/kephis-quarantine/management/thresholds/', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+export function openKephisExportCsv() {
+  if (typeof window === 'undefined') return;
+  window.open(
+    `${API_BASE_URL}/api/kephis-quarantine/management/export_excel/`,
+    '_blank',
+    'noopener,noreferrer'
+  );
+}
+
+export async function verifyAndCloseCase(params: {
+  caseId: string;
+  diagnosis: string;
+  recommended_actions: string[];
+}): Promise<{ status: string; case: BackendCase }> {
+  return apiRequest<{ status: string; case: BackendCase }>(
+    `/api/case-management/cases/${params.caseId}/verify_and_close/`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        diagnosis: params.diagnosis,
+        recommended_actions: params.recommended_actions,
+      }),
+    },
+  );
 }
 
