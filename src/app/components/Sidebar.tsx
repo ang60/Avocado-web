@@ -64,7 +64,14 @@ const kephisNavItems: NavItem[] = [
 
 /** Agronomists: full dashboard tabs, plus a dedicated reports page. */
 const agronomistNavItems: NavItem[] = [
-  { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.dashboard' },
+  { name: 'Overview', icon: LayoutDashboard, path: '/dashboard?tab=overview', permission: 'nav.dashboard' },
+  { name: 'Quarantine & Permits', icon: Shield, path: '/dashboard?tab=quarantine', permission: 'nav.dashboard' },
+  { name: 'Risk Intelligence', icon: TrendingUp, path: '/dashboard?tab=risk-intel', permission: 'nav.dashboard' },
+  { name: 'Triage Queue', icon: Search, path: '/dashboard?tab=triage', permission: 'nav.scouting' },
+  { name: 'My Farmers', icon: Users, path: '/dashboard?tab=my-farmers', permission: 'nav.farmers' },
+  { name: 'Trend Analytics', icon: Activity, path: '/dashboard?tab=analytics', permission: 'nav.scouting' },
+  { name: 'Knowledge Base', icon: BookOpen, path: '/dashboard?tab=kb', permission: 'nav.knowledge' },
+  { name: 'Audit Logs', icon: FileText, path: '/dashboard?tab=audit', permission: 'nav.scouting' },
   { name: 'Reports', icon: ClipboardCheck, path: '/agronomist-reports', permission: 'nav.reports' },
 ];
 
@@ -113,10 +120,16 @@ function SidebarNavLinks({
       <ul className="space-y-1 pb-4">
         {visibleItems.map((item) => {
           const Icon = item.icon;
-          const isActive =
-            item.path === '/'
-              ? location.pathname === '/' || location.pathname === '/dashboard'
-              : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+          const isActive = (() => {
+            const itemHasQuery = item.path.includes('?');
+            if (item.path === '/') {
+              return location.pathname === '/' || location.pathname === '/dashboard';
+            }
+            if (itemHasQuery) {
+              return `${location.pathname}${location.search}` === item.path;
+            }
+            return location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+          })();
           return (
             <li key={item.name}>
               <AppLink

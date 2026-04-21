@@ -90,6 +90,7 @@ ROLE_PERMISSIONS = {
         'nav.knowledge',
         'nav.symptom_codebook',
         'nav.farmers',
+        'nav.reports',
         'alert_rules.view',
     ],
     'Agronomist': [

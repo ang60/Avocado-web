@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Waves,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { KenyaHeatMap } from '../components/KenyaHeatMap';
 import { TableScroll } from '../components/TableScroll';
 import { AppToast } from '../components/AppToast';
@@ -66,7 +67,44 @@ function isUnknownFinding(report: ScoutingFeedItem) {
 }
 
 export function AgronomistDashboard() {
-  const [activeTab, setActiveTab] = useState<AgronomistTab>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const normalizeTab = (raw: string | null): AgronomistTab => {
+    const t = String(raw || '').trim();
+    const allowed: AgronomistTab[] = [
+      'overview',
+      'quarantine',
+      'risk-intel',
+      'triage',
+      'my-farmers',
+      'analytics',
+      'kb',
+      'audit',
+    ];
+    return (allowed as string[]).includes(t) ? (t as AgronomistTab) : 'overview';
+  };
+  const [activeTab, setActiveTab] = useState<AgronomistTab>(() => normalizeTab(searchParams.get('tab')));
+
+  const navigateTab = (tab: AgronomistTab) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const fromUrl = normalizeTab(searchParams.get('tab'));
+    setActiveTab(fromUrl);
+    // Keep the URL explicit so refresh/share always lands on the same section.
+    if (searchParams.get('tab') !== fromUrl) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('tab', fromUrl);
+        return next;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [feed, setFeed] = useState<ScoutingFeedItem[]>([]);
   const [kbEntries, setKbEntries] = useState<KnowledgeEntryDto[]>([]);
   const [farmers, setFarmers] = useState<FarmerListRow[]>([]);
@@ -335,33 +373,6 @@ export function AgronomistDashboard() {
         </p>
       </header>
 
-      <div className="mb-4 flex flex-wrap gap-2 sm:mb-5">
-        {[
-          ['overview', 'Overview'],
-          ['quarantine', 'Quarantine & Permits'],
-          ['risk-intel', 'Risk Intelligence'],
-          ['triage', `Triage Queue (${triageQueue.length})`],
-          ['my-farmers', `My Farmers (${farmers.length})`],
-          ['analytics', 'Trend Analytics'],
-          ['kb', 'Knowledge Base'],
-          ['audit', 'Audit Logs'],
-        ].map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id as AgronomistTab)}
-            className="rounded-lg px-4 py-2 text-sm transition-all"
-            style={{
-              fontFamily: 'IBM Plex Sans, sans-serif',
-              backgroundColor: activeTab === id ? '#2D6A4F' : '#FFFFFF',
-              color: activeTab === id ? '#FFFFFF' : '#1B4332',
-              border: '1px solid #E0DDD6',
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       {loading && activeTab !== 'quarantine' && activeTab !== 'risk-intel' ? (
         <div className="p-8 rounded-lg border" style={{ borderColor: '#E0DDD6' }}>
           <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading agronomist modules…</p>
@@ -378,8 +389,8 @@ export function AgronomistDashboard() {
           embedMode
           embedActiveTab={activeTab === 'risk-intel' ? 'risk-intel' : 'quarantine'}
           onEmbedTabChange={(t) => {
-            if (t === 'risk-intel') setActiveTab('risk-intel');
-            else if (t === 'quarantine') setActiveTab('quarantine');
+            if (t === 'risk-intel') navigateTab('risk-intel');
+            else if (t === 'quarantine') navigateTab('quarantine');
           }}
           hideAlertsTab
         />
