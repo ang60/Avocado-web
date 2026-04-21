@@ -364,11 +364,20 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
 
         from case_management.models import Case
 
+        assigned_agronomist = None
+        try:
+            # If the farmer account is linked to an agronomist, assign the reinspection case to them.
+            farmer_user = getattr(record, 'farmer', None)
+            assigned_agronomist = getattr(farmer_user, 'managed_by', None)
+        except Exception:
+            assigned_agronomist = None
+
         case = Case.objects.create(
             case_title=title,
             severity=severity,
             pest_scouting_record=record,
             notes=notes,
+            assigned_agronomist=assigned_agronomist,
         )
 
         return Response(
