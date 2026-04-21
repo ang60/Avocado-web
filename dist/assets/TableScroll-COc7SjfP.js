@@ -1,0 +1,1 @@
+import{j as l}from"./index-1A7inskN.js";const t="min-w-0 max-w-full overflow-x-auto overflow-y-visible touch-pan-x overscroll-x-contain [-webkit-overflow-scrolling:touch]";function i({children:o,className:r=""}){return l.jsx("div",{className:`${t} ${r}`.trim(),children:o})}export{i as T};

@@ -1,0 +1,1 @@
+import{u as e,d as o,j as r,P as a}from"./index-1A7inskN.js";import{b as s}from"./recharts-DkIQCLio.js";import"./d3-geo-cGJwCMu6.js";function p(){const t=e();return s.useEffect(()=>{o(),t("/login",{replace:!0})},[t]),r.jsx(a,{})}export{p as Logout};
