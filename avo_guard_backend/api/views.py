@@ -41,7 +41,12 @@ def _scoped_farmers_qs(user):
     if role_name(user) == 'Exporter':
         return FarmerProfile.objects.filter(linked_exporter_id=getattr(user, 'entity_id', None))
     if role_name(user) == ROLE_AGRONOMIST:
-        return FarmerProfile.objects.filter(cases__assigned_agronomist=user).distinct()
+        # Agronomists should see farmers explicitly linked to them (accounts.User.managed_by),
+        # plus any farmers that have cases assigned to them.
+        return (
+            FarmerProfile.objects.filter(Q(user__managed_by=user) | Q(cases__assigned_agronomist=user))
+            .distinct()
+        )
     return FarmerProfile.objects.none()
 
 
