@@ -364,14 +364,6 @@ export function AgronomistDashboard() {
           onDismiss={() => setToastMessage(null)}
         />
       ) : null}
-      <header className="mb-4 md:mb-5">
-        <h1 className="mb-1 text-2xl sm:text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-          Agronomist Command Center
-        </h1>
-        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-          Expert triage, surveillance analytics, and knowledge curation for national avocado health intelligence.
-        </p>
-      </header>
 
       {loading && activeTab !== 'quarantine' && activeTab !== 'risk-intel' ? (
         <div className="p-8 rounded-lg border" style={{ borderColor: '#E0DDD6' }}>
