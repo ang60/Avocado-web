@@ -4,10 +4,14 @@ import dj_database_url
 from datetime import timedelta
 
 from dotenv import load_dotenv
-load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load env from the Django project root (backend/), not only from the shell cwd.
+# This fixes `manage.py` / gunicorn when the working directory is not `backend/`.
+load_dotenv(BASE_DIR / ".env")
+load_dotenv()  # optional: allow a .env in cwd for local overrides
 
 
 # Quick-start development settings - unsuitable for production
