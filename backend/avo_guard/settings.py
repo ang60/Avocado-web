@@ -8,10 +8,13 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load env from the Django project root (backend/), not only from the shell cwd.
-# This fixes `manage.py` / gunicorn when the working directory is not `backend/`.
-load_dotenv(BASE_DIR / ".env")
-load_dotenv()  # optional: allow a .env in cwd for local overrides
+# Load env from predictable paths (not only the shell cwd).
+# After splitting repo into `backend/` + `frontend/`, many servers still keep `.env`
+# at the monorepo root (`Avocado-web/.env`) instead of `backend/.env`.
+_REPO_ROOT = BASE_DIR.parent
+load_dotenv(_REPO_ROOT / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)  # backend wins over repo root
+load_dotenv()  # optional: cwd-based overrides for local dev
 
 
 # Quick-start development settings - unsuitable for production
@@ -112,8 +115,16 @@ else:
         database_url = _clean_database_url(os.environ.get("DATABASE_URL_LOCAL"))
 
 if not database_url:
+    root_env = _REPO_ROOT / ".env"
+    backend_env = BASE_DIR / ".env"
+    root_note = "exists" if root_env.is_file() else "missing"
+    backend_note = "exists" if backend_env.is_file() else "missing"
     raise RuntimeError(
-        "Database URL is not configured. Set DATABASE_URL (prod) or DATABASE_URL_LOCAL (dev) in your environment."
+        "Database URL is not configured. Set DATABASE_URL (production) or "
+        "DATABASE_URL_LOCAL (development) in the environment, or in a .env file.\n"
+        f"  Checked: {root_env} ({root_note})\n"
+        f"  Checked: {backend_env} ({backend_note})\n"
+        f"  DEBUG={DEBUG!r} (when DEBUG is false, DATABASE_URL is tried first, then DATABASE_URL_LOCAL)."
     )
 
 DATABASES = {
