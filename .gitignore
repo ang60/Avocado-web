@@ -3,7 +3,7 @@ node_modules/
 
 # Build / cache
 # Built frontend artifacts should not be versioned.
-dist/
+frontend/dist/
 *.tsbuildinfo
 .vite/
 
@@ -11,7 +11,6 @@ dist/
 backend/db.sqlite3
 backend/.venv/
 backend/**/__pycache__/
-avo_guard_backend/**/__pycache__/
 **/__pycache__/
 *.pyo
 *.pyd
