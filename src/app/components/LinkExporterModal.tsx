@@ -7,6 +7,7 @@ interface LinkExporterModalProps {
   onSave: (data: any) => void;
   farmer: {
     id: string;
+    farmerCode?: string;
     name: string;
     county: string;
     owner: string;
@@ -114,7 +115,7 @@ export function LinkExporterModal({ isOpen, onClose, onSave, farmer, exporters }
                 Block ID
               </p>
               <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#1B4332', fontWeight: 600 }}>
-                {farmer.id}
+                {farmer.farmerCode || farmer.id}
               </p>
             </div>
             <div>

@@ -868,7 +868,7 @@ function PhytosanitaryReport({
                           fontWeight: '500',
                         }}
                       >
-                        {farmer.id}
+                        {farmer.farmerCode || farmer.id}
                       </p>
                       <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                         {farmer.farmName}

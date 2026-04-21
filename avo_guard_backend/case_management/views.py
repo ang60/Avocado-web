@@ -134,7 +134,7 @@ class CaseViewSet(viewsets.ModelViewSet):
                 )
 
             message = (
-                f"Case ID: {case.id}\n"
+                f"Case ID: {case.case_code or case.id}\n"
                 f"Severity: {case.severity}\n"
                 f"Farmer: {farmer_name}\n"
                 f"Block: {block_name}\n"

@@ -136,6 +136,7 @@ export interface CaseManagementKpi {
 /** Case Management — table row (matches CaseTableEnhanced) */
 export interface CaseManagementCaseRow {
   id: string;
+  caseCode?: string;
   severity: 'high' | 'medium' | 'low' | 'unknown';
   farm: string;
   block: string;
@@ -225,6 +226,7 @@ export interface SymptomCodebookEntry {
 
 export interface FarmerListRow {
   id: string;
+  farmerCode?: string;
   name: string;
   owner: string;
   location: string;
@@ -248,6 +250,7 @@ export interface FarmerListRow {
 
 export interface ComplianceFarmerRow {
   id: string;
+  farmerCode?: string;
   name: string;
   farmName: string;
   location: string;

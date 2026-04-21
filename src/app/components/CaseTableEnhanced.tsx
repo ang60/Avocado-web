@@ -75,6 +75,7 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedCase, setSelectedCase] = useState<CaseDetailData | null>(null);
   const [assignModalCase, setAssignModalCase] = useState<CaseData | null>(null);
+  const [assignSuccess, setAssignSuccess] = useState<{ caseId: string; smsSent: boolean } | null>(null);
   const navigate = useNavigate();
 
   const handleSort = (field: SortField) => {
@@ -292,7 +293,9 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
                     className="px-6 py-4"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}
                   >
-                    {caseItem.id}
+                    <span style={{ fontFamily: 'IBM Plex Mono, monospace' }}>
+                      {caseItem.caseCode || caseItem.id}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <SeverityBadge severity={caseItem.severity} />
@@ -553,7 +556,7 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
               <button
                 onClick={() => {
                   console.log('Assigning case:', assignModalCase.id);
-                  alert(`Case ${assignModalCase.id} assigned successfully!\n\nSMS notification sent to agronomist.`);
+                  setAssignSuccess({ caseId: assignModalCase.id, smsSent: true });
                   setAssignModalCase(null);
                 }}
                 className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center gap-2"
@@ -567,6 +570,72 @@ export function CaseTableEnhanced({ cases }: { cases: CaseManagementCaseRow[] })
               >
                 <UserPlus className="w-4 h-4" />
                 Assign Case
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Assignment Success Modal */}
+      {assignSuccess ? (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-[60] p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setAssignSuccess(null)}
+        >
+          <div
+            className="rounded-lg max-w-md w-full overflow-hidden border shadow-lg"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '12px' }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Assignment successful"
+          >
+            <div className="p-5 border-b flex items-start justify-between" style={{ borderColor: '#E0DDD6' }}>
+              <div>
+                <h3 style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332', fontSize: 18 }}>
+                  Assignment successful
+                </h3>
+                <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                  Case routed to the selected agronomist.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssignSuccess(null)}
+                className="p-2 rounded-lg transition-colors hover:bg-gray-100"
+                style={{ color: '#717182' }}
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              <div className="rounded-lg border p-3" style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF' }}>
+                <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                  Case <span style={{ fontFamily: 'IBM Plex Mono, monospace' }}>{assignSuccess.caseId}</span> assigned successfully.
+                </p>
+                <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: assignSuccess.smsSent ? '#2D6A4F' : '#717182' }}>
+                  {assignSuccess.smsSent ? 'SMS notification sent to agronomist.' : 'SMS notification not sent.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-5 border-t flex items-center justify-end" style={{ borderColor: '#E0DDD6' }}>
+              <button
+                type="button"
+                onClick={() => setAssignSuccess(null)}
+                className="px-4 py-2 rounded-lg transition-colors hover:opacity-90"
+                style={{
+                  backgroundColor: '#2D6A4F',
+                  color: '#FFFFFF',
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                }}
+              >
+                OK
               </button>
             </div>
           </div>

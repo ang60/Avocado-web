@@ -1,7 +1,8 @@
 import uuid
 
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
+from django.utils import timezone
 
 
 class EntityType(models.TextChoices):
@@ -9,6 +10,23 @@ class EntityType(models.TextChoices):
     KEPHIS = 'Government - KEPHIS', 'Government - KEPHIS'
     HCDA = 'Government - HCDA', 'Government - HCDA'
     PARTNER = 'Partner Organization', 'Partner Organization'
+
+
+class FarmerCodeSequence(models.Model):
+    """
+    Tracks the last issued farmer sequence number for a given year.
+
+    Generates Farmer IDs like: FRM-0001-2026
+    """
+
+    year = models.PositiveIntegerField(unique=True)
+    last_number = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['year']
+
+    def __str__(self):
+        return f'{self.year}: {self.last_number}'
 
 
 class FarmerProfile(models.Model):
@@ -32,6 +50,9 @@ class FarmerProfile(models.Model):
         NEEDS_FOLLOW_UP = 'needs-follow-up', 'needs-follow-up'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Nullable so migrations can add it safely before backfill; uniqueness is still enforced
+    # for non-null values (Postgres allows multiple NULLs).
+    farmer_code = models.CharField(max_length=32, unique=True, null=True, blank=True, default=None)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -89,8 +110,32 @@ class FarmerProfile(models.Model):
     class Meta:
         ordering = ['name']
 
+    @staticmethod
+    def _format_farmer_code(n: int, year: int) -> str:
+        return f'FRM-{n:04d}-{year}'
+
+    def _compute_farmer_code_year(self) -> int:
+        if self.registration_date:
+            return int(self.registration_date.year)
+        return int(timezone.now().year)
+
+    def ensure_farmer_code(self):
+        if self.farmer_code:
+            return
+        year = self._compute_farmer_code_year()
+        with transaction.atomic():
+            seq, _ = FarmerCodeSequence.objects.select_for_update().get_or_create(year=year)
+            seq.last_number = int(seq.last_number or 0) + 1
+            seq.save(update_fields=['last_number'])
+            self.farmer_code = self._format_farmer_code(seq.last_number, year)
+
+    def save(self, *args, **kwargs):
+        if not self.farmer_code:
+            self.ensure_farmer_code()
+        return super().save(*args, **kwargs)
+
     def __str__(self):
-        return f'{self.name} ({self.id})'
+        return f'{self.name} ({self.farmer_code or self.id})'
 
 
 class FarmBlock(models.Model):

@@ -11,7 +11,7 @@ class CaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Case
         fields = [
-            'id', 'case_title', 'severity', 'pest_scouting_record',
+            'id', 'case_code', 'case_title', 'severity', 'pest_scouting_record',
             'notes', 'status', 'diagnosis', 'recommended_actions', 'closed_at',
             'assigned_agronomist', 'created_at', 'updated_at'
         ]
@@ -19,6 +19,8 @@ class CaseSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
+        # Frontend prefers camelCase for display-only IDs.
+        representation['caseCode'] = representation.get('case_code') or getattr(instance, 'case_code', None)
         if instance.assigned_agronomist:
             representation['assigned_agronomist'] = UserSerializer(instance.assigned_agronomist).data
         if instance.pest_scouting_record:

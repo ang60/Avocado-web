@@ -63,6 +63,8 @@ type BackendWeeklyRecord = {
 
 type BackendCase = {
   id: string;
+  caseCode?: string;
+  case_code?: string;
   case_title: string;
   severity: 'high' | 'medium' | 'low' | 'unknown';
   notes: string;
@@ -100,6 +102,7 @@ export async function fetchCaseManagement(): Promise<CaseManagementPayload> {
 
     return {
       id: c.id,
+      caseCode: (c.caseCode || c.case_code) as string | undefined,
       severity: c.severity,
       farm: farmerName,
       block: blockLabel || '—',

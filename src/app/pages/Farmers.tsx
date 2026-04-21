@@ -455,7 +455,7 @@ export function Farmers() {
                         className="px-6 py-4"
                         style={{ fontFamily: 'monospace', color: '#2D6A4F', fontWeight: '600' }}
                       >
-                        {farmer.id}
+                        {farmer.farmerCode || farmer.id}
                       </td>
                       <td 
                         className="px-6 py-4"

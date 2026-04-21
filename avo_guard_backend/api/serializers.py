@@ -37,6 +37,7 @@ class AlertRuleSerializer(serializers.ModelSerializer):
 
 
 class FarmerListSerializer(serializers.ModelSerializer):
+    farmerCode = serializers.CharField(source='farmer_code')
     primaryChannel = serializers.CharField(source='primary_channel')
     weeklyScoutingLogs = serializers.SerializerMethodField()
     lastScoutingResult = serializers.SerializerMethodField()
@@ -52,6 +53,7 @@ class FarmerListSerializer(serializers.ModelSerializer):
         model = FarmerProfile
         fields = (
             'id',
+            'farmerCode',
             'name',
             'owner',
             'location',
@@ -87,6 +89,7 @@ class FarmerListSerializer(serializers.ModelSerializer):
 
 
 class FarmerDetailSerializer(serializers.ModelSerializer):
+    farmerCode = serializers.CharField(source='farmer_code')
     farmName = serializers.CharField(source='farm_name')
     subCounty = serializers.CharField(source='sub_county')
     phone = serializers.CharField(source='user.phone_number')
@@ -109,6 +112,7 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
         model = FarmerProfile
         fields = (
             'id',
+            'farmerCode',
             'name',
             'farmName',
             'location',
