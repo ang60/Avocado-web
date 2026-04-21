@@ -199,6 +199,7 @@ function mapBackendCaseToCaseDetail(c: BackendCase): CaseDetailPayload {
 
   return {
     id: c.id,
+    caseCode: (c.caseCode || c.case_code) as string | undefined,
     caseStatus: caseStatus,
     farmerName,
     farmerPhone,

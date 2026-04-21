@@ -64,14 +64,17 @@ const kephisNavItems: NavItem[] = [
 
 /** Agronomists: full dashboard tabs, plus a dedicated reports page. */
 const agronomistNavItems: NavItem[] = [
-  { name: 'Overview', icon: LayoutDashboard, path: '/dashboard?tab=overview', permission: 'nav.dashboard' },
-  { name: 'Quarantine & Permits', icon: Shield, path: '/dashboard?tab=quarantine', permission: 'nav.dashboard' },
-  { name: 'Risk Intelligence', icon: TrendingUp, path: '/dashboard?tab=risk-intel', permission: 'nav.dashboard' },
-  { name: 'Triage Queue', icon: Search, path: '/dashboard?tab=triage', permission: 'nav.scouting' },
-  { name: 'My Farmers', icon: Users, path: '/dashboard?tab=my-farmers', permission: 'nav.farmers' },
-  { name: 'Trend Analytics', icon: Activity, path: '/dashboard?tab=analytics', permission: 'nav.scouting' },
-  { name: 'Knowledge Base', icon: BookOpen, path: '/dashboard?tab=kb', permission: 'nav.knowledge' },
-  { name: 'Audit Logs', icon: FileText, path: '/dashboard?tab=audit', permission: 'nav.scouting' },
+  { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.dashboard' },
+  { name: 'Triage Queue', icon: Search, path: '/dashboard?tab=triage', permission: 'nav.dashboard' },
+  { name: 'My Farmers', icon: Users, path: '/dashboard?tab=my-farmers', permission: 'nav.dashboard' },
+  { name: 'Trend Analytics', icon: Activity, path: '/dashboard?tab=analytics', permission: 'nav.dashboard' },
+  { name: 'Knowledge Base', icon: BookOpen, path: '/dashboard?tab=kb', permission: 'nav.dashboard' },
+  { name: 'Audit Logs', icon: FileText, path: '/dashboard?tab=audit', permission: 'nav.dashboard' },
+  { name: 'Scouting Reports', icon: FileText, path: '/scouting-reports', permission: 'nav.scouting' },
+  { name: 'Case Management', icon: FolderOpen, path: '/case-management', permission: 'nav.cases' },
+  { name: 'Outbreak Monitoring', icon: Activity, path: '/outbreak-monitoring', permission: 'nav.outbreak' },
+  { name: 'Alerts', icon: Bell, path: '/alerts', permission: 'nav.alerts' },
+  { name: 'Symptom Codebook', icon: Phone, path: '/symptom-codebook', permission: 'nav.symptom_codebook' },
   { name: 'Reports', icon: ClipboardCheck, path: '/agronomist-reports', permission: 'nav.reports' },
 ];
 

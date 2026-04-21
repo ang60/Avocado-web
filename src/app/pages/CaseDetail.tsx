@@ -234,7 +234,7 @@ export function CaseDetail() {
                       color: '#1B4332',
                     }}
                   >
-                    Case {caseData.id}
+                    Case {caseData.caseCode || caseData.id}
                   </h1>
                   <span
                     className="px-3 py-1 rounded text-xs uppercase"
@@ -952,7 +952,7 @@ export function CaseDetail() {
                       Case ID
                     </p>
                     <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                      {caseData.id}
+                      {caseData.caseCode || caseData.id}
                     </p>
                   </div>
                 </div>
@@ -1039,7 +1039,7 @@ export function CaseDetail() {
                     }}
                   >
                     <p className="text-sm leading-relaxed" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                      <strong>AvoGuard Advisory - {caseData.id}</strong><br /><br />
+                      <strong>AvoGuard Advisory - {caseData.caseCode || caseData.id}</strong><br /><br />
                       
                       Diagnosis: {selectedDiagnosisLabel}<br /><br />
                       
@@ -1090,7 +1090,7 @@ export function CaseDetail() {
                     }}
                   >
                     <p className="text-sm leading-relaxed" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                      <strong>AvoGuard Ushauri - {caseData.id}</strong><br /><br />
+                      <strong>AvoGuard Ushauri - {caseData.caseCode || caseData.id}</strong><br /><br />
                       
                       Tathmini: {caseData.pestDiseaseKiswahili}<br /><br />
                       
@@ -1249,7 +1249,7 @@ export function CaseDetail() {
                       Case ID
                     </p>
                     <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                      {caseData.id}
+                      {caseData.caseCode || caseData.id}
                     </p>
                   </div>
                 </div>
@@ -1336,7 +1336,7 @@ export function CaseDetail() {
                     }}
                   >
                     <p className="text-sm leading-relaxed" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                      <strong>AvoGuard Advisory - {caseData.id}</strong><br /><br />
+                      <strong>AvoGuard Advisory - {caseData.caseCode || caseData.id}</strong><br /><br />
                       
                       Diagnosis: {selectedDiagnosisLabel}<br /><br />
                       
@@ -1387,7 +1387,7 @@ export function CaseDetail() {
                     }}
                   >
                     <p className="text-sm leading-relaxed" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                      <strong>AvoGuard Ushauri - {caseData.id}</strong><br /><br />
+                      <strong>AvoGuard Ushauri - {caseData.caseCode || caseData.id}</strong><br /><br />
                       
                       Tathmini: {caseData.pestDiseaseKiswahili}<br /><br />
                       

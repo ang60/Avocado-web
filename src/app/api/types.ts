@@ -384,6 +384,7 @@ export interface KnowledgeBaseListPayload {
 /** Case detail page (rich case view) */
 export interface CaseDetailPayload {
   id: string;
+  caseCode?: string;
   caseStatus?: string;
   farmerName: string;
   farmerPhone: string;
