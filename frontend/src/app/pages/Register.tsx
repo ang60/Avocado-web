@@ -34,32 +34,30 @@ export function Register() {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [roles, setRoles] = useState<RoleOption[]>([]);
-  const [roleSearch, setRoleSearch] = useState('');
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      async function loadRoles() {
-        setLoadingRoles(true);
-        try {
-          const data = await fetchRoles(roleSearch || undefined);
-          setRoles(data);
-          if (data.length > 0 && !role) {
-            setRole(data[0].id);
-          }
-        } catch (err) {
-          console.error('Failed to load roles', err);
-        } finally {
-          setLoadingRoles(false);
-        }
+    let cancelled = false;
+    async function loadRoles() {
+      setLoadingRoles(true);
+      try {
+        const data = await fetchRoles();
+        if (!cancelled) setRoles(data);
+      } catch (err) {
+        console.error('Failed to load roles', err);
+        if (!cancelled) setRoles([]);
+      } finally {
+        if (!cancelled) setLoadingRoles(false);
       }
-      loadRoles();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [roleSearch, role]);
+    }
+    loadRoles();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const canSubmit = useMemo(() => {
     if (
@@ -119,6 +117,7 @@ export function Register() {
         role,
         county: county.trim(),
         password,
+        password_confirm: password,
       });
       setSuccess(true);
     } catch (err) {
@@ -241,36 +240,22 @@ export function Register() {
                   Role
                 </label>
                 <div className="mt-1.5 relative">
-                  <Briefcase className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={roleSearch}
-                    onChange={(e) => setRoleSearch(e.target.value)}
-                    placeholder="Search roles..."
-                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4 mb-2 text-sm"
-                    style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-                  />
+                  <Briefcase className="absolute left-3 top-3 w-4 h-4 text-gray-400 pointer-events-none z-[1]" />
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4 appearance-none"
+                    className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-2.5 pl-10 pr-3 sm:pr-4 appearance-none relative z-0"
                     style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                     required
+                    disabled={loadingRoles}
                   >
-                    {loadingRoles ? (
-                      <option value="">Loading roles...</option>
-                    ) : roles.length === 0 ? (
-                      <option value="">No roles found</option>
-                    ) : (
-                      <>
-                        {!role && <option value="">Select a role</option>}
-                        {roles.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.role_name}
-                          </option>
-                        ))}
-                      </>
-                    )}
+                    <option value="">{loadingRoles ? 'Loading roles…' : 'Select role'}</option>
+                    {!loadingRoles &&
+                      roles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.role_name}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>

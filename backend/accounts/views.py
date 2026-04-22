@@ -78,6 +78,18 @@ class RoleViewSet(viewsets.ModelViewSet):
     search_fields = ['role_name', 'description']
     permission_classes = [permissions.IsAuthenticated, IsAdminLikeUser]
 
+    def get_permissions(self):
+        # Anonymous users can list roles when building the public registration form.
+        if self.action == 'list' and self.request.query_params.get('for_registration') == '1':
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated(), IsAdminLikeUser()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action == 'list' and self.request.query_params.get('for_registration') == '1':
+            return qs.exclude(role_name='Administrator')
+        return qs
+
 @extend_schema(tags=['User Management'])
 class EntityViewSet(viewsets.ModelViewSet):
     queryset = Entity.objects.all()

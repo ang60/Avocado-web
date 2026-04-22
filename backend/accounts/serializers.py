@@ -213,14 +213,19 @@ class RegisterSerializer(serializers.Serializer):
     """
     Access request only — not phone verification and does not send an OTP.
     Creates or updates a pending user; admin must set is_active before the user can use request_otp / verify_otp.
-      - POST /api/users/register/ with { name, email?, phone_number, password, password_confirm }
+      - POST /api/users/register/ with { first_name, last_name, email?, phone_number, county?, role?,
+        password, password_confirm } or legacy { name, ... }.
     """
 
-    name = serializers.CharField(max_length=255)
+    name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
     phone_number = serializers.CharField(max_length=15)
     password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
     password_confirm = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
+    county = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    role = serializers.UUIDField(required=False, allow_null=True)
 
     def validate_phone_number(self, value: str) -> str:
         return normalize_phone_number(value)
@@ -234,26 +239,55 @@ class RegisterSerializer(serializers.Serializer):
             )
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({'password_confirm': 'Passwords do not match.'})
-        attrs.pop('password_confirm', None)
+
+        fn = (attrs.get('first_name') or '').strip()
+        ln = (attrs.get('last_name') or '').strip()
+        legacy = (attrs.get('name') or '').strip()
+        if fn or ln:
+            resolved_fn, resolved_ln = fn, ln
+        elif legacy:
+            parts = [p for p in legacy.split() if p]
+            resolved_fn = parts[0] if parts else ''
+            resolved_ln = ' '.join(parts[1:]) if len(parts) > 1 else ''
+        else:
+            raise serializers.ValidationError(
+                {'non_field_errors': 'Enter your first and last name (or full name).'}
+            )
+        attrs['resolved_first_name'] = resolved_fn
+        attrs['resolved_last_name'] = resolved_ln
+
+        role_id = attrs.get('role')
+        if role_id and not Role.objects.filter(pk=role_id).exists():
+            raise serializers.ValidationError({'role': 'Invalid role selected.'})
+
         return attrs
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        name = validated_data.get('name') or ''
-        email = validated_data.get('email') or ''
-        phone_number = validated_data.get('phone_number')
-
-        parts = [p for p in name.split() if p]
-        first_name = parts[0] if parts else ''
-        last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
+        validated_data.pop('password_confirm', None)
+        first_name = validated_data.pop('resolved_first_name')
+        last_name = validated_data.pop('resolved_last_name')
+        validated_data.pop('first_name', None)
+        validated_data.pop('last_name', None)
+        validated_data.pop('name', None)
+        email = validated_data.pop('email', None) or None
+        phone_number = validated_data.pop('phone_number')
+        county_raw = validated_data.pop('county', None)
+        county = (county_raw or '').strip() or None
+        role_id = validated_data.pop('role', None)
+        role = Role.objects.filter(pk=role_id).first() if role_id else None
 
         user = User.objects.filter(phone_number=phone_number).first()
         if user:
             user.first_name = first_name or user.first_name
             user.last_name = last_name or user.last_name
-            user.email = (email or None) if email else user.email
+            user.email = email if email is not None else user.email
+            if county is not None:
+                user.county = county
+            if role is not None:
+                user.role = role
             user.set_password(password)
-            user.save(update_fields=['first_name', 'last_name', 'email', 'password'])
+            user.save()
             return user
 
         return User.objects.create_user(
@@ -261,8 +295,9 @@ class RegisterSerializer(serializers.Serializer):
             password=password,
             first_name=first_name,
             last_name=last_name,
-            email=email or None,
-            county=None,
+            email=email,
+            county=county,
+            role=role,
             is_active=False,
         )
 

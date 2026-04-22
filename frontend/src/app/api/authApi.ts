@@ -25,6 +25,7 @@ export async function submitAccessRequest(params: {
   role: string;
   county: string;
   password: string;
+  password_confirm: string;
 }): Promise<AccessRequestResponse> {
   return apiRequest<AccessRequestResponse>('/api/users/register/', {
     method: 'POST',
@@ -43,14 +44,15 @@ export type RoleOption = {
   permissions_count: number;
 };
 
-export async function fetchRoles(search?: string): Promise<RoleOption[]> {
-  const url = search 
-    ? `/api/roles/?page_size=1000&search=${encodeURIComponent(search)}` 
-    : '/api/roles/?page_size=1000';
-  const res = await apiRequest<{ results: RoleOption[] }>(url, {
-    method: 'GET',
-    auth: false,
-  });
+/** Roles for the public registration page (unauthenticated; server must allow `for_registration=1`). */
+export async function fetchRoles(): Promise<RoleOption[]> {
+  const res = await apiRequest<{ results: RoleOption[] }>(
+    '/api/roles/?page_size=100&for_registration=1',
+    {
+      method: 'GET',
+      auth: false,
+    }
+  );
   return res.results;
 }
 
