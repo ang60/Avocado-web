@@ -204,6 +204,11 @@ export const router = createBrowserRouter([
         Component: lazyRoute(() => import('./pages/HCDARegistry'), 'HCDARegistry'),
       },
       {
+        path: 'hcda-reports',
+        loader: requireNavPermission('nav.hcda'),
+        Component: lazyRoute(() => import('./pages/HCDAReports'), 'HCDAReports'),
+      },
+      {
         path: 'alerts',
         loader: requireNavPermission('nav.alerts'),
         Component: lazyRoute(() => import('./pages/Alerts'), 'Alerts'),

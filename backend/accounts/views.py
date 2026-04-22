@@ -28,6 +28,7 @@ from .serializers import (
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.html import strip_tags
 import random
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -48,6 +49,12 @@ def _user_for_login_identifier(identifier: str):
     except serializers.ValidationError:
         return None
     return User.objects.filter(phone_number=phone).first()
+
+
+def _record_user_login(user: User) -> None:
+    """JWT sign-in does not call django.contrib.auth.login(); mirror last_login updates."""
+    user.last_login = timezone.now()
+    user.save(update_fields=['last_login'])
 
 
 class StandardResultsSetPagination(pagination.PageNumberPagination):
@@ -245,6 +252,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        _record_user_login(user)
         refresh = RefreshToken.for_user(user)
         return Response(
             {
@@ -364,6 +372,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 otp.is_used = True
                 otp.save()
 
+                _record_user_login(user)
                 refresh = RefreshToken.for_user(user)
 
                 return Response({

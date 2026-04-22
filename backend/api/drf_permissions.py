@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework.permissions import BasePermission
 
-from .rbac import has_app_permission, is_admin_like, role_name, ROLE_AGRONOMIST
+from .rbac import ROLE_AGRONOMIST, ROLE_HCDA, has_app_permission, is_admin_like, role_name
 
 
 class IsAdminLike(BasePermission):
@@ -44,7 +44,12 @@ class CanManageScoutingReview(BasePermission):
         user = getattr(request, 'user', None)
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        if is_admin_like(user) or role_name(user) == ROLE_AGRONOMIST:
+        if role_name(user) == ROLE_AGRONOMIST:
+            return True
+        # HCDA is admin_like for county APIs but must not review individual scouting without scouting.manage.
+        if role_name(user) == ROLE_HCDA:
+            return has_app_permission(user, 'scouting.manage')
+        if is_admin_like(user):
             return True
         return has_app_permission(user, 'scouting.manage')
 

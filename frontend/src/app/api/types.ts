@@ -237,6 +237,9 @@ export interface FarmerListRow {
   lastScoutingResult: {
     status: 'high-risk' | 'medium-risk' | 'low-risk' | 'no-pests';
     finding: string;
+    /** ISO-ish datetime from API when present */
+    date?: string;
+    scoutName?: string;
   };
   exportEligibility: 'ready' | 'at-risk' | 'suspended';
   totalAcres: number;

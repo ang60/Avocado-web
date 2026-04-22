@@ -5,10 +5,24 @@ import { countyKeyFromName2 } from './kenyaMapShared';
 /** Loaded from `/geo/KEN_adm2.json` at runtime — not bundled (multi‑MB). */
 const GEO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}geo/KEN_adm2.json`;
 
+export type HeatMapRiskLevel = 'critical' | 'high' | 'medium' | 'low';
+
+export type KenyaHeatMapTooltipOverride = Record<
+  string,
+  { lines: Array<{ label: string; value: string }> }
+>;
+
+export type KenyaHeatMapProps = {
+  /** When set, these counties use API-driven colours instead of built-in demo data. */
+  countyRiskOverride?: Record<string, HeatMapRiskLevel>;
+  /** Optional per-county tooltip rows (e.g. HCDA surveillance metrics). */
+  countyTooltipOverride?: KenyaHeatMapTooltipOverride;
+};
+
 interface CountyData {
   name: string;
   cases: number;
-  riskLevel: 'critical' | 'high' | 'medium' | 'low';
+  riskLevel: HeatMapRiskLevel;
   farms: number;
   activeOutbreaks: number;
 }
@@ -37,13 +51,16 @@ const PADDING = 10;
 
 type GeoFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>>;
 
-function getFillForCounty(countyKey: string): string {
+function getFillForCounty(countyKey: string, countyRiskOverride?: Record<string, HeatMapRiskLevel>): string {
+  const override = countyRiskOverride?.[countyKey];
+  if (override) return riskColors[override];
   const data = countyData[countyKey];
   if (data) return riskColors[data.riskLevel];
   return NO_DATA_COLOR;
 }
 
-export function KenyaHeatMap() {
+export function KenyaHeatMap(props?: KenyaHeatMapProps) {
+  const { countyRiskOverride, countyTooltipOverride } = props ?? {};
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ w: 640, h: 400 });
@@ -87,12 +104,12 @@ export function KenyaHeatMap() {
       return {
         feature: feature as GeoFeature,
         countyKey,
-        fill: countyKey ? getFillForCounty(countyKey) : NO_DATA_COLOR,
+        fill: countyKey ? getFillForCounty(countyKey, countyRiskOverride) : NO_DATA_COLOR,
         key: `${countyKey || 'c'}-${i}`,
       };
     });
     return { collection: collectionInner, featureRows: rows };
-  }, [geoCollection]);
+  }, [geoCollection, countyRiskOverride]);
 
   useLayoutEffect(() => {
     const el = wrapRef.current;
@@ -148,7 +165,9 @@ export function KenyaHeatMap() {
     ctx.fillRect(0, 0, w, h);
 
     for (const { feature, countyKey, fill } of featureRows) {
-      const hasData = countyKey && countyData[countyKey];
+      const hasData =
+        countyKey &&
+        (countyData[countyKey] || (countyRiskOverride && countyKey in countyRiskOverride));
       const isHover = countyKey && countyKey === hoveredCountyKey;
       const d = pathToD(feature as GeoFeature);
       if (!d || d.length < 2) continue;
@@ -165,7 +184,7 @@ export function KenyaHeatMap() {
       ctx.lineJoin = 'round';
       ctx.stroke(p2d);
     }
-  }, [collection, featureRows, size.w, size.h, hoveredCountyKey]);
+  }, [collection, featureRows, size.w, size.h, hoveredCountyKey, countyRiskOverride]);
 
   useLayoutEffect(() => {
     draw();
@@ -214,6 +233,8 @@ export function KenyaHeatMap() {
   };
 
   const hoveredData = hoveredCountyKey ? countyData[hoveredCountyKey] : null;
+  const hoveredTipOverride =
+    hoveredCountyKey && countyTooltipOverride ? countyTooltipOverride[hoveredCountyKey] : undefined;
 
   return (
     <div className="relative w-full min-w-0 max-w-full">
@@ -275,7 +296,16 @@ export function KenyaHeatMap() {
           <h4 className="font-medium mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
             {hoveredData ? hoveredData.name : `${hoveredCountyKey} County`}
           </h4>
-          {hoveredData ? (
+          {hoveredTipOverride ? (
+            <div className="space-y-1 text-sm">
+              {hoveredTipOverride.lines.map((line) => (
+                <div key={line.label} className="flex justify-between gap-4">
+                  <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>{line.label}:</span>
+                  <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>{line.value}</span>
+                </div>
+              ))}
+            </div>
+          ) : hoveredData ? (
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Cases:</span>

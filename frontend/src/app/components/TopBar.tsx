@@ -7,6 +7,7 @@ import { useSidebar } from '../context/SidebarContext';
 
 const routeNames: Record<string, string> = {
   '/': 'Dashboard',
+  '/dashboard': 'Dashboard',
   '/scouting-reports': 'Scouting Reports',
   '/case-management': 'Case Management',
   '/outbreak-monitoring': 'Outbreak Monitoring',
@@ -22,9 +23,9 @@ const routeNames: Record<string, string> = {
   '/kephis-quarantine/traceability': 'KEPHIS',
   '/kephis-quarantine/standards': 'KEPHIS',
   '/kephis-quarantine/human-audit': 'KEPHIS',
-  '/kephis-quarantine/export-reports': 'KEPHIS',
   '/hcda-registry': 'HCDA',
-  '/exporter': 'Exporter',
+  '/hcda-reports': 'HCDA Reports',
+  '/exporter': 'Supply base',
   '/alerts': 'Alerts',
   '/knowledge-base': 'Knowledge Base',
   '/symptom-codebook': 'Symptom Codebook',
@@ -85,7 +86,8 @@ export function TopBar() {
     const path = location.pathname;
     const breadcrumbs = [{ name: 'Home', path: '/' }];
     
-    if (path === '/') {
+    if (path === '/' || path === '/dashboard') {
+      breadcrumbs.push({ name: 'Dashboard', path: '/dashboard' });
       return breadcrumbs;
     }
 

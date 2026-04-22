@@ -13,6 +13,7 @@ import { getAuthUser } from '../auth';
 import { FarmerDashboard } from './FarmerDashboard';
 import { AgronomistDashboard } from './AgronomistDashboard';
 import { KEPHISDashboard } from './KEPHISDashboard';
+import { HCDADashboard } from './HCDADashboard';
 
 const METRIC_ICONS = {
   activity: Activity,
@@ -29,6 +30,7 @@ export function Dashboard() {
   ).trim();
   const normalizedRoleName = roleName.toLowerCase();
   const isKephisUser = normalizedRoleName.includes('kephis');
+  const isHcdaUser = normalizedRoleName.includes('hcda');
 
   if (roleName === 'Farmer') {
     return <FarmerDashboard />;
@@ -38,6 +40,9 @@ export function Dashboard() {
   }
   if (isKephisUser) {
     return <KEPHISDashboard />;
+  }
+  if (isHcdaUser) {
+    return <HCDADashboard />;
   }
 
   const narrowPhone = useIsNarrowPhone();

@@ -6,8 +6,15 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from api.drf_permissions import IsAdminLike
+from api.rbac import ROLE_HCDA, role_name
+
+from .analytics import build_county_overview
 from .models import FarmerRegistration
 from .serializers import FarmerRegistrationSerializer, FarmerStatisticsSerializer
 
@@ -19,6 +26,32 @@ class FarmerRegistrationViewSet(viewsets.ModelViewSet):
     filterset_fields = ['globalGAPStatus', 'primaryExporter']
     search_fields = ['hcdaRegNumber', 'ward', 'county']
     ordering_fields = '__all__'
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated and role_name(user) == ROLE_HCDA:
+            raise PermissionDenied(
+                'HCDA accounts are limited to county-level surveillance. '
+                'Farm-level registry and compliance exports are not available for this role.'
+            )
+
+
+@extend_schema(tags=['HCDA Registry'])
+class HcdaCountyOverviewAPIView(APIView):
+    """
+    Aggregated surveillance indicators by county (no farmer names, blocks, or GPS).
+    Intended for HCDA extension planning at jurisdiction level.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminLike]
+
+    def get(self, request):
+        try:
+            days = int(request.query_params.get('days', 30))
+        except (TypeError, ValueError):
+            days = 30
+        return Response(build_county_overview(window_days=days))
 
     @extend_schema(
         summary="Export Farmer Registration",

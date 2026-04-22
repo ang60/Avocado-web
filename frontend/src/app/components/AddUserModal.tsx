@@ -1,3 +1,5 @@
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PasswordField } from './PasswordField';
@@ -120,12 +122,18 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
       }
     }
 
+    const phoneTrimmed = formData.phone.trim();
+    if (phoneTrimmed.length < 10) {
+      setLocalError('Enter a valid phone number with country code.');
+      return;
+    }
+
     try {
       const payload: AddUserSavePayload = {
         id: initialUser?.id,
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
+        phone: phoneTrimmed,
         role: formData.role,
         county: formData.county,
       };
@@ -210,19 +218,24 @@ export function AddUserModal({ isOpen, onClose, onSave, initialUser, roleOptions
               <label className="block text-sm mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                 Phone Number *
               </label>
-              <input
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg border"
-                style={{
-                  fontFamily: 'IBM Plex Sans, sans-serif',
-                  borderColor: '#E0DDD6',
-                  backgroundColor: '#FFFFFF',
-                }}
-                placeholder="+254 712 345 678"
-              />
+              <div className="mt-0 relative add-user-phone-input">
+                <PhoneInput
+                  country="ke"
+                  value={formData.phone}
+                  onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
+                  inputProps={{
+                    name: 'phone',
+                    required: true,
+                    autoComplete: 'tel',
+                  }}
+                  containerClass="w-full"
+                  inputClass="!w-full !bg-white !border !border-[#E0DDD6] focus:!border-[#2D6A4F] !outline-none !rounded-lg !py-2.5 !pl-12 !pr-3 !h-auto !text-sm"
+                  buttonClass="!bg-transparent !border-transparent !rounded-l-lg"
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-gray-500" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                Pick country code, then enter the rest of the number (same as sign in). Format: +254XXXXXXXXX.
+              </p>
             </div>
 
             {initialUser ? (
