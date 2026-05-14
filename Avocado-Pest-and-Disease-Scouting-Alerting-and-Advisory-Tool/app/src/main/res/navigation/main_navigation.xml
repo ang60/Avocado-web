@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_navigation"
+    app:startDestination="@+id/navigation_home">
+
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.avocado.android.ui.main.home.HomeFragment"
+        android:label="@string/title_home"
+        tools:layout="@layout/fragment_main_home">
+        <action
+            android:id="@+id/action_main_navigation_home_to_advisory_fragment"
+            app:destination="@id/navigation_advisory" />
+    </fragment>
+    <fragment
+        android:id="@+id/navigation_advisory"
+        android:name="com.avocado.android.ui.main.advisory.AdvisoryFragment"
+        android:label="@string/title_advisory"
+        tools:layout="@layout/fragment_main_advisory" />
+    <fragment
+        android:id="@+id/navigation_records"
+        android:name="com.avocado.android.ui.main.records.RecordsFragment"
+        android:label="@string/title_records"
+        tools:layout="@layout/fragment_main_records" />
+    <fragment
+        android:id="@+id/navigation_settings"
+        android:name="com.avocado.android.ui.main.settings.SettingsFragment"
+        android:label="@string/title_settings"
+        tools:layout="@layout/fragment_main_settings" />
+
+</navigation>

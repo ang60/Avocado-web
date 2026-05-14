@@ -318,14 +318,28 @@ class VerifyOTPSerializer(serializers.Serializer):
 class LoginPasswordSerializer(serializers.Serializer):
     """Sign-in with email or phone plus password (approved accounts only)."""
 
-    identifier = serializers.CharField(max_length=255, help_text='Email address or phone number')
+    identifier = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=255,
+        help_text='Email address or phone number',
+    )
+    email = serializers.CharField(required=False, allow_blank=True, max_length=255, write_only=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True, max_length=20, write_only=True)
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
 
-    def validate_identifier(self, value: str) -> str:
-        s = (value or '').strip()
-        if not s:
-            raise serializers.ValidationError('Enter your email or phone number.')
-        return s
+    def validate(self, attrs):
+        ident = (attrs.get('identifier') or '').strip()
+        if not ident:
+            ident = (attrs.get('email') or '').strip()
+        if not ident:
+            ident = (attrs.get('phone_number') or '').strip()
+        if not ident:
+            raise serializers.ValidationError({'identifier': ['Enter your email or phone number.']})
+        attrs['identifier'] = ident
+        attrs.pop('email', None)
+        attrs.pop('phone_number', None)
+        return attrs
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):

@@ -11,6 +11,7 @@ class Alert(models.Model):
     title = models.CharField(max_length=255)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
+    category = models.CharField(max_length=64, blank=True, default='')
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:

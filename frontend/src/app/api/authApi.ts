@@ -66,8 +66,8 @@ export async function verifyLink(farmer_id: string, otp_code: string): Promise<{
 }
 
 /** Request a password reset. */
-export async function requestPasswordReset(params: { phone_number: string; email: string }): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>('/api/users/request_password_reset/', {
+export async function requestPasswordReset(params: { identifier: string }): Promise<{ detail: string; code?: string }> {
+  return apiRequest<{ detail: string; code?: string }>('/api/users/request_password_reset/', {
     method: 'POST',
     auth: false,
     body: JSON.stringify(params),
@@ -75,8 +75,8 @@ export async function requestPasswordReset(params: { phone_number: string; email
 }
 
 /** Confirm a password reset using the code sent to the phone. */
-export async function confirmPasswordReset(params: { phone_number: string; code: string; new_password: string }): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>('/api/users/confirm_password_reset/', {
+export async function confirmPasswordReset(params: { identifier: string; code: string; new_password: string }): Promise<{ detail: string }> {
+  return apiRequest<{ detail: string }>('/api/users/confirm_password_reset/', {
     method: 'POST',
     auth: false,
     body: JSON.stringify(params),

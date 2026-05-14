@@ -19,6 +19,13 @@ export const PLACEHOLDER_FARMERS: FarmerListRow[] = [
     lastInspection: 'Mar 14, 2026',
     overdueScouts: false,
     linkedExporter: '1',
+    mobileFarmFromApp: {
+      farmName: 'Kangema Hills Avocado Farm',
+      location: 'Kangema ward, free-text location',
+      numberOfBlocks: 4,
+      farmSize: 245,
+      updatedAt: '2026-03-10T10:00:00+00:00',
+    },
   },
   {
     id: 'FRM-1023',

@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework import viewsets, permissions, filters as drf_filters
 from django_filters import rest_framework as filters
 from drf_spectacular.utils import extend_schema
@@ -15,7 +16,7 @@ class AdvisoryFilter(filters.FilterSet):
 
     def filter_action_taken(self, queryset, name, value):
         if value.lower() == 'complete':
-            return queryset.filter(outcome='✅ Controlled')
+            return queryset.filter(Q(outcome='✅ Controlled') | Q(outcome__icontains='controlled'))
         return queryset
 
 

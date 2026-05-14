@@ -6,6 +6,9 @@ import type {
   FarmerDetailPayload,
   FarmerListRow,
   ScoutingFeedItem,
+  ProductionVolumeSubmission,
+  ProductionResolvedRow,
+  BroadcastCampaign,
 } from './types';
 import { API_BASE_URL, apiRequest, parseDrfList, type PaginatedResults } from './client';
 
@@ -16,6 +19,76 @@ import { API_BASE_URL, apiRequest, parseDrfList, type PaginatedResults } from '.
 
 export async function fetchDashboard(): Promise<DashboardPayload> {
   return apiRequest<DashboardPayload>('/api/dashboard/');
+}
+
+export async function listProductionVolumes(params: {
+  year?: number;
+  month?: number;
+} = {}): Promise<ProductionVolumeSubmission[]> {
+  const q = new URLSearchParams();
+  if (params.year) q.set('year', String(params.year));
+  if (params.month) q.set('month', String(params.month));
+  const data = await apiRequest<any>(`/api/production_volumes/?page_size=1000${q.toString() ? `&${q}` : ''}`);
+  return parseDrfList<ProductionVolumeSubmission>(data);
+}
+
+export async function createProductionVolume(params: {
+  year: number;
+  month: number;
+  county: string;
+  sub_county?: string;
+  ward: string;
+  village?: string;
+  tonnage_mt: number;
+  notes?: string;
+}): Promise<ProductionVolumeSubmission> {
+  return apiRequest<ProductionVolumeSubmission>('/api/production_volumes/', {
+    method: 'POST',
+    body: JSON.stringify({
+      year: params.year,
+      month: params.month,
+      county: params.county,
+      sub_county: params.sub_county ?? '',
+      ward: params.ward,
+      village: params.village ?? '',
+      tonnage_mt: params.tonnage_mt,
+      notes: params.notes ?? '',
+    }),
+  });
+}
+
+export async function fetchResolvedProduction(params: {
+  year: number;
+  month: number;
+  group_by?: 'county' | 'ward' | 'village';
+}): Promise<ProductionResolvedRow[]> {
+  const q = new URLSearchParams({
+    year: String(params.year),
+    month: String(params.month),
+    group_by: params.group_by ?? 'ward',
+  });
+  const res = await apiRequest<{ results: ProductionResolvedRow[] }>(`/api/production_volumes/resolved/?${q.toString()}`);
+  return res.results;
+}
+
+export async function listBroadcastCampaigns(): Promise<BroadcastCampaign[]> {
+  const data = await apiRequest<any>('/api/kephis/broadcasts/?page_size=50');
+  return parseDrfList<BroadcastCampaign>(data);
+}
+
+export async function dryRunBroadcast(params: { county?: string; ward?: string; village?: string; message: string }): Promise<{ total_recipients: number }> {
+  const res = await apiRequest<any>('/api/kephis/broadcasts/send/', {
+    method: 'POST',
+    body: JSON.stringify({ ...params, dry_run: true }),
+  });
+  return { total_recipients: Number(res.total_recipients ?? 0) };
+}
+
+export async function sendBroadcast(params: { county?: string; ward?: string; village?: string; message: string }): Promise<BroadcastCampaign> {
+  return apiRequest<BroadcastCampaign>('/api/kephis/broadcasts/send/', {
+    method: 'POST',
+    body: JSON.stringify(params),
+  });
 }
 
 export async function fetchFarmersList(): Promise<FarmerListRow[]> {
@@ -944,8 +1017,8 @@ export async function verifyAndCloseCase(params: {
   caseId: string;
   diagnosis: string;
   recommended_actions: string[];
-}): Promise<{ status: string; case: BackendCase }> {
-  return apiRequest<{ status: string; case: BackendCase }>(
+}): Promise<{ status: string; case: BackendCase; sms_sent?: boolean; sms_error?: string | null }> {
+  return apiRequest<{ status: string; case: BackendCase; sms_sent?: boolean; sms_error?: string | null }>(
     `/api/case-management/cases/${params.caseId}/verify_and_close/`,
     {
       method: 'POST',

@@ -104,6 +104,11 @@ export const router = createBrowserRouter([
         Component: lazyRoute(() => import('./pages/ScoutingReports'), 'ScoutingReports'),
       },
       {
+        path: 'scouting-reports/:id',
+        loader: requireNavPermission('nav.scouting'),
+        Component: lazyRoute(() => import('./pages/ScoutingReportDetail'), 'ScoutingReportDetail'),
+      },
+      {
         path: 'case-management',
         loader: requireNavPermission('nav.cases'),
         Component: lazyRoute(() => import('./pages/CaseManagement'), 'CaseManagement'),
@@ -199,6 +204,11 @@ export const router = createBrowserRouter([
         Component: lazyRoute(() => import('./pages/KEPHISChinaFarmIds'), 'KEPHISChinaFarmIds'),
       },
       {
+        path: 'kephis-quarantine/market-intelligence',
+        loader: requireNavPermission('nav.kephis'),
+        Component: lazyRoute(() => import('./pages/KEPHISMarketIntelligence'), 'KEPHISMarketIntelligence'),
+      },
+      {
         path: 'hcda-registry',
         loader: requireNavPermission('nav.hcda'),
         Component: lazyRoute(() => import('./pages/HCDARegistry'), 'HCDARegistry'),
@@ -207,6 +217,11 @@ export const router = createBrowserRouter([
         path: 'hcda-reports',
         loader: requireNavPermission('nav.hcda'),
         Component: lazyRoute(() => import('./pages/HCDAReports'), 'HCDAReports'),
+      },
+      {
+        path: 'hcda-market-intelligence',
+        loader: requireNavPermission('nav.hcda'),
+        Component: lazyRoute(() => import('./pages/HCDAMarketIntelligence'), 'HCDAMarketIntelligence'),
       },
       {
         path: 'alerts',
@@ -262,6 +277,11 @@ export const router = createBrowserRouter([
         path: 'exporter',
         loader: requireNavPermission('nav.exporter'),
         Component: lazyRoute(() => import('./pages/Exporter'), 'Exporter'),
+      },
+      {
+        path: 'exporter/production-volumes',
+        loader: requireNavPermission('nav.exporter'),
+        Component: lazyRoute(() => import('./pages/ExporterProductionVolumes'), 'ExporterProductionVolumes'),
       },
     ],
   },

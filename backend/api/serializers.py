@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
+from django.db.models import Sum
 from django.utils import timezone
 from django.apps import apps
 from django.conf import settings as dj_settings
@@ -7,10 +10,130 @@ from rest_framework import serializers
 
 from accounts.models import Entity, AppPermission, Role  # noqa: F401  (used by DRF schema/readability)
 
-from .models import AlertRule, Case, FarmBlock, FarmerProfile, ScoutingReport
+from .models import (
+    AlertRule,
+    BroadcastCampaign,
+    BroadcastRecipient,
+    Case,
+    FarmBlock,
+    FarmerProfile,
+    ProductionVolumeSubmission,
+    ScoutingReport,
+)
 from .rbac import ROLE_AGRONOMIST, ROLE_FARMER, is_admin_like, role_name
 
 USER_MODEL = apps.get_model(*dj_settings.AUTH_USER_MODEL.split('.'))
+
+_INT_SENTINEL = 2147483647
+
+
+def _display_user_name(user) -> str:
+    parts = [getattr(user, 'first_name', '') or '', getattr(user, 'last_name', '') or '']
+    name = ' '.join(parts).strip()
+    return name or (getattr(user, 'phone_number', '') or '') or 'Farmer'
+
+
+def _pest_farm_latest_for_profile(obj: FarmerProfile):
+    """Latest `pest_scouting.Farm` for this profile; uses `Prefetch` cache when present."""
+    try:
+        from pest_scouting.models import Farm
+    except ImportError:
+        return None
+    user = obj.user
+    relname = 'pest_scouting_farms'
+    cache = getattr(user, '_prefetched_objects_cache', None) or {}
+    if relname in cache:
+        for farm in user.pest_scouting_farms.all():
+            return farm
+        return None
+    return Farm.objects.filter(farmer_id=obj.user_id).order_by('-updated_at').first()
+
+
+def _serialize_pest_scouting_farm_row(farm) -> dict | None:
+    """Shape aligned with `FarmerDetailSerializer.get_mobileFarmFromApp` (mobile onboarding farm)."""
+    if not farm:
+        return None
+    nb = _sanitize_block_count(farm.number_of_blocks)
+    fs = float(farm.farm_size or 0)
+    if fs <= 0 or fs >= 10**7:
+        fs_out = None
+    else:
+        fs_out = round(fs, 2)
+    return {
+        'farmName': farm.farm_name or '',
+        'location': farm.location or '',
+        'numberOfBlocks': nb,
+        'farmSize': fs_out,
+        'updatedAt': farm.updated_at.isoformat() if getattr(farm, 'updated_at', None) else '',
+    }
+
+
+def _sanitize_block_count(n: int | None) -> int | None:
+    if n is None:
+        return None
+    try:
+        v = int(n)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0 or v >= _INT_SENTINEL or v > 50_000:
+        return None
+    return v
+
+
+def _sanitize_tree_count(n: int | None) -> int:
+    if n is None:
+        return 0
+    try:
+        v = int(n)
+    except (TypeError, ValueError):
+        return 0
+    if v < 0 or v >= _INT_SENTINEL or v > 500_000:
+        return 0
+    return v
+
+
+def _weekly_scouting_logs_for_farmer(obj: FarmerProfile) -> list[dict]:
+    """Rolling four 7-day windows (oldest = W-4); prefers pest_scouting WeeklyRecord when present."""
+    uid = obj.user_id
+    try:
+        from pest_scouting.models import WeeklyRecord
+    except ImportError:
+        WeeklyRecord = None  # type: ignore
+    if WeeklyRecord is not None and WeeklyRecord.objects.filter(farmer_id=uid).exists():
+        now = timezone.now()
+        out: list[dict] = []
+        for i in range(4):
+            label = f'W-{4 - i}'
+            window_start = now - timedelta(days=28 - i * 7)
+            window_end = now - timedelta(days=21 - i * 7)
+            qs = WeeklyRecord.objects.filter(
+                farmer_id=uid,
+                timestamp__gte=window_start,
+                timestamp__lt=window_end,
+            )
+            completed = qs.exists()
+            rec = qs.order_by('-timestamp').first()
+            scout = ''
+            date_str = ''
+            if rec and rec.timestamp:
+                scout = _display_user_name(rec.farmer)
+                date_str = timezone.localtime(rec.timestamp).strftime('%Y-%m-%d')
+            out.append(
+                {
+                    'week': label,
+                    'completed': completed,
+                    'date': date_str,
+                    'scout': scout,
+                }
+            )
+        return out
+    logs = list(obj.weekly_scouting_logs_4w or [])[:4]
+    out = []
+    for i, v in enumerate(logs):
+        out.append({'week': f'W-{4 - i}', 'completed': bool(v), 'date': '', 'scout': ''})
+    while len(out) < 4:
+        out.append({'week': f'W-{4 - len(out)}', 'completed': False, 'date': '', 'scout': ''})
+    return out
 
 
 class AlertRuleSerializer(serializers.ModelSerializer):
@@ -36,6 +159,119 @@ class AlertRuleSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'triggered', 'last_triggered_at', 'created_at', 'updated_at')
 
 
+class ProductionVolumeSubmissionSerializer(serializers.ModelSerializer):
+    sourceEntityName = serializers.SerializerMethodField()
+    submittedBy = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductionVolumeSubmission
+        fields = (
+            'id',
+            'year',
+            'month',
+            'county',
+            'sub_county',
+            'ward',
+            'village',
+            'tonnage_mt',
+            'source_type',
+            'source_entity',
+            'sourceEntityName',
+            'status',
+            'notes',
+            'submitted_by',
+            'submittedBy',
+            'created_at',
+            'updated_at',
+        )
+        # These fields are inferred server-side from the authenticated user.
+        read_only_fields = (
+            'id',
+            'source_type',
+            'source_entity',
+            'submitted_by',
+            'sourceEntityName',
+            'submittedBy',
+            'created_at',
+            'updated_at',
+        )
+        extra_kwargs = {
+            # Allow POST without providing these; server sets them.
+            'source_type': {'required': False},
+            'source_entity': {'required': False},
+            'submitted_by': {'required': False},
+        }
+
+    def get_sourceEntityName(self, obj):
+        return getattr(getattr(obj, 'source_entity', None), 'company_name', None)
+
+    def get_submittedBy(self, obj):
+        u = getattr(obj, 'submitted_by', None)
+        if not u:
+            return None
+        name = f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
+        return name or getattr(u, 'phone_number', None) or str(getattr(u, 'id', ''))
+
+
+class BroadcastRecipientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BroadcastRecipient
+        fields = (
+            'id',
+            'phone_number',
+            'status',
+            'error',
+            'provider_response',
+            'sent_at',
+        )
+        read_only_fields = fields
+
+
+class BroadcastCampaignSerializer(serializers.ModelSerializer):
+    createdBy = serializers.SerializerMethodField()
+    recipientsPreview = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BroadcastCampaign
+        fields = (
+            'id',
+            'county',
+            'ward',
+            'village',
+            'message',
+            'status',
+            'total_recipients',
+            'sent_count',
+            'failed_count',
+            'createdBy',
+            'created_at',
+            'updated_at',
+            'recipientsPreview',
+        )
+        read_only_fields = (
+            'id',
+            'status',
+            'total_recipients',
+            'sent_count',
+            'failed_count',
+            'createdBy',
+            'created_at',
+            'updated_at',
+            'recipientsPreview',
+        )
+
+    def get_createdBy(self, obj):
+        u = getattr(obj, 'created_by', None)
+        if not u:
+            return None
+        name = f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
+        return name or getattr(u, 'phone_number', None) or str(getattr(u, 'id', ''))
+
+    def get_recipientsPreview(self, obj):
+        qs = obj.recipients.all().order_by('-sent_at')[:25]
+        return BroadcastRecipientSerializer(qs, many=True).data
+
+
 class FarmerListSerializer(serializers.ModelSerializer):
     farmerCode = serializers.CharField(source='farmer_code')
     primaryChannel = serializers.CharField(source='primary_channel')
@@ -48,6 +284,7 @@ class FarmerListSerializer(serializers.ModelSerializer):
     overdueScouts = serializers.BooleanField(source='overdue_scouts')
     linkedExporter = serializers.SerializerMethodField()
     complianceStatus = serializers.CharField(source='agronomist_compliance_status')
+    mobileFarmFromApp = serializers.SerializerMethodField()
 
     class Meta:
         model = FarmerProfile
@@ -69,7 +306,11 @@ class FarmerListSerializer(serializers.ModelSerializer):
             'overdueScouts',
             'linkedExporter',
             'complianceStatus',
+            'mobileFarmFromApp',
         )
+
+    def get_mobileFarmFromApp(self, obj):
+        return _serialize_pest_scouting_farm_row(_pest_farm_latest_for_profile(obj))
 
     def get_weeklyScoutingLogs(self, obj):
         v = obj.weekly_scouting_logs_4w or []
@@ -90,15 +331,17 @@ class FarmerListSerializer(serializers.ModelSerializer):
 
 class FarmerDetailSerializer(serializers.ModelSerializer):
     farmerCode = serializers.CharField(source='farmer_code')
-    farmName = serializers.CharField(source='farm_name')
+    hcdaRegNo = serializers.SerializerMethodField()
+    farmName = serializers.SerializerMethodField()
+    location = serializers.SerializerMethodField()
     subCounty = serializers.CharField(source='sub_county')
     phone = serializers.CharField(source='user.phone_number')
     email = serializers.CharField(source='user.email', allow_null=True)
     primaryChannel = serializers.CharField(source='primary_channel')
     registrationDate = serializers.SerializerMethodField()
-    totalAcres = serializers.FloatField(source='total_acres')
-    blocksManaged = serializers.IntegerField(source='blocks_managed')
-    treesCount = serializers.IntegerField(source='trees_count')
+    totalAcres = serializers.SerializerMethodField()
+    blocksManaged = serializers.SerializerMethodField()
+    treesCount = serializers.SerializerMethodField()
     exportEligibility = serializers.CharField(source='export_eligibility')
     lastScoutingResult = serializers.SerializerMethodField()
     weeklyScoutingLogs = serializers.SerializerMethodField()
@@ -107,12 +350,17 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
     recentActivities = serializers.SerializerMethodField()
     blocks = serializers.SerializerMethodField()
     complianceStatus = serializers.CharField(source='agronomist_compliance_status')
+    trapLogsFromApp = serializers.SerializerMethodField()
+    problemReportsFromApp = serializers.SerializerMethodField()
+    mobileFarmFromApp = serializers.SerializerMethodField()
+    latestScoutingFromApp = serializers.SerializerMethodField()
 
     class Meta:
         model = FarmerProfile
         fields = (
             'id',
             'farmerCode',
+            'hcdaRegNo',
             'name',
             'farmName',
             'location',
@@ -134,33 +382,229 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
             'activeCases',
             'recentActivities',
             'blocks',
+            'trapLogsFromApp',
+            'problemReportsFromApp',
+            'mobileFarmFromApp',
+            'latestScoutingFromApp',
         )
+
+    def get_hcdaRegNo(self, obj):
+        return (obj.farmer_code or '').strip()
+
+    def get_farmName(self, obj):
+        farm = _pest_farm_latest_for_profile(obj)
+        if farm and (farm.farm_name or '').strip():
+            return farm.farm_name.strip()
+        return obj.farm_name or ''
+
+    def get_location(self, obj):
+        farm = _pest_farm_latest_for_profile(obj)
+        if farm and (farm.location or '').strip():
+            return farm.location.strip()
+        return obj.location or ''
 
     def get_registrationDate(self, obj):
         return obj.registration_date.isoformat() if obj.registration_date else ''
 
-    def get_lastScoutingResult(self, obj):
+    def get_totalAcres(self, obj):
+        farm = _pest_farm_latest_for_profile(obj)
+        if farm is not None:
+            fs = float(farm.farm_size or 0)
+            if 0 < fs < 10**7:
+                return round(fs, 2)
+        ta = float(obj.total_acres or 0)
+        return round(ta, 2)
+
+    def get_blocksManaged(self, obj):
+        farm = _pest_farm_latest_for_profile(obj)
+        if farm is not None:
+            nb = _sanitize_block_count(farm.number_of_blocks)
+            if nb is not None:
+                return nb
+        try:
+            from pest_scouting.models import FarmBlock as PsFarmBlock
+        except ImportError:
+            PsFarmBlock = None  # type: ignore
+        if PsFarmBlock is not None:
+            n = PsFarmBlock.objects.filter(farmer_id=obj.user_id).count()
+            if n:
+                return min(n, 50_000)
+        return int(obj.blocks_managed or 0)
+
+    def get_treesCount(self, obj):
+        try:
+            from pest_scouting.models import FarmBlock as PsFarmBlock
+        except ImportError:
+            PsFarmBlock = None  # type: ignore
+        if PsFarmBlock is not None:
+            agg = PsFarmBlock.objects.filter(farmer_id=obj.user_id).aggregate(s=Sum('number_of_trees'))
+            s = agg.get('s')
+            if s is not None and s < _INT_SENTINEL:
+                return min(int(s), 50_000_000)
+        return int(obj.trees_count or 0)
+
+    def get_mobileFarmFromApp(self, obj):
+        return _serialize_pest_scouting_farm_row(_pest_farm_latest_for_profile(obj))
+
+    def get_trapLogsFromApp(self, obj):
+        try:
+            from pest_scouting.models import TrapLog
+        except ImportError:
+            return []
+        out = []
+        for t in TrapLog.objects.filter(farmer_id=obj.user_id).order_by('-timestamp')[:12]:
+            n = t.number_of_traps
+            if n >= _INT_SENTINEL - 1000:
+                n = 0
+            out.append(
+                {
+                    'trapName': t.trap_name,
+                    'numberOfTraps': int(n),
+                    'photo': t.photo or '',
+                    'timestamp': t.timestamp.isoformat() if t.timestamp else '',
+                }
+            )
+        return out
+
+    def get_problemReportsFromApp(self, obj):
+        try:
+            from pest_scouting.models import ProblemReport
+        except ImportError:
+            return []
+        out = []
+        for pr in ProblemReport.objects.filter(farmer_id=obj.user_id).order_by('-timestamp')[:8]:
+            out.append(
+                {
+                    'problemType': pr.problem_type,
+                    'urgency': pr.urgency,
+                    'description': (pr.description or '')[:500],
+                    'photo': pr.photo or '',
+                    'timestamp': pr.timestamp.isoformat() if pr.timestamp else '',
+                }
+            )
+        return out
+
+    def get_latestScoutingFromApp(self, obj):
+        try:
+            from pest_scouting.models import WeeklyRecord
+        except ImportError:
+            return None
+
+        rec = WeeklyRecord.objects.filter(farmer_id=obj.user_id).order_by('-timestamp').first()
+        if not rec:
+            return None
+
+        raw = rec.raw_payload if isinstance(rec.raw_payload, dict) else {}
+
+        def as_list(v):
+            if isinstance(v, list):
+                return [x for x in v if x not in (None, '')]
+            if isinstance(v, str) and v.strip():
+                return [v.strip()]
+            return []
+
+        def pick_urls(d: dict) -> list[str]:
+            urls: list[str] = []
+            for k, v in d.items():
+                if not isinstance(v, str):
+                    continue
+                if not v.startswith('http'):
+                    continue
+                # Heuristic: only media-ish keys to avoid pulling random links
+                lk = k.lower()
+                if any(x in lk for x in ('photo', 'media', 'image', 'gallery', 'voice')):
+                    urls.append(v)
+            return urls
+
+        blk = getattr(rec, 'block', None)
+        block_name = getattr(blk, 'block_name', '') if blk else ''
+        block_trees = getattr(blk, 'number_of_trees', None) if blk else None
+
+        gps_lat = raw.get('gps_latitude', None)
+        gps_lng = raw.get('gps_longitude', None)
+
+        trap_use = raw.get('trap_use', None)
+        if not isinstance(trap_use, list):
+            # backward compatible (single trap fields on model)
+            trap_use = []
+            if getattr(rec, 'type_of_trap', None):
+                trap_use.append(
+                    {
+                        'type_of_trap': rec.type_of_trap,
+                        'number_of_trap': int(getattr(rec, 'number_of_trap', 0) or 0),
+                        'average_no_of_pest_per_trap': float(getattr(rec, 'pests_per_trap', 0) or 0),
+                    }
+                )
+
         return {
+            'id': str(rec.id),
+            'timestamp': rec.timestamp.isoformat() if rec.timestamp else '',
+            'farmName': str(raw.get('farm_name') or ''),
+            'location': str(raw.get('location') or ''),
+            'blockName': block_name,
+            'blockTrees': _sanitize_tree_count(block_trees),
+            'variety': str(raw.get('variety') or getattr(rec, 'variety', '') or ''),
+            'anyPestsObserved': str(raw.get('any_pests_observed') or getattr(rec, 'any_pests_observed', '') or ''),
+            'pestsObserved': as_list(raw.get('pests_observed') or raw.get('pests_observed_list') or getattr(rec, 'pests_observed_list', [])),
+            'beneficialInsectsObserved': as_list(
+                raw.get('beneficial_insects_observed') or raw.get('beneficial_insects_observed_list') or getattr(rec, 'beneficial_insects_observed_list', [])
+            ),
+            'anyDiseasesObserved': str(raw.get('any_diseases_observed') or getattr(rec, 'any_diseases_observed', '') or ''),
+            'diseasesObserved': as_list(raw.get('disease') or raw.get('disease_list') or getattr(rec, 'disease_list', [])),
+            'diseasePlantPart': as_list(raw.get('disease_plant_part') or raw.get('disease_plant_parts_list') or getattr(rec, 'disease_plant_parts_list', [])),
+            'diseaseCropStage': str(raw.get('disease_crop_stage') or getattr(rec, 'disease_crop_stage', '') or ''),
+            'diseaseDetectionMethod': str(raw.get('disease_detection_method') or getattr(rec, 'disease_detection_method', '') or ''),
+            'trapUse': trap_use,
+            'actionsTaken': as_list(raw.get('actions_taken') or raw.get('actions_taken_list') or getattr(rec, 'actions_taken_list', [])),
+            'outcome': str(raw.get('outcome') or getattr(rec, 'outcome', '') or ''),
+            'otherProductionChallenges': as_list(raw.get('other_production_challenges') or raw.get('other_production_challenges_list') or []),
+            'additionalNotes': str(raw.get('additional_notes') or getattr(rec, 'additional_notes', '') or ''),
+            'gpsLatitude': str(gps_lat) if gps_lat not in (None, '') else '',
+            'gpsLongitude': str(gps_lng) if gps_lng not in (None, '') else '',
+            'mediaUrls': pick_urls(raw),
+        }
+
+    def get_lastScoutingResult(self, obj):
+        out = {
             'status': obj.last_scouting_status or 'no-pests',
             'finding': obj.last_scouting_finding or '',
             'date': obj.last_scouting_date or '',
             'scoutName': obj.last_scouting_scout_name or '',
         }
-
-    def get_weeklyScoutingLogs(self, obj):
-        logs = list(obj.weekly_scouting_logs_4w or [])[:4]
-        out = []
-        for i, v in enumerate(logs):
-            out.append({'week': f'W-{4 - i}', 'completed': bool(v), 'date': '', 'scout': ''})
-        while len(out) < 4:
-            out.append({'week': f'W-{4 - len(out)}', 'completed': False, 'date': '', 'scout': ''})
+        try:
+            from pest_scouting.models import WeeklyRecord
+        except ImportError:
+            return out
+        rec = WeeklyRecord.objects.filter(farmer_id=obj.user_id).order_by('-timestamp').first()
+        if not rec:
+            return out
+        raw = rec.raw_payload if isinstance(rec.raw_payload, dict) else {}
+        if rec.timestamp:
+            out['date'] = timezone.localtime(rec.timestamp).strftime('%Y-%m-%d')
+        scout_name = _display_user_name(rec.farmer)
+        if scout_name:
+            out['scoutName'] = out['scoutName'] or scout_name
+        pests_yes = str(raw.get('any_pests_observed', '')).strip().lower() == 'yes'
+        disease_yes = str(raw.get('any_diseases_observed', '')).strip().lower() == 'yes'
+        if pests_yes or disease_yes:
+            out['status'] = 'pests'
+            bits = []
+            if pests_yes:
+                bits.append('Pests observed')
+            if disease_yes:
+                bits.append('Diseases observed')
+            if bits and not (out.get('finding') or '').strip():
+                out['finding'] = '; '.join(bits)
         return out
 
+    def get_weeklyScoutingLogs(self, obj):
+        return _weekly_scouting_logs_for_farmer(obj)
+
     def get_complianceScore(self, obj):
-        logs = list(obj.weekly_scouting_logs_4w or [])[:4]
+        logs = _weekly_scouting_logs_for_farmer(obj)
         if not logs:
             return 0
-        completed = sum(1 for x in logs[:4] if int(x) == 1)
+        completed = sum(1 for x in logs if x.get('completed'))
         return int(round((completed / 4) * 100))
 
     def get_activeCases(self, obj):
@@ -177,9 +621,73 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_recentActivities(self, obj):
-        return []
+        rows = []
+        uid = obj.user_id
+        try:
+            from pest_scouting.models import ProblemReport, WeeklyRecord
+        except ImportError:
+            return []
+
+        for rec in WeeklyRecord.objects.filter(farmer_id=uid).order_by('-timestamp')[:6]:
+            raw = rec.raw_payload if isinstance(rec.raw_payload, dict) else {}
+            blk = getattr(rec, 'block', None)
+            farm_label = (raw.get('farm_name') or '') or (blk.block_name if blk else '')
+            desc = f'Weekly scouting{f" — {farm_label}" if farm_label else ""}'
+            ap = str(raw.get('any_pests_observed', '')).strip().lower()
+            ad = str(raw.get('any_diseases_observed', '')).strip().lower()
+            if ap == 'yes' or ad == 'yes':
+                desc += ' (issues reported)'
+            ts = rec.timestamp
+            rows.append(
+                {
+                    '_ts': ts,
+                    'type': 'scouting',
+                    'description': desc[:240],
+                    'date': timezone.localtime(ts).strftime('%Y-%m-%d %H:%M') if ts else '',
+                    'user': _display_user_name(rec.farmer),
+                }
+            )
+
+        for pr in ProblemReport.objects.filter(farmer_id=uid).order_by('-timestamp')[:5]:
+            ts = pr.timestamp
+            rows.append(
+                {
+                    '_ts': ts,
+                    'type': 'report',
+                    'description': f'Problem report ({pr.problem_type}){((": " + pr.description[:160]) if pr.description else "")}',
+                    'date': timezone.localtime(ts).strftime('%Y-%m-%d %H:%M') if ts else '',
+                    'user': _display_user_name(pr.farmer),
+                }
+            )
+
+        rows.sort(
+            key=lambda r: r['_ts'].timestamp() if r.get('_ts') else 0.0,
+            reverse=True,
+        )
+        return [{k: v for k, v in r.items() if k != '_ts'} for r in rows[:10]]
 
     def get_blocks(self, obj):
+        try:
+            from pest_scouting.models import FarmBlock as PsFarmBlock
+        except ImportError:
+            PsFarmBlock = None  # type: ignore
+
+        if PsFarmBlock is not None:
+            ps_blocks = list(PsFarmBlock.objects.filter(farmer_id=obj.user_id).order_by('-timestamp')[:24])
+            if ps_blocks:
+                return [
+                    {
+                        'id': str(b.id),
+                        'name': b.block_name,
+                        'acres': 0.0,
+                        'trees': _sanitize_tree_count(b.number_of_trees),
+                        'status': 'healthy',
+                        'lastInspection': timezone.localtime(b.timestamp).strftime('%Y-%m-%d') if b.timestamp else '',
+                        'source': 'app',
+                    }
+                    for b in ps_blocks
+                ]
+
         return [
             {
                 'id': str(b.id),
@@ -188,6 +696,7 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
                 'trees': b.trees,
                 'status': b.status,
                 'lastInspection': b.last_inspection,
+                'source': 'registry',
             }
             for b in obj.blocks.all()
         ]
@@ -198,64 +707,9 @@ class FarmerComplianceStatusPatchSerializer(serializers.ModelSerializer):
         model = FarmerProfile
         fields = ('agronomist_compliance_status',)
 
-    def get_registrationDate(self, obj):
-        return obj.registration_date.isoformat() if obj.registration_date else ''
-
-    def get_lastScoutingResult(self, obj):
-        return {
-            'status': obj.last_scouting_status or 'no-pests',
-            'finding': obj.last_scouting_finding or '',
-            'date': obj.last_scouting_date or '',
-            'scoutName': obj.last_scouting_scout_name or '',
-        }
-
-    def get_weeklyScoutingLogs(self, obj):
-        logs = list(obj.weekly_scouting_logs_4w or [])[:4]
-        out = []
-        for i, v in enumerate(logs):
-            out.append({'week': f'W-{4 - i}', 'completed': bool(v), 'date': '', 'scout': ''})
-        while len(out) < 4:
-            out.append({'week': f'W-{4 - len(out)}', 'completed': False, 'date': '', 'scout': ''})
-        return out
-
-    def get_complianceScore(self, obj):
-        logs = list(obj.weekly_scouting_logs_4w or [])[:4]
-        if not logs:
-            return 0
-        completed = sum(1 for x in logs[:4] if int(x) == 1)
-        return int(round((completed / 4) * 100))
-
-    def get_activeCases(self, obj):
-        qs = obj.cases.all()[:10]
-        return [
-            {
-                'id': str(c.id),
-                'issue': c.pest_disease,
-                'severity': c.severity,
-                'status': c.status,
-                'date': c.date_submitted.isoformat() if c.date_submitted else '',
-            }
-            for c in qs
-        ]
-
-    def get_recentActivities(self, obj):
-        return []
-
-    def get_blocks(self, obj):
-        return [
-            {
-                'id': str(b.id),
-                'name': b.name,
-                'acres': b.acres,
-                'trees': b.trees,
-                'status': b.status,
-                'lastInspection': b.last_inspection,
-            }
-            for b in obj.blocks.all()
-        ]
-
 
 class CaseManagementRowSerializer(serializers.ModelSerializer):
+    caseCode = serializers.CharField(source='case_code', read_only=True)
     farm = serializers.CharField(source='farmer.farm_name')
     block = serializers.SerializerMethodField()
     pestDisease = serializers.CharField(source='pest_disease')
@@ -270,6 +724,7 @@ class CaseManagementRowSerializer(serializers.ModelSerializer):
         model = Case
         fields = (
             'id',
+            'caseCode',
             'severity',
             'farm',
             'block',
@@ -297,6 +752,7 @@ class CaseManagementRowSerializer(serializers.ModelSerializer):
 
 
 class CaseDetailSerializer(serializers.ModelSerializer):
+    caseCode = serializers.CharField(source='case_code', read_only=True)
     farmerName = serializers.CharField(source='farmer.name')
     farmerPhone = serializers.CharField(source='farmer.user.phone_number')
     location = serializers.CharField(source='farmer.location')
@@ -320,6 +776,7 @@ class CaseDetailSerializer(serializers.ModelSerializer):
         model = Case
         fields = (
             'id',
+            'caseCode',
             'farmerName',
             'farmerPhone',
             'location',
@@ -377,6 +834,7 @@ class CaseDetailSerializer(serializers.ModelSerializer):
 
 
 class ScoutingFeedItemSerializer(serializers.ModelSerializer):
+    recordCode = serializers.CharField(source='record_code', read_only=True)
     farmerId = serializers.UUIDField(source='farmer_id', read_only=True)
     blockUuid = serializers.UUIDField(source='block_id', read_only=True, allow_null=True)
 
@@ -393,6 +851,7 @@ class ScoutingFeedItemSerializer(serializers.ModelSerializer):
         model = ScoutingReport
         fields = (
             'id',
+            'recordCode',
             'farmerId',
             'blockUuid',
             'farmName',

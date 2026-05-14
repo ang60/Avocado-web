@@ -1,14 +1,14 @@
-import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Activity, MapPin, Clock, Users, FileText, Eye } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Activity, MapPin, Clock, Users, FileText, Eye, Crosshair } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { KenyaHeatMap } from '../components/KenyaHeatMap';
 import { TriageCaseModal } from '../components/TriageCaseModal';
-import { ScoutingRecordModal } from '../components/ScoutingRecordModal';
+import { DashboardScoutingTrapPanels } from '../components/DashboardScoutingTrapPanels';
 import { useState, useEffect } from 'react';
 import { getApiErrorMessage } from '../api/errors';
 import { fetchDashboard } from '../api/realApi';
 import { useIsNarrowPhone } from '../hooks/useMediaQuery';
 import { TableScroll } from '../components/TableScroll';
-import type { DashboardPayload } from '../api/types';
+import type { DashboardPayload, TriageQueueItem } from '../api/types';
 import { getAuthUser } from '../auth';
 import { FarmerDashboard } from './FarmerDashboard';
 import { AgronomistDashboard } from './AgronomistDashboard';
@@ -20,6 +20,7 @@ const METRIC_ICONS = {
   alert: AlertTriangle,
   check: CheckCircle,
   clock: Clock,
+  target: Crosshair,
 } as const;
 
 export function Dashboard() {
@@ -51,8 +52,7 @@ export function Dashboard() {
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedTriageCase, setSelectedTriageCase] = useState(null);
-  const [selectedScoutingRecord, setSelectedScoutingRecord] = useState(null);
+  const [selectedTriageCase, setSelectedTriageCase] = useState<TriageQueueItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,10 +107,15 @@ export function Dashboard() {
     pestDistribution,
     triageQueue,
     recentScoutingRecords,
+    recentTrapActivity = [],
     complianceSummary,
-    todayLabel,
+    todayDateKey,
   } = data;
 
+  const weeklyTrendsChart = weeklyTrends.map((w) => ({
+    ...w,
+    fieldReports: w.fieldReports ?? 0,
+  }));
 
   return (
     <>
@@ -129,10 +134,10 @@ export function Dashboard() {
         </p>
       </header>
 
-      {/* Key Metrics (placeholder API) */}
-      <div className="mb-4 grid min-w-0 max-w-full grid-cols-2 gap-3 sm:mb-5 sm:gap-4 lg:grid-cols-4 lg:gap-6 [&>*]:min-w-0">
+      {/* Key metrics: registry + mobile scouting & traps */}
+      <div className="mb-4 grid min-w-0 max-w-full grid-cols-2 gap-3 sm:mb-5 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5 xl:gap-4 [&>*]:min-w-0">
         {metrics.map((m) => {
-          const Icon = METRIC_ICONS[m.icon];
+          const Icon = METRIC_ICONS[m.icon as keyof typeof METRIC_ICONS] ?? Activity;
           return (
             <div
               key={m.label}
@@ -156,10 +161,10 @@ export function Dashboard() {
                 </div>
               </div>
               {m.sublabel ? (
-                <div className="flex items-center gap-1 text-sm">
+                <div className="flex items-center gap-1 text-xs sm:text-sm">
                   <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>{m.sublabel}</span>
                 </div>
-              ) : (
+              ) : m.trendPercent != null && m.trendVs ? (
                 <div className="flex items-center gap-1 text-sm">
                   {m.trendUp ? (
                     <TrendingUp className="w-4 h-4" style={{ color: '#74C69D' }} />
@@ -171,6 +176,8 @@ export function Dashboard() {
                   </span>
                   <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>{m.trendVs}</span>
                 </div>
+              ) : (
+                <div className="min-h-[1.25rem]" aria-hidden />
               )}
             </div>
           );
@@ -189,7 +196,7 @@ export function Dashboard() {
               Weekly Scouting Compliance
             </h3>
             <p className="text-xs sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-              Target: {complianceSummary.target}% | Current: {complianceSummary.current}%
+              Target: {complianceSummary.target}% | Current: {complianceSummary.current}% (monitored farmers with weekly app submissions when data exists)
             </p>
           </div>
           <div className="min-h-[220px] w-full min-w-0 sm:min-h-[280px]">
@@ -201,8 +208,8 @@ export function Dashboard() {
                 style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '12px' }}
                 tick={{ fill: '#717182' }}
               />
-              <YAxis 
-                domain={[80, 100]} 
+              <YAxis
+                domain={[0, 100]}
                 style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '12px' }}
                 tick={{ fill: '#717182' }}
               />
@@ -303,7 +310,7 @@ export function Dashboard() {
                     </div>
                   </td>
                   <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
-                    {item.id}
+                    {item.caseCode || item.id}
                   </td>
                   <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                     <div>
@@ -363,135 +370,11 @@ export function Dashboard() {
         </TableScroll>
       </div>
 
-      {/* Recent Scouting Records */}
-      <div 
-        className="mb-4 overflow-hidden rounded-lg border sm:mb-5"
-        style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
-      >
-        <div className="flex flex-col gap-2 border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4" style={{ backgroundColor: '#F7F4EF', borderColor: '#E0DDD6' }}>
-          <div className="min-w-0">
-            <h3 className="mb-0.5 text-sm sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-              Recent Scouting Records
-            </h3>
-            <p className="text-xs sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-              Latest field inspections and reports
-            </p>
-          </div>
-          <div 
-            className="w-fit flex-shrink-0 rounded px-3 py-1 text-xs sm:text-sm"
-            style={{ backgroundColor: '#74C69D20', color: '#2D6A4F', fontFamily: 'IBM Plex Sans, sans-serif' }}
-          >
-            Today: {recentScoutingRecords.filter((r) => r.date === todayLabel).length} reports
-          </div>
-        </div>
-        
-        <TableScroll className="-mx-1 px-1 sm:mx-0 sm:px-0">
-          <table className="w-full min-w-[720px]">
-            <thead>
-              <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  Record ID
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  Scout
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  Farm / Location
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  Date & Time
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  Blocks
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  Issues Found
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  Status
-                </th>
-                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider sm:px-6 sm:py-4 sm:text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentScoutingRecords.map((record, index) => (
-                <tr 
-                  key={record.id}
-                  className="hover:bg-gray-50/50 transition-colors cursor-pointer"
-                  style={{ borderBottom: index !== recentScoutingRecords.length - 1 ? '1px solid #E0DDD6' : 'none' }}
-                >
-                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
-                    {record.id}
-                  </td>
-                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                    {record.scout}
-                  </td>
-                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                    <div>
-                      <div>{record.farm}</div>
-                      <div className="text-xs" style={{ color: '#717182' }}>
-                        {record.location}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                    <div>
-                      <div>{record.date}</div>
-                      <div className="text-xs">{record.time}</div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                    {record.blocksInspected}
-                  </td>
-                  <td className="px-3 py-2 sm:px-6 sm:py-4">
-                    <span
-                      className="px-3 py-1 rounded-full text-xs"
-                      style={{
-                        backgroundColor: record.issuesFound > 0 ? '#FEF3C7' : '#74C69D20',
-                        color: record.issuesFound > 0 ? '#D97706' : '#2D6A4F',
-                        fontFamily: 'IBM Plex Sans, sans-serif',
-                        borderRadius: '8px',
-                      }}
-                    >
-                      {record.issuesFound}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 sm:px-6 sm:py-4">
-                    <span
-                      className="px-3 py-1 rounded-full text-xs"
-                      style={{
-                        backgroundColor: '#74C69D20',
-                        color: '#2D6A4F',
-                        fontFamily: 'IBM Plex Sans, sans-serif',
-                        borderRadius: '8px',
-                      }}
-                    >
-                      Completed
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 sm:px-6 sm:py-4">
-                    <button
-                      className="px-3 py-1 rounded-full text-xs"
-                      style={{
-                        backgroundColor: '#74C69D20',
-                        color: '#2D6A4F',
-                        fontFamily: 'IBM Plex Sans, sans-serif',
-                        borderRadius: '8px',
-                      }}
-                      onClick={() => setSelectedScoutingRecord(record)}
-                    >
-                      Review
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </TableScroll>
-      </div>
-
+      <DashboardScoutingTrapPanels
+        recentScoutingRecords={recentScoutingRecords}
+        recentTrapActivity={recentTrapActivity}
+        todayDateKey={todayDateKey}
+      />
       {/* Charts Row 2: Case Trends & Pest Distribution */}
       <div className="mb-4 grid grid-cols-1 gap-4 min-w-0 sm:mb-5 md:grid-cols-2 md:gap-6">
         {/* Case Trends */}
@@ -500,11 +383,14 @@ export function Dashboard() {
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
           <h3 className="mb-2 text-sm sm:mb-4 sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-            Case Trends (Last 8 Weeks)
+            Activity (last 6 weeks)
           </h3>
+          <p className="mb-2 text-xs sm:mb-3 sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            Cases plus field reports (mobile weekly + web/USSD scouting, mirrored app rows excluded from field count).
+          </p>
           <div className="min-h-[220px] w-full min-w-0 sm:min-h-[280px]">
           <ResponsiveContainer width="100%" height={chartHeight}>
-            <AreaChart data={weeklyTrends}>
+            <AreaChart data={weeklyTrendsChart}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E0DDD6" />
               <XAxis 
                 dataKey="week" 
@@ -516,8 +402,17 @@ export function Dashboard() {
                 tick={{ fill: '#717182' }}
               />
               <Tooltip contentStyle={{ fontFamily: 'IBM Plex Sans, sans-serif', borderRadius: '8px' }} />
-              <Area key="cases-area" type="monotone" dataKey="cases" stackId="1" stroke="#DC2626" fill="#FEE2E2" name="New Cases" />
+              <Area key="cases-area" type="monotone" dataKey="cases" stackId="1" stroke="#DC2626" fill="#FEE2E2" name="New cases" />
               <Area key="resolved-area" type="monotone" dataKey="resolved" stackId="2" stroke="#2D6A4F" fill="#74C69D" name="Resolved" />
+              <Area
+                key="field-reports-area"
+                type="monotone"
+                dataKey="fieldReports"
+                stackId="field"
+                stroke="#0369A1"
+                fill="#E0F2FE"
+                name="Field reports"
+              />
             </AreaChart>
           </ResponsiveContainer>
           </div>
@@ -529,8 +424,11 @@ export function Dashboard() {
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
         >
           <h3 className="mb-2 text-sm sm:mb-4 sm:text-base" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-            Pest & Disease Distribution
+            Risk & clean scans (30 days)
           </h3>
+          <p className="mb-2 text-xs sm:mb-3 sm:text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            Case severity (30d) and clean field scans from the app weekly form plus web/USSD (mirrored app scouting excluded).
+          </p>
           <div className="min-h-[220px] w-full min-w-0 sm:min-h-[280px]">
           <ResponsiveContainer width="100%" height={chartHeight}>
             <PieChart>
@@ -559,11 +457,6 @@ export function Dashboard() {
       <TriageCaseModal 
         caseData={selectedTriageCase}
         onClose={() => setSelectedTriageCase(null)}
-      />
-      
-      <ScoutingRecordModal 
-        recordData={selectedScoutingRecord}
-        onClose={() => setSelectedScoutingRecord(null)}
       />
     </>
   );

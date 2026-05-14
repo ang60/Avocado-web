@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/white">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp"
+            android:gravity="center_horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="I don't know"
+                android:textSize="20sp"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tell us about it in your own way"
+                android:textSize="16sp"
+                android:textColor="@color/slate"
+                android:textStyle="normal"
+                android:layout_marginBottom="32dp"/>
+            <com.avocado.android.ui.views.RecursiveRadioGroup
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <LinearLayout
+                    android:id="@+id/dialog_i_dont_know_linear_layout"
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:padding="0dp">
+                    <com.avocado.android.ui.views.RadioButtonEleven
+                        android:id="@+id/dialog_i_dont_know_take_photo_radio_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        app:image="@drawable/ic_camera"
+                        app:text="Take Photo"/>
+                    <com.avocado.android.ui.views.RadioButtonEleven
+                        android:id="@+id/dialog_i_dont_know_voice_note_radio_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        app:image="@drawable/ic_studio_microphone"
+                        app:text="Voice Note"/>
+                    <com.avocado.android.ui.views.RadioButtonEleven
+                        android:id="@+id/dialog_i_dont_know_write_down_radio_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        app:image="@drawable/ic_note"
+                        app:text="Write Down"/>
+                </LinearLayout>
+            </com.avocado.android.ui.views.RecursiveRadioGroup>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

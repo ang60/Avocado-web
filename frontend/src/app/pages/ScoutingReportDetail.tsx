@@ -1,15 +1,21 @@
-import { useParams, Link, useNavigate } from 'react-router';
+import { ArrowLeft, Plus, AlertCircle, CheckCircle } from 'lucide-react';
+import { useParams, Link } from 'react-router';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, AlertCircle, Clock, MapPin, User, Building2, CheckCircle } from 'lucide-react';
 import { fetchScoutingReportDetail, type ScoutingReport } from '../api/scoutingApi';
 import { createCase } from '../api/caseApi';
 import { getApiErrorMessage } from '../api/errors';
 import { getAuthUser } from '../auth';
-import { OptimizedImage } from '../components/OptimizedImage';
+import { ScoutingSubmissionReviewBody } from '../components/ScoutingSubmissionReviewBody';
+
+function roleIsFarmer(): boolean {
+  const u = getAuthUser();
+  const name = (u?.role_details?.role_name || u?.role?.role_name || '').trim().toLowerCase();
+  return name === 'farmer';
+}
 
 export function ScoutingReportDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const isFarmer = roleIsFarmer();
   const [report, setReport] = useState<ScoutingReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,134 +122,95 @@ export function ScoutingReportDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Main info card */}
-          <div className="bg-white rounded-xl shadow-sm border border-[#E0DDD6] overflow-hidden">
-            <div className="p-6 border-b border-[#E0DDD6] bg-[#F7F4EF]">
-              <h2 className="text-lg font-semibold text-[#1B4332]">Observation Finding</h2>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className={`space-y-6 ${isFarmer ? 'lg:col-span-3' : 'lg:col-span-2'}`}>
+          <div className="overflow-hidden rounded-xl border border-[#E0DDD6] bg-white shadow-sm">
+            <div className="border-b border-[#E0DDD6] bg-[#F7F4EF] p-6">
+              <h2 className="text-lg font-semibold text-[#1B4332]" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                Field submission
+              </h2>
+              <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                Mobile app payload, traps, pests, diseases, and photos
+              </p>
             </div>
             <div className="p-6">
-              <div className="mb-6 p-4 rounded-lg bg-[#FEE2E2] border border-[#FECACA]">
-                <p className="text-xl font-bold text-[#C0392B]">{report.finding}</p>
-                <p className="text-sm text-[#7F1D1D] mt-1">Status: {report.status}</p>
-              </div>
+              <ScoutingSubmissionReviewBody report={report} />
+            </div>
+          </div>
+        </div>
 
-              {report.mediaPreview && (
-                <div className="mb-6">
-                  <p className="text-sm font-medium text-gray-500 mb-2">Photo Evidence</p>
-                  <OptimizedImage 
-                    src={report.mediaPreview} 
-                    alt="Finding evidence" 
-                    className="w-full rounded-lg border border-[#E0DDD6] object-cover max-h-[500px]"
+        {!isFarmer ? (
+          <div className="space-y-6">
+            <div className="sticky top-6 overflow-hidden rounded-xl border border-[#E0DDD6] bg-white shadow-sm">
+              <div className="border-b border-[#E0DDD6] bg-[#F7F4EF] p-6">
+                <h2
+                  className="flex items-center gap-2 text-lg font-semibold text-[#1B4332]"
+                  style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
+                >
+                  <Plus className="h-5 w-5" /> Create case
+                </h2>
+                <p className="mt-1 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                  For agronomists — open a case from this scouting record.
+                </p>
+              </div>
+              <form className="space-y-4 p-6" onSubmit={handleCreateCase}>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">Case title</label>
+                  <input
+                    type="text"
+                    value={caseTitle}
+                    onChange={(e) => setCaseTitle(e.target.value)}
+                    className="w-full rounded-lg border border-[#E0DDD6] p-2 text-sm outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+                    required
                   />
                 </div>
-              )}
-            </div>
-          </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">Severity</label>
+                  <select
+                    value={caseSeverity}
+                    onChange={(e) => setCaseSeverity(e.target.value as 'low' | 'medium' | 'high')}
+                    className="w-full rounded-lg border border-[#E0DDD6] p-2 text-sm outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">Notes</label>
+                  <textarea
+                    rows={4}
+                    value={caseNotes}
+                    onChange={(e) => setCaseNotes(e.target.value)}
+                    className="w-full rounded-lg border border-[#E0DDD6] p-2 text-sm outline-none focus:ring-2 focus:ring-[#2D6A4F]"
+                    placeholder="Additional observations..."
+                  />
+                </div>
 
-          {/* Location & Farmer details */}
-          <div className="bg-white rounded-xl shadow-sm border border-[#E0DDD6] overflow-hidden">
-            <div className="p-6 border-b border-[#E0DDD6] bg-[#F7F4EF]">
-              <h2 className="text-lg font-semibold text-[#1B4332]">Context Information</h2>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex items-start gap-3">
-                <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Farmer Name</p>
-                  <p className="font-semibold text-[#1B4332]">{report.farmerName}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Building2 className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Farm / Entity</p>
-                  <p className="font-semibold text-[#1B4332]">{report.farmName}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Location</p>
-                  <p className="font-semibold text-[#1B4332]">Block {report.blockId} · {report.county || 'N/A'}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Timestamp</p>
-                  <p className="font-semibold text-[#1B4332]">{report.timestamp}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+                {caseError ? (
+                  <div className="flex items-center gap-2 rounded border border-red-100 bg-red-50 p-2 text-xs text-red-600">
+                    <AlertCircle className="h-4 w-4" /> {caseError}
+                  </div>
+                ) : null}
 
-        <div className="space-y-6">
-          {/* Create Case Form */}
-          <div className="bg-white rounded-xl shadow-sm border border-[#E0DDD6] overflow-hidden sticky top-6">
-            <div className="p-6 border-b border-[#E0DDD6] bg-[#F7F4EF]">
-              <h2 className="text-lg font-semibold text-[#1B4332] flex items-center gap-2">
-                <Plus className="w-5 h-5" /> Create Case
-              </h2>
-            </div>
-            <form className="p-6 space-y-4" onSubmit={handleCreateCase}>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Case Title</label>
-                <input 
-                  type="text" 
-                  value={caseTitle}
-                  onChange={(e) => setCaseTitle(e.target.value)}
-                  className="w-full border border-[#E0DDD6] rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#2D6A4F] outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Severity</label>
-                <select 
-                  value={caseSeverity}
-                  onChange={(e) => setCaseSeverity(e.target.value as any)}
-                  className="w-full border border-[#E0DDD6] rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#2D6A4F] outline-none"
+                {caseSuccess ? (
+                  <div className="flex items-center gap-2 rounded border border-green-100 bg-green-50 p-2 text-xs text-green-600">
+                    <CheckCircle className="h-4 w-4" /> {caseSuccess}
+                  </div>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={caseSubmitting}
+                  className="w-full rounded-lg bg-[#2D6A4F] py-2 font-semibold text-white transition-colors hover:bg-[#1B4332] disabled:opacity-50"
+                  style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Notes</label>
-                <textarea 
-                  rows={4}
-                  value={caseNotes}
-                  onChange={(e) => setCaseNotes(e.target.value)}
-                  className="w-full border border-[#E0DDD6] rounded-lg p-2 text-sm focus:ring-2 focus:ring-[#2D6A4F] outline-none"
-                  placeholder="Additional observations..."
-                />
-              </div>
-
-              {caseError && (
-                <div className="p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" /> {caseError}
-                </div>
-              )}
-
-              {caseSuccess && (
-                <div className="p-2 bg-green-50 text-green-600 text-xs rounded border border-green-100 flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4" /> {caseSuccess}
-                </div>
-              )}
-
-              <button 
-                type="submit"
-                disabled={caseSubmitting}
-                className="w-full bg-[#2D6A4F] text-white py-2 rounded-lg font-semibold hover:bg-[#1B4332] transition-colors disabled:opacity-50"
-              >
-                {caseSubmitting ? 'Creating...' : 'Create Case'}
-              </button>
-            </form>
+                  {caseSubmitting ? 'Creating...' : 'Create case'}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );

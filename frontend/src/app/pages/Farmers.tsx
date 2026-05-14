@@ -470,6 +470,45 @@ export function Farmers() {
                             <MapPin className="w-3 h-3" />
                             {farmer.location}, {farmer.county}
                           </div>
+                          {farmer.mobileFarmFromApp &&
+                          ((farmer.mobileFarmFromApp.farmName || '').trim() ||
+                            (farmer.mobileFarmFromApp.location || '').trim() ||
+                            farmer.mobileFarmFromApp.numberOfBlocks != null ||
+                            (farmer.mobileFarmFromApp.farmSize != null && farmer.mobileFarmFromApp.farmSize > 0)) ? (
+                            <div
+                              className="mt-2 rounded-md border px-2 py-1.5 text-xs"
+                              style={{ borderColor: '#BFDBFE', backgroundColor: '#F0F9FF' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center gap-1 font-semibold" style={{ color: '#0369A1' }}>
+                                <Smartphone className="h-3 w-3 shrink-0" />
+                                App farm (onboarding)
+                              </div>
+                              {(farmer.mobileFarmFromApp.farmName || '').trim() ? (
+                                <div className="mt-0.5 font-medium" style={{ color: '#1B4332' }}>
+                                  {farmer.mobileFarmFromApp.farmName.trim()}
+                                </div>
+                              ) : null}
+                              {(farmer.mobileFarmFromApp.location || '').trim() ? (
+                                <div className="text-[11px]" style={{ color: '#475569' }}>
+                                  {farmer.mobileFarmFromApp.location.trim()}
+                                </div>
+                              ) : null}
+                              {farmer.mobileFarmFromApp.numberOfBlocks != null && farmer.mobileFarmFromApp.numberOfBlocks > 0 ? (
+                                <div className="mt-0.5 text-[11px]" style={{ color: '#64748B' }}>
+                                  {farmer.mobileFarmFromApp.numberOfBlocks} block
+                                  {farmer.mobileFarmFromApp.numberOfBlocks === 1 ? '' : 's'}
+                                  {farmer.mobileFarmFromApp.farmSize != null && farmer.mobileFarmFromApp.farmSize > 0
+                                    ? ` · ${farmer.mobileFarmFromApp.farmSize} ha`
+                                    : ''}
+                                </div>
+                              ) : farmer.mobileFarmFromApp.farmSize != null && farmer.mobileFarmFromApp.farmSize > 0 ? (
+                                <div className="mt-0.5 text-[11px]" style={{ color: '#64748B' }}>
+                                  {farmer.mobileFarmFromApp.farmSize} ha
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
                           {exporterCompanyName(farmer.linkedExporter) && (
                             <div className="text-xs mt-1" style={{ color: '#2D6A4F', fontWeight: 600 }}>
                               Exporter: {exporterCompanyName(farmer.linkedExporter)}

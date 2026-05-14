@@ -7,6 +7,6 @@ class AlertSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Alert
-        fields = ['id', 'farmer', 'title', 'message', 'is_read', 'timestamp', 'time_ago']
+        fields = ['id', 'farmer', 'title', 'message', 'is_read', 'category', 'timestamp', 'time_ago']
         read_only_fields = ['id', 'farmer', 'timestamp', 'time_ago']
 

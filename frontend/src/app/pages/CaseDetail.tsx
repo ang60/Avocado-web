@@ -1484,6 +1484,13 @@ export function CaseDetail() {
                     });
                     setData(mapVerifiedCaseResponseToDetail(result.case));
                     setShowVerifyModal(false);
+                    if (result.sms_sent === false) {
+                      setVerifyError(
+                        result.sms_error
+                          ? `Case closed, but SMS was not sent. ${result.sms_error}`
+                          : 'Case closed, but SMS was not sent. Check SMS configuration on the server.',
+                      );
+                    }
                     setShowVerifySuccessModal(true);
                   } catch (e: unknown) {
                     setVerifyError(getApiErrorMessage(e, 'Could not verify and close this case.'));

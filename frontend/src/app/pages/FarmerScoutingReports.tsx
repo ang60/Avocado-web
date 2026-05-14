@@ -1,8 +1,10 @@
-import { Calendar, Camera, RefreshCcw, Search, TrendingUp } from 'lucide-react';
+import { Calendar, Camera, Eye, RefreshCcw, Search, TrendingUp } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router';
 import { getApiErrorMessage } from '../api/errors';
 import type { ScoutingFeedItem } from '../api/types';
 import { fetchScoutingFeed, requestReinspectionFromScouting } from '../api/realApi';
+import { diseaseLabelsFromReport, pestRowsFromReport, splitGalleryUrls, trapUseRows } from '../utils/scoutingPayloadDisplay';
 
 function formatDateTime(value: string): { date: string; time: string } {
   if (!value) return { date: '—', time: '—' };
@@ -162,6 +164,10 @@ export function FarmerScoutingReports() {
           const dt = formatDateTime(item.timestamp);
           const pestType = extractPestType(item.finding);
           const scouter = item.farmerName || 'Farm Manager';
+          const thumb = splitGalleryUrls(item).images[0] || item.mediaPreview;
+          const pests = pestRowsFromReport(item).slice(0, 3);
+          const diseases = diseaseLabelsFromReport(item).slice(0, 3);
+          const traps = trapUseRows(item).slice(0, 2);
           return (
             <article key={item.id} className="rounded-lg border bg-white p-4" style={{ borderColor: '#E0DDD6' }}>
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -172,14 +178,33 @@ export function FarmerScoutingReports() {
                   <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
                     Block: {item.blockId} · Pest type: {pestType}
                   </p>
+                  {(pests.length || diseases.length || traps.length) ? (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                      {traps.length ? (
+                        <span className="rounded-full px-2 py-1" style={{ backgroundColor: '#F7F4EF', border: '1px solid #E0DDD6' }}>
+                          Traps: {traps.map((t) => `${t.type}×${t.count}`).join(' · ')}
+                        </span>
+                      ) : null}
+                      {pests.length ? (
+                        <span className="rounded-full px-2 py-1" style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E' }}>
+                          Pests: {pests.map((p) => (p.perTrap ? `${p.name}(${p.perTrap})` : p.name)).join(' · ')}
+                        </span>
+                      ) : null}
+                      {diseases.length ? (
+                        <span className="rounded-full px-2 py-1" style={{ backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5', color: '#991B1B' }}>
+                          Diseases: {diseases.join(' · ')}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                     <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" /> {dt.date}, {dt.time}</span>
                     <span>Scouter: {scouter}</span>
                   </div>
                 </div>
                 <div className="h-20 w-full max-w-[140px] overflow-hidden rounded border bg-[#F7F4EF] md:w-[140px]" style={{ borderColor: '#E0DDD6' }}>
-                  {item.mediaPreview ? (
-                    <img src={item.mediaPreview} alt="Field evidence" className="h-full w-full object-cover" />
+                  {thumb ? (
+                    <img src={thumb} alt="Field evidence" className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
                       <Camera className="mr-1 h-3 w-3" /> No photo
@@ -188,6 +213,14 @@ export function FarmerScoutingReports() {
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  to={`/scouting-reports/${item.id}`}
+                  className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm"
+                  style={{ borderColor: '#2D6A4F', color: '#2D6A4F', fontFamily: 'IBM Plex Sans, sans-serif', fontWeight: 600 }}
+                >
+                  <Eye className="h-4 w-4" />
+                  View
+                </Link>
                 <button
                   type="button"
                   onClick={async () => {

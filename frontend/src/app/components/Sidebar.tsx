@@ -56,6 +56,7 @@ const kephisNavItems: NavItem[] = [
   { name: 'Dashboard Home', icon: LayoutDashboard, path: '/dashboard', permission: 'nav.kephis' },
   { name: 'Quarantine Management', icon: Shield, path: '/kephis-quarantine', permission: 'nav.kephis' },
   { name: 'Risk Intelligence', icon: TrendingUp, path: '/kephis-quarantine/risk-intelligence', permission: 'nav.kephis' },
+  { name: 'Market Intelligence', icon: TrendingUp, path: '/kephis-quarantine/market-intelligence', permission: 'nav.kephis' },
   { name: 'Alerts', icon: Bell, path: '/kephis-quarantine/alerts', permission: 'nav.kephis' },
   { name: 'China Export Farm IDs', icon: ClipboardCheck, path: '/kephis-quarantine/china-farm-ids', permission: 'nav.kephis' },
   { name: 'Chain of Custody', icon: HistoryIcon, path: '/kephis-quarantine/chain-of-custody', permission: 'nav.kephis' },
@@ -67,6 +68,7 @@ const kephisNavItems: NavItem[] = [
 const exporterNavItems: NavItem[] = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/', permission: 'nav.dashboard' },
   { name: 'Supply base', icon: Package, path: '/exporter', permission: 'nav.exporter' },
+  { name: 'Production volumes', icon: TrendingUp, path: '/exporter/production-volumes', permission: 'nav.exporter' },
   { name: 'Scouting Reports', icon: FileText, path: '/scouting-reports', permission: 'nav.scouting' },
   { name: 'Case Management', icon: FolderOpen, path: '/case-management', permission: 'nav.cases' },
   { name: 'Outbreak Monitoring', icon: Activity, path: '/outbreak-monitoring', permission: 'nav.outbreak' },
@@ -82,6 +84,7 @@ const hcdaNavItems: NavItem[] = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/', permission: 'nav.dashboard' },
   { name: 'County surveillance', icon: Building2, path: '/hcda-registry', permission: 'nav.hcda' },
   { name: 'County reports', icon: ClipboardCheck, path: '/hcda-reports', permission: 'nav.hcda' },
+  { name: 'Market Intelligence', icon: TrendingUp, path: '/hcda-market-intelligence', permission: 'nav.hcda' },
   { name: 'Outbreak Monitoring', icon: Activity, path: '/outbreak-monitoring', permission: 'nav.outbreak' },
   { name: 'Alerts', icon: Bell, path: '/alerts', permission: 'nav.alerts' },
   { name: 'Knowledge Base', icon: BookOpen, path: '/knowledge-base', permission: 'nav.knowledge' },

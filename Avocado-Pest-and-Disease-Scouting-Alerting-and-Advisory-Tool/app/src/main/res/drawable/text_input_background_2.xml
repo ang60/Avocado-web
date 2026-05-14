@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Use <shape> instead of <vector> for better android system support -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <solid
+        android:color="#E8E8E0"/>
+    <stroke
+        android:width="0dp"
+        android:color="#E8E8E0"/>
+    <corners
+        android:bottomLeftRadius="14dp"
+        android:bottomRightRadius="0dp"
+        android:topLeftRadius="14dp"
+        android:topRightRadius="0dp" />
+
+</shape>

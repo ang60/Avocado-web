@@ -1,10 +1,12 @@
 import { Users, Settings, Shield, Database, Bell, Edit, Trash2, Plus, Building2, FileCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import { AddUserModal, type AddUserSavePayload } from '../components/AddUserModal';
 import { AddRoleModal } from '../components/AddRoleModal';
 import { AddAlertRuleModal } from '../components/AddAlertRuleModal';
 import { AddEntityModal } from '../components/AddEntityModal';
 import { TableScroll } from '../components/TableScroll';
+import { DashboardScoutingTrapPanels } from '../components/DashboardScoutingTrapPanels';
 import {
   listEntities,
   listPermissions,
@@ -28,6 +30,8 @@ import {
   type AppPermissionDto,
   type AdminAlertRuleApiRow,
 } from '../api/adminApi';
+import { fetchDashboard } from '../api/realApi';
+import type { RecentScoutingRecord, RecentTrapActivityRow } from '../api/types';
 import { ApiError } from '../api/client';
 
 const FALLBACK_SYSTEM_STATS = [
@@ -53,7 +57,7 @@ const ALERT_ACTION_LABELS: Record<string, string> = {
 };
 
 export function Admin() {
-  const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'entities' | 'alerts' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'entities' | 'alerts' | 'scouting' | 'settings'>('users');
   const [activeEntitySubTab, setActiveEntitySubTab] = useState<'all' | 'exporters' | 'government' | 'partners'>('all');
   const [adminLoading, setAdminLoading] = useState(true);
   const [adminError, setAdminError] = useState<string | null>(null);
@@ -108,6 +112,37 @@ export function Admin() {
     status: boolean;
   } | null>(null);
   const [editingAlertRule, setEditingAlertRule] = useState<AdminAlertRuleApiRow | null>(null);
+  const [mergedFieldFeed, setMergedFieldFeed] = useState<{
+    recentScoutingRecords: RecentScoutingRecord[];
+    recentTrapActivity: RecentTrapActivityRow[];
+    todayDateKey?: string;
+  } | null>(null);
+  const [scoutingDashboardError, setScoutingDashboardError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setScoutingDashboardError(null);
+    fetchDashboard()
+      .then((d) => {
+        if (cancelled) return;
+        setMergedFieldFeed({
+          recentScoutingRecords: d.recentScoutingRecords,
+          recentTrapActivity: d.recentTrapActivity ?? [],
+          todayDateKey: d.todayDateKey,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMergedFieldFeed(null);
+          setScoutingDashboardError(
+            'Could not load merged scouting data. Ensure this account has dashboard access (nav.dashboard) or open Scouting Reports from the sidebar.',
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -492,6 +527,17 @@ export function Admin() {
             }}
           >
             Alert Rules
+          </button>
+          <button
+            onClick={() => setActiveTab('scouting')}
+            className="pb-3 px-2 transition-colors"
+            style={{
+              fontFamily: 'IBM Plex Sans, sans-serif',
+              color: activeTab === 'scouting' ? '#2D6A4F' : '#717182',
+              borderBottom: activeTab === 'scouting' ? '2px solid #2D6A4F' : '2px solid transparent',
+            }}
+          >
+            Scouting
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -1237,6 +1283,48 @@ export function Admin() {
             </tbody>
           </table>
           </TableScroll>
+        </div>
+      )}
+
+      {/* Scouting tab — merged registry + mobile (same as agronomist dashboard API) */}
+      {activeTab === 'scouting' && (
+        <div className="min-w-0 space-y-4">
+          {scoutingDashboardError ? (
+            <div className="rounded-lg border p-4 text-sm" style={{ borderColor: '#FDE68A', backgroundColor: '#FFFBEB', color: '#92400E' }}>
+              {scoutingDashboardError}
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="mb-1 text-base sm:text-lg" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                Registry + mobile app (merged)
+              </h3>
+              <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                Weekly scouting from the field registry and smartphone app, plus trap check-ins — same data as the main dashboard feed.
+              </p>
+            </div>
+            <Link
+              to="/scouting-reports"
+              className="flex-shrink-0 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors hover:bg-[#F7F4EF]"
+              style={{ borderColor: '#2D6A4F', color: '#2D6A4F', fontFamily: 'IBM Plex Sans, sans-serif' }}
+            >
+              Open full scouting feed
+            </Link>
+          </div>
+          {mergedFieldFeed ? (
+            <DashboardScoutingTrapPanels
+              recentScoutingRecords={mergedFieldFeed.recentScoutingRecords}
+              recentTrapActivity={mergedFieldFeed.recentTrapActivity}
+              todayDateKey={mergedFieldFeed.todayDateKey}
+            />
+          ) : !scoutingDashboardError ? (
+            <div
+              className="rounded-lg border p-8 text-center text-sm"
+              style={{ borderColor: '#E0DDD6', fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
+            >
+              Loading scouting overview…
+            </div>
+          ) : null}
         </div>
       )}
 

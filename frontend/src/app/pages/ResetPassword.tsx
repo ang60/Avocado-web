@@ -13,7 +13,7 @@ import { getApiErrorMessage } from '../api/errors';
 export function ResetPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [phoneNumber, setPhoneNumber] = useState(searchParams.get('phone') || '');
+  const [identifier, setIdentifier] = useState(searchParams.get('identifier') || '');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,8 +22,8 @@ export function ResetPassword() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const phone = searchParams.get('phone');
-    if (phone) setPhoneNumber(phone);
+    const q = searchParams.get('identifier');
+    if (q) setIdentifier(q);
   }, [searchParams]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -45,7 +45,7 @@ export function ResetPassword() {
 
     try {
       await confirmPasswordReset({
-        phone_number: phoneNumber.trim(),
+        identifier: identifier.trim(),
         code: code.trim(),
         new_password: newPassword,
       });
@@ -96,8 +96,8 @@ export function ResetPassword() {
                 <div className="mt-2 relative reset-phone-input">
                   <PhoneInput
                     country={'ke'}
-                    value={phoneNumber}
-                    onChange={(phone) => setPhoneNumber('+' + phone)}
+                    value={identifier}
+                    onChange={(phone) => setIdentifier('+' + phone)}
                     inputProps={{
                       name: 'phone',
                       required: true,

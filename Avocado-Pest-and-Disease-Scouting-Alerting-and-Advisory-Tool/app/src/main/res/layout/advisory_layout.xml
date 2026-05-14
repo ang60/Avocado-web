@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:background="@drawable/layout_background_21">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical">
+        <ImageView
+            android:id="@+id/advisory_layout_logo_image_view"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:padding="16dp"
+            android:src="@drawable/ic_fallen_leaf"
+            android:background="@drawable/image_background_10"
+            android:layout_marginEnd="16dp"/>
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="16dp">
+            <TextView
+                android:id="@+id/advisory_layout_title_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textColor="@color/ink"
+                android:text="Leaf Spots"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+            <TextView
+                android:id="@+id/advisory_layout_sub_title_text_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/slate"
+                android:text="Kimani Farm • Block A"
+                android:textStyle="normal"
+                android:layout_marginBottom="4dp"/>
+        </LinearLayout>
+        <TextView
+            android:id="@+id/advisory_layout_resolved_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Resolved"
+            android:textSize="14sp"
+            android:textColor="@color/success_border"
+            android:textStyle="bold"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:background="@drawable/text_background_4"/>
+    </LinearLayout>
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:background="@android:drawable/divider_horizontal_bright"/>
+    <TextView
+        android:id="@+id/advisory_layout_action_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:textSize="14sp"
+        android:textColor="@color/mist"
+        android:text="ACTION REQUIRED"
+        android:textStyle="bold" />
+    <TextView
+        android:id="@+id/advisory_layout_message_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:textSize="16sp"
+        android:textColor="@color/ink"
+        android:text="Spray copper medicine on sick leaves. Remove and throw away the bad leaves. Cut some branches so air can flow better. Check trees every week for 4 weeks"
+        android:textStyle="normal" />
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical">
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_calendar"/>
+        <TextView
+            android:id="@+id/advisory_layout_date_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/mist"
+            android:text="Jan 6, 2026"
+            android:textStyle="normal" />
+    </LinearLayout>
+    <Button
+        android:id="@+id/advisory_layout_record_action_button"
+        style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="@color/white"
+        android:text="Record Action"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        android:padding="12dp"
+        android:background="@drawable/layout_background_22"
+        android:foreground="@drawable/custom_ripple_2"
+        app:icon="@drawable/ic_memo"
+        app:iconTint="@null"
+        app:iconSize="12dp"
+        app:iconGravity="textStart"
+        app:backgroundTint="@null"/>
+</LinearLayout>

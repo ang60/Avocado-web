@@ -13,7 +13,15 @@ import {
   fetchScoutingFeed,
   openHcdaPdfExport,
 } from '../api/realApi';
+import type { ScoutingFeedItem } from '../api/types';
 import { FarmerFarmPointMap } from '../components/FarmerFarmPointMap';
+import { RecentScoutingReportsTable } from '../components/RecentScoutingReportsTable';
+import {
+  actionsFromReport,
+  diseaseLabelsFromReport,
+  outcomeFromReport,
+  pestRowsFromReport,
+} from '../utils/scoutingPayloadDisplay';
 
 type BlockStatus = 'Cleared' | 'Under Observation' | 'Restricted';
 
@@ -83,6 +91,7 @@ export function FarmerDashboard() {
   ]);
   const [selectedBlock, setSelectedBlock] = useState<UiBlock | null>(null);
   const [protocolOpen, setProtocolOpen] = useState(false);
+  const [scoutingFeed, setScoutingFeed] = useState<ScoutingFeedItem[]>([]);
 
   const handleViewAffectedBlock = () => {
     const restrictedBlocks = blocks.filter((b) => b.status === 'Restricted');
@@ -110,6 +119,7 @@ export function FarmerDashboard() {
     ])
       .then(async ([farmBlocks, scouting, blockOverview, farmerCases, hcdaRows, hcdaStats]) => {
         if (cancelled) return;
+        setScoutingFeed(scouting);
         const userCounty = (user?.county || '').toLowerCase();
         const userName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim().toLowerCase();
         const myHcda =
@@ -143,23 +153,25 @@ export function FarmerDashboard() {
         const detectedFindings: string[] = [];
 
         for (const row of scouting) {
-          const status: BlockStatus =
-            row.status === 'detected' ? (row.severity === 'high' ? 'Restricted' : 'Under Observation') : 'Cleared';
+          const pests = pestRowsFromReport(row).map((p) => p.name);
+          const diseases = diseaseLabelsFromReport(row);
+          const hasIssues = row.status === 'detected' || pests.length > 0 || diseases.length > 0;
+          const status: BlockStatus = hasIssues ? (row.severity === 'high' ? 'Restricted' : 'Under Observation') : 'Cleared';
           byBlock[row.blockId] = {
             status,
             lastScoutDate: row.timestamp || '—',
             latestFinding: row.finding,
-            pests: row.pestsObservedList || [],
-            diseases: row.diseasesObservedList || [],
-            actionsTaken: row.actionsTakenList || [],
-            outcomes: row.outcomeList || [],
+            pests,
+            diseases,
+            actionsTaken: actionsFromReport(row),
+            outcomes: outcomeFromReport(row) ? [outcomeFromReport(row)] : [],
             historyCount: 1,
           };
-          if (row.status === 'detected') {
+          if (hasIssues) {
             alerts.push(`Block ${row.blockId} detected: ${row.finding}.`);
             detectedFindings.push(row.finding);
           }
-          activities.push(`${row.farmerName} submitted a scouting report for ${row.blockId}.`);
+          activities.push(`${row.farmerName} submitted a scouting report for ${row.blockId}${hasIssues ? ` — ${row.finding}` : ''}.`);
         }
 
         for (const row of blockOverview) {
@@ -280,6 +292,15 @@ export function FarmerDashboard() {
     };
   }, [user?.county, user?.first_name, user?.last_name]);
 
+  const recentScoutingSorted = useMemo(() => {
+    return [...scoutingFeed].sort((a, b) => {
+      const ta = a.rawTimestamp || '';
+      const tb = b.rawTimestamp || '';
+      if (ta || tb) return tb.localeCompare(ta);
+      return String(b.timestamp).localeCompare(String(a.timestamp));
+    });
+  }, [scoutingFeed]);
+
   const hasRestricted = useMemo(() => blocks.some((b) => b.status === 'Restricted'), [blocks]);
   const heroBg = hasRestricted ? '#B91C1C' : '#2E7D32';
   const heroText = hasRestricted ? 'Farm Status: Warning — Restricted Block Detected' : 'Farm Status: Export Ready';
@@ -328,6 +349,14 @@ export function FarmerDashboard() {
           </button>
         </div>
       </div>
+
+      <RecentScoutingReportsTable
+        items={recentScoutingSorted}
+        maxRows={8}
+        title="Your recent scouting (mobile)"
+        subtitle="Same feed as Scouting Reports: app submissions, traps, and review status. Use View for full detail."
+        showFullFeedLink
+      />
 
       {/* Latest Advisory */}
       <section className="mb-4 rounded-xl border bg-white p-4" style={{ borderColor: '#E0DDD6' }}>

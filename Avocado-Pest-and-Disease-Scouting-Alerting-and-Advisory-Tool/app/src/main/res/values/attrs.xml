@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Shared attributes -->
+    <attr name="image" format="reference" />
+    <attr name="text" format="string" />
+    <attr name="title" format="string" />
+    <attr name="sub_title" format="string" />
+    <attr name="highlight_background" format="reference" />
+    <attr name="description" format="string" />
+
+    <!-- Styleables -->
+    <declare-styleable name="RadioButtonOne">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonTwo">
+        <attr name="image" />
+        <attr name="title" />
+        <attr name="sub_title" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonThree">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonFour">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonFive">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonSix">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonSeven">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonEight">
+        <attr name="text" />
+        <attr name="highlight_background" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonNine">
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonTen">
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonEleven">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonTwelve">
+        <attr name="image" />
+        <attr name="title" />
+        <attr name="sub_title" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonThirteen">
+        <attr name="image" />
+        <attr name="title" />
+        <attr name="sub_title" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonFourteen">
+        <attr name="image" />
+        <attr name="text" />
+        <attr name="description" />
+    </declare-styleable>
+
+    <declare-styleable name="RadioButtonFifteen">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="CheckBoxOne">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="CheckBoxTwo">
+        <attr name="image" />
+        <attr name="text" />
+    </declare-styleable>
+
+    <declare-styleable name="CheckBoxThree">
+        <attr name="image" />
+        <attr name="title" />
+        <attr name="sub_title" />
+    </declare-styleable>
+
+    <declare-styleable name="CheckBoxFour">
+        <attr name="image" />
+        <attr name="title" />
+    </declare-styleable>
+
+    <declare-styleable name="CheckBoxFive">
+        <attr name="image" />
+        <attr name="title" />
+        <attr name="description" />
+        <attr name="sub_title" />
+    </declare-styleable>
+
+    <declare-styleable name="AutoFitGridLayout">
+        <attr name="column_width" format="dimension"/>
+        <attr name="horizontal_spacing" format="dimension"/>
+        <attr name="vertical_spacing" format="dimension"/>
+    </declare-styleable>
+
+</resources>

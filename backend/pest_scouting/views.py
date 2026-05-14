@@ -4,12 +4,16 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from .models import FarmBlock, WeeklyRecord, ScoutingReview, ScoutingSession
+from .models import Farm, FarmBlock, ProblemReport, TrapLog, WeeklyRecord, ScoutingReview, ScoutingSession
 from .serializers import (
     FarmBlockSerializer,
+    FarmSerializer,
+    ProblemReportSerializer,
     ScoutingSessionSerializer,
+    TrapLogSerializer,
     WeeklyRecordSerializer,
     ScoutingReportSerializer,
     ScoutingReviewSerializer,
@@ -19,6 +23,12 @@ from django.db.models import Avg, Count, Q
 
 from avo_guard.pagination import LargeResultsSetPagination
 from api.drf_permissions import CanManageScoutingReview
+
+
+class PestScoutingPage(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 def _payload_value(payload, key, default=''):
@@ -131,7 +141,13 @@ class FarmBlockViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(farmer=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(farmer=self.request.user)
+        farm_id = self.request.data.get('farm_name_id')
+        farm = None
+        if farm_id:
+            farm = Farm.objects.filter(id=farm_id, farmer=self.request.user).first()
+            if not farm:
+                raise ValidationError({'farm_name_id': 'Unknown farm id for this user.'})
+        serializer.save(farmer=self.request.user, farm=farm)
 
 
 @extend_schema(tags=['Pest Scouting'])
@@ -182,6 +198,29 @@ class WeeklyRecordViewSet(viewsets.ModelViewSet):
             record = WeeklyRecord.objects.create(**normalized)
 
         return Response(WeeklyRecordSerializer(record, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], url_path='import_android')
+    def import_android(self, request):
+        from .android_import import build_weekly_record_kwargs, maybe_create_pending_review
+
+        body = request.data
+        if not isinstance(body, dict):
+            raise ValidationError({'detail': 'Expected a JSON object body.'})
+        try:
+            kwargs = build_weekly_record_kwargs(request.user, body)
+        except ValueError as e:
+            raise ValidationError({'block': str(e)})
+        with transaction.atomic():
+            record = WeeklyRecord.objects.create(**kwargs)
+            maybe_create_pending_review(record, body)
+        return Response(WeeklyRecordSerializer(record, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    def create(self, request, *args, **kwargs):
+        from .android_import import is_android_scouting_payload
+
+        if is_android_scouting_payload(request.data):
+            return self.import_android(request)
+        return super().create(request, *args, **kwargs)
 
 
 @extend_schema(tags=['Pest Scouting'])
@@ -433,3 +472,49 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+
+@extend_schema(tags=['Pest Scouting'])
+class FarmViewSet(viewsets.ModelViewSet):
+    queryset = Farm.objects.all()
+    serializer_class = FarmSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = PestScoutingPage
+
+    def get_queryset(self):
+        return Farm.objects.filter(farmer=self.request.user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(farmer=self.request.user)
+
+
+@extend_schema(tags=['Pest Scouting'])
+class TrapLogViewSet(viewsets.ModelViewSet):
+    queryset = TrapLog.objects.all()
+    serializer_class = TrapLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = PestScoutingPage
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        return TrapLog.objects.filter(farmer=self.request.user).select_related('farm').order_by('-timestamp')
+
+    def perform_create(self, serializer):
+        farm = serializer.validated_data.get('farm')
+        if farm and farm.farmer_id != self.request.user.id:
+            raise ValidationError({'farm': 'Farm does not belong to you.'})
+        serializer.save(farmer=self.request.user)
+
+
+@extend_schema(tags=['Pest Scouting'])
+class ProblemReportViewSet(viewsets.ModelViewSet):
+    queryset = ProblemReport.objects.all()
+    serializer_class = ProblemReportSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = PestScoutingPage
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    def get_queryset(self):
+        return ProblemReport.objects.filter(farmer=self.request.user).order_by('-timestamp')
+
+    def perform_create(self, serializer):
+        serializer.save(farmer=self.request.user)

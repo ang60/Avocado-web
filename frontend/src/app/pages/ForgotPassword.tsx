@@ -1,6 +1,6 @@
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import { Phone, Mail, ArrowRight } from 'lucide-react';
+import { Phone, ArrowRight } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import avocadoLogo from '../../imports/avocado_logo.svg';
@@ -12,7 +12,6 @@ import { getApiErrorMessage } from '../api/errors';
 export function ForgotPassword() {
   const navigate = useNavigate();
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,12 +23,9 @@ export function ForgotPassword() {
     setError(null);
 
     try {
-      await requestPasswordReset({
-        phone_number: phoneNumber.trim(),
-        email: email.trim(),
-      });
-      // Redirect to confirm password reset page, passing the phone number
-      navigate(`/reset-password?phone=${encodeURIComponent(phoneNumber.trim())}`);
+      const identifier = phoneNumber.trim();
+      await requestPasswordReset({ identifier });
+      navigate(`/reset-password?identifier=${encodeURIComponent(identifier)}`);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.getDetailMessage() ?? getApiErrorMessage(err, 'Could not request password reset.'));
@@ -54,7 +50,7 @@ export function ForgotPassword() {
               Forgot password?
             </h1>
             <p className="text-gray-500 text-sm text-center max-w-md mt-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              Enter your registered phone number and email. We'll send a reset code to your phone.
+              Enter your registered phone number. We'll send a reset code to your phone.
             </p>
           </div>
 
@@ -76,24 +72,6 @@ export function ForgotPassword() {
                   containerClass="w-full"
                   inputClass="!w-full !bg-[#f3f7f4] !border-transparent focus:!border-green-500 !outline-none !rounded-lg !py-6 !pl-12 !pr-4 !h-auto !text-base"
                   buttonClass="!bg-transparent !border-transparent !rounded-l-lg"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-600" style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                Email address
-              </label>
-              <div className="mt-2 relative">
-                <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. name@example.com"
-                  className="w-full bg-[#f3f7f4] border border-transparent focus:border-green-500 outline-none rounded-lg py-3 pl-10 pr-10"
-                  style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
-                  required
                 />
               </div>
             </div>

@@ -23,6 +23,8 @@ export interface SupplyFarmRow {
   cadence: Cadence;
   phone: string;
   location: string;
+  /** One-line summary from mobile app farm registration when present */
+  appOnboardingSummary?: string;
 }
 
 function shortBlockId(id: string): string {
@@ -65,13 +67,28 @@ function mapFarmerToSupplyRow(r: FarmerListRow): SupplyFarmRow {
   const ls = r.lastScoutingResult;
   const lastScout = parseScoutDate(ls?.date);
   const risk = mapApiStatusToRisk(ls?.status);
+  const m = r.mobileFarmFromApp;
+  const acreageFromApp = m?.farmSize != null && m.farmSize > 0 ? m.farmSize : r.totalAcres;
+  const bits: string[] = [];
+  if (m) {
+    const fn = (m.farmName || '').trim();
+    const loc = (m.location || '').trim();
+    if (fn) bits.push(fn);
+    if (loc) bits.push(loc);
+  }
+  const meta: string[] = [];
+  if (m && m.numberOfBlocks != null && m.numberOfBlocks > 0) meta.push(`${m.numberOfBlocks} blocks`);
+  if (m && m.farmSize != null && m.farmSize > 0) meta.push(`${m.farmSize} ha`);
+  const line1 = bits.join(' · ');
+  const line2 = meta.join(' · ');
+  const appOnboardingSummary = line1 || line2 ? [line1, line2].filter(Boolean).join(' — ') : undefined;
   return {
     id: r.id,
     blockId: r.farmerCode ? `BLK-${String(r.farmerCode).replace(/\s/g, '')}` : shortBlockId(r.id),
     farmerName: r.name,
     county: (r.county || '—').trim() || '—',
-    acreage: r.totalAcres,
-    estimatedVolume: Math.round(r.totalAcres * 1.2 * 10) / 10,
+    acreage: acreageFromApp,
+    estimatedVolume: Math.round(acreageFromApp * 1.2 * 10) / 10,
     risk,
     finding: (ls?.finding || '—').trim() || '—',
     lastScoutDate: ls?.date ? String(ls.date) : null,
@@ -79,6 +96,7 @@ function mapFarmerToSupplyRow(r: FarmerListRow): SupplyFarmRow {
     cadence: computeCadence(risk, lastScout),
     phone: r.phone,
     location: r.location || '—',
+    appOnboardingSummary,
   };
 }
 
@@ -154,7 +172,8 @@ export function Exporter() {
         r.blockId.toLowerCase().includes(q) ||
         r.farmerName.toLowerCase().includes(q) ||
         r.county.toLowerCase().includes(q) ||
-        r.finding.toLowerCase().includes(q)
+        r.finding.toLowerCase().includes(q) ||
+        (r.appOnboardingSummary || '').toLowerCase().includes(q)
       );
     });
   }, [rows, searchTerm, countyFilter, cadenceFilter]);
@@ -404,7 +423,12 @@ export function Exporter() {
                         {r.blockId}
                       </td>
                       <td className="p-3 font-medium" style={{ color: '#1B4332' }}>
-                        {r.farmerName}
+                        <div>{r.farmerName}</div>
+                        {r.appOnboardingSummary ? (
+                          <p className="mt-1 max-w-[220px] text-[11px] leading-snug" style={{ color: '#64748B' }}>
+                            {r.appOnboardingSummary}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="p-3" style={{ color: '#475569' }}>
                         {r.county}

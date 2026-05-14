@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+import logging
 from .models import Case
 from .serializers import CaseSerializer, CaseAssignmentSerializer, CaseCloseSerializer
 from accounts.sms_utils import send_advanta_sms
@@ -9,6 +10,8 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from api.rbac import is_admin_like
 from api.rbac import ROLE_FARMER, role_name
+
+logger = logging.getLogger(__name__)
 
 
 @extend_schema(tags=['Case Management'])
@@ -148,10 +151,14 @@ class CaseViewSet(viewsets.ModelViewSet):
                 f"- SAFIC Team"
             )
 
+            sms_sent = False
+            sms_error = None
             try:
                 send_advanta_sms(farmer_phone, message)
-            except Exception:
-                pass
+                sms_sent = True
+            except Exception as e:
+                sms_error = str(e)
+                logger.exception("Failed to send advisory SMS for case=%s phone=%s", case.id, farmer_phone)
 
             case.status = 'closed'
             case.diagnosis = diagnosis
@@ -161,7 +168,9 @@ class CaseViewSet(viewsets.ModelViewSet):
 
             return Response(
                 {
-                    'status': 'case verified and farmer notified',
+                    'status': 'case verified',
+                    'sms_sent': sms_sent,
+                    'sms_error': sms_error,
                     'case': CaseSerializer(case, context={'request': request}).data,
                 },
                 status=status.HTTP_200_OK,

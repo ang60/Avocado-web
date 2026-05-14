@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/checkbox_three_linear_layout"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="8dp"
+    android:layout_margin="8dp"
+    android:background="@drawable/layout_background_8">
+
+    <ImageView
+        android:id="@+id/checkbox_three_image_view"
+        android:layout_width="match_parent"
+        android:layout_height="172dp"
+        android:src="@mipmap/mediterranean_fruit_fly"
+        android:scaleType="centerCrop"
+        android:clipToOutline="true"
+        android:gravity="center_horizontal"
+        android:background="@drawable/image_background_13"/>
+    <TextView
+        android:id="@+id/checkbox_three_title_text_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="2dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:textSize="18sp"
+        android:textColor="#1A1A1A"
+        android:text="Mediterranean fruit fly"
+        android:textStyle="bold"
+        android:gravity="center_horizontal"/>
+    <TextView
+        android:id="@+id/checkbox_three_sub_title_text_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:textSize="16sp"
+        android:textColor="@color/sage"
+        android:text="0/Trap"
+        android:textStyle="bold"
+        android:gravity="center_horizontal"/>
+
+</LinearLayout>

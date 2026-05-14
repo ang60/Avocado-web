@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    android:id="@+id/alerts_2_layout_linear_layout"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp"
+    android:background="@drawable/layout_background_3"
+    android:layout_margin="4dp"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <ImageView
+        android:id="@+id/alerts_2_layout_logo_image_view"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:padding="12dp"
+        android:src="@drawable/ic_warning_24dp"
+        android:background="@drawable/image_background_5"
+        android:layout_marginEnd="16dp"
+        app:tint="@null"/>
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginEnd="16dp">
+        <TextView
+            android:id="@+id/alerts_2_layout_title_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:textColor="#1A1A1A"
+            android:text="Weekly Scouting Due"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+        <TextView
+            android:id="@+id/alerts_2_layout_sub_title_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:textColor="#6B7280"
+            android:text="Block B needs attention"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp"/>
+    </LinearLayout>
+    <TextView
+        android:id="@+id/alerts_2_layout_date_text_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="@color/mist"
+        android:text="Today"
+        android:textStyle="bold"
+        android:layout_gravity="center_vertical"/>
+</LinearLayout>

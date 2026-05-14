@@ -20,7 +20,39 @@ export type ScoutingReport = {
 
   triageStatus?: TriageStatus;
   triageLabel?: string | null;
+  triagedAt?: string | null;
   ussdCode?: string;
+  farmerId?: string;
+  blockUuid?: string | null;
+  rawTimestamp?: string;
+  auditFlags?: string[];
+  /** Full mobile / Android payload preserved on import */
+  rawPayload?: Record<string, unknown> | null;
+  pestsObservedList?: string[];
+  diseasesObservedList?: string[];
+  beneficialInsectsObservedList?: string[];
+  pestPlantPartsAffectedList?: string[];
+  diseasePlantPartsAffectedList?: string[];
+  actionsTakenList?: string[];
+  outcomeList?: string[];
+  /** Hass, etc. */
+  variety?: string | null;
+  /** Weekly record location (e.g. county / ward text) */
+  reportLocation?: string | null;
+  blockTreeCount?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  additionalNotes?: string | null;
+  remarks?: string | null;
+  gpsLatitude?: string | null;
+  gpsLongitude?: string | null;
+  /** All image / file URLs for review (photos + voice) */
+  mediaGallery?: string[];
+  /** WeeklyRecord trap summary when `trap_use` is absent in raw JSON */
+  recordTypeOfTrap?: string;
+  recordNumberOfTrap?: number;
+  recordTrapsReplaced?: number;
+  recordPestsPerTrap?: string | null;
 };
 
 export type ScoutingReportListResponse = {

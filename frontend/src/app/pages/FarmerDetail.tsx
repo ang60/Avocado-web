@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { 
-  MapPin, Phone, Mail, Calendar, Smartphone, TrendingUp, 
+  MapPin, Phone, Calendar, Smartphone, TrendingUp, 
   AlertCircle, CheckCircle, FileText, ArrowLeft, Download,
-  Leaf, Users, Package, Clock, MessageSquare, FileCheck
+  Leaf, Package, MessageSquare, FileCheck, ClipboardList
 } from 'lucide-react';
 import { getApiErrorMessage } from '../api/errors';
 import { fetchFarmerDetail } from '../api/realApi';
@@ -69,6 +69,7 @@ export function FarmerDetail() {
   }
 
   const farmerData = data;
+  const latest = farmerData.latestScoutingFromApp ?? null;
 
   return (
     <>
@@ -148,7 +149,7 @@ export function FarmerDetail() {
                   </p>
                 </div>
                 <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                  —
+                  {farmerData.hcdaRegNo?.trim() || farmerData.farmerCode?.trim() || '—'}
                 </p>
               </div>
 
@@ -240,6 +241,11 @@ export function FarmerDetail() {
               </p>
               <p className="text-xs mt-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                 acres under management
+                {farmerData.mobileFarmFromApp?.updatedAt ? (
+                  <span className="block mt-0.5">
+                    Last app farm sync: {new Date(farmerData.mobileFarmFromApp.updatedAt).toLocaleString()}
+                  </span>
+                ) : null}
               </p>
             </div>
 
@@ -300,6 +306,71 @@ export function FarmerDetail() {
               Last 4 Weeks Performance
             </p>
 
+            {/* Compact app-derived scouting summary (no layout change) */}
+            {latest ? (
+              <div
+                className="mb-4 p-4 rounded-lg border flex flex-wrap items-center justify-between gap-3"
+                style={{ borderColor: '#E0DDD6', borderRadius: '8px', backgroundColor: '#F7F4EF' }}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
+                    Latest app scouting
+                    {latest.timestamp ? ` • ${new Date(latest.timestamp).toLocaleString()}` : ''}
+                  </p>
+                  <p className="text-xs mt-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    {(latest.variety ? `Variety: ${latest.variety}` : 'Variety: —')}
+                    {' • '}
+                    Pests: {latest.anyPestsObserved || '—'}
+                    {' • '}
+                    Diseases: {latest.anyDiseasesObserved || '—'}
+                    {latest.blockName ? ` • ${latest.blockName}` : ''}
+                  </p>
+                  {(latest.gpsLatitude && latest.gpsLongitude) || (latest.mediaUrls?.length ?? 0) > 0 ? (
+                    <div className="flex flex-wrap gap-3 mt-2">
+                      {latest.gpsLatitude && latest.gpsLongitude ? (
+                        <a
+                          className="text-xs"
+                          style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F', fontWeight: '600' }}
+                          href={`https://www.google.com/maps?q=${encodeURIComponent(`${latest.gpsLatitude},${latest.gpsLongitude}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View GPS
+                        </a>
+                      ) : null}
+                      {(latest.mediaUrls?.length ?? 0) > 0 ? (
+                        <a
+                          className="text-xs"
+                          style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F', fontWeight: '600' }}
+                          href={latest.mediaUrls[0]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View latest photo
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg transition-colors hover:opacity-90 flex items-center gap-2 shrink-0"
+                  style={{
+                    backgroundColor: '#2D6A4F',
+                    color: '#FFFFFF',
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    borderRadius: '8px',
+                    fontWeight: '600',
+                  }}
+                  onClick={() => navigate(`/scouting-reports/app-weekly-${latest.id}`)}
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  Open
+                </button>
+              </div>
+            ) : null}
+
             <div className="space-y-3">
               {farmerData.weeklyScoutingLogs.map((log, index) => (
                 <div 
@@ -322,7 +393,8 @@ export function FarmerDetail() {
                       </p>
                       {log.completed && (
                         <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                          Scout: {log.scout} • {log.date}
+                          {(log.scout ? `Scout: ${log.scout}` : 'Submitted')}
+                          {log.date ? ` • ${log.date}` : ''}
                         </p>
                       )}
                     </div>
@@ -435,7 +507,12 @@ export function FarmerDetail() {
             </h2>
 
             <div className="grid grid-cols-2 gap-4">
-              {farmerData.blocks.map((block) => (
+              {farmerData.blocks.length === 0 ? (
+                <p className="text-sm col-span-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                  No blocks synced from the app or registry yet.
+                </p>
+              ) : (
+              farmerData.blocks.map((block) => (
                 <div 
                   key={block.id}
                   className="p-4 rounded-lg border"
@@ -445,7 +522,21 @@ export function FarmerDetail() {
                     <h3 className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
                       {block.name}
                     </h3>
-                    <span
+                    <div className="flex items-center gap-2">
+                      {block.source === 'app' ? (
+                        <span
+                          className="px-2 py-0.5 rounded text-xs"
+                          style={{
+                            backgroundColor: '#E8F5E9',
+                            color: '#2E7D32',
+                            fontFamily: 'IBM Plex Sans, sans-serif',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          App
+                        </span>
+                      ) : null}
+                      <span
                       className="px-2 py-1 rounded text-xs"
                       style={{
                         backgroundColor: block.status === 'healthy' ? '#DCFCE7' : '#FEF3C7',
@@ -456,6 +547,7 @@ export function FarmerDetail() {
                     >
                       {block.status}
                     </span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
@@ -471,7 +563,8 @@ export function FarmerDetail() {
                     Last: {block.lastInspection}
                   </p>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </div>
         </div>
@@ -497,6 +590,11 @@ export function FarmerDetail() {
             </p>
 
             <div className="space-y-4">
+              {farmerData.recentActivities.length === 0 ? (
+                <p className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                  No recent activity from the app yet.
+                </p>
+              ) : null}
               {farmerData.recentActivities.map((activity, index) => (
                 <div key={index} className="relative">
                   {index !== farmerData.recentActivities.length - 1 && (
@@ -512,11 +610,13 @@ export function FarmerDetail() {
                       style={{ 
                         backgroundColor: 
                           activity.type === 'scouting' ? '#DBEAFE' : 
-                          activity.type === 'advisory' ? '#DCFCE7' : '#FEF3C7',
+                          activity.type === 'advisory' ? '#DCFCE7' : 
+                          activity.type === 'report' ? '#FEE2E2' : '#FEF3C7',
                       }}
                     >
                       {activity.type === 'scouting' && <CheckCircle className="w-4 h-4" style={{ color: '#1E40AF' }} />}
                       {activity.type === 'advisory' && <FileText className="w-4 h-4" style={{ color: '#15803D' }} />}
+                      {activity.type === 'report' && <AlertCircle className="w-4 h-4" style={{ color: '#C0392B' }} />}
                       {activity.type === 'sms' && <MessageSquare className="w-4 h-4" style={{ color: '#D97706' }} />}
                     </div>
                     
@@ -574,6 +674,21 @@ export function FarmerDetail() {
               >
                 <AlertCircle className="w-4 h-4" />
                 View All Cases
+              </button>
+
+              <button
+                type="button"
+                className="w-full px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50 flex items-center gap-2 justify-center"
+                style={{
+                  borderColor: '#E0DDD6',
+                  color: '#1B4332',
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  borderRadius: '8px',
+                }}
+                onClick={() => navigate(`/scouting-reports?q=${encodeURIComponent(farmerData.name)}`)}
+              >
+                <ClipboardList className="w-4 h-4" />
+                Review scouting reports
               </button>
 
               <button

@@ -161,6 +161,23 @@ class FarmBlock(models.Model):
         return self.name
 
 
+class CaseCodeSequence(models.Model):
+    """
+    Tracks the last issued case sequence number for a given year.
+
+    Generates Case IDs like: CSE-0001-2026
+    """
+
+    year = models.PositiveIntegerField(unique=True)
+    last_number = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['year']
+
+    def __str__(self):
+        return f'{self.year}: {self.last_number}'
+
+
 class Case(models.Model):
     class Severity(models.TextChoices):
         HIGH = 'high', 'high'
@@ -169,6 +186,8 @@ class Case(models.Model):
         UNKNOWN = 'unknown', 'unknown'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Nullable so we can backfill safely; uniqueness enforced for non-null values.
+    case_code = models.CharField(max_length=32, unique=True, null=True, blank=True, default=None)
     farmer = models.ForeignKey(FarmerProfile, on_delete=models.CASCADE, related_name='cases')
     block = models.ForeignKey(FarmBlock, null=True, blank=True, on_delete=models.SET_NULL, related_name='cases')
     severity = models.CharField(max_length=16, choices=Severity.choices, default=Severity.UNKNOWN)
@@ -200,8 +219,52 @@ class Case(models.Model):
     class Meta:
         ordering = ['-date_submitted']
 
+    @staticmethod
+    def _format_case_code(n: int, year: int) -> str:
+        return f'CSE-{n:04d}-{year}'
+
+    def _compute_case_code_year(self) -> int:
+        if self.date_submitted:
+            try:
+                return int(self.date_submitted.year)
+            except Exception:
+                pass
+        return int(timezone.now().year)
+
+    def ensure_case_code(self):
+        if self.case_code:
+            return
+        year = self._compute_case_code_year()
+        with transaction.atomic():
+            seq, _ = CaseCodeSequence.objects.select_for_update().get_or_create(year=year)
+            seq.last_number = int(seq.last_number or 0) + 1
+            seq.save(update_fields=['last_number'])
+            self.case_code = self._format_case_code(seq.last_number, year)
+
+    def save(self, *args, **kwargs):
+        if not self.case_code:
+            self.ensure_case_code()
+        return super().save(*args, **kwargs)
+
     def __str__(self):
-        return f'Case {self.id}'
+        return f'Case {self.case_code or self.id}'
+
+
+class ScoutingRecordCodeSequence(models.Model):
+    """
+    Tracks the last issued scouting record sequence number for a given year.
+
+    Generates Record IDs like: REC-0001-2026
+    """
+
+    year = models.PositiveIntegerField(unique=True)
+    last_number = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['year']
+
+    def __str__(self):
+        return f'{self.year}: {self.last_number}'
 
 
 class ScoutingReport(models.Model):
@@ -226,6 +289,7 @@ class ScoutingReport(models.Model):
         REVIEWED = 'reviewed', 'reviewed'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    record_code = models.CharField(max_length=32, unique=True, null=True, blank=True, default=None)
     farmer = models.ForeignKey(FarmerProfile, on_delete=models.CASCADE, related_name='scouting_reports')
     block = models.ForeignKey(FarmBlock, null=True, blank=True, on_delete=models.SET_NULL, related_name='scouting_reports')
 
@@ -257,8 +321,35 @@ class ScoutingReport(models.Model):
             models.Index(fields=['farmer', '-submitted_at']),
         ]
 
+    @staticmethod
+    def _format_record_code(n: int, year: int) -> str:
+        return f'REC-{n:04d}-{year}'
+
+    def _compute_record_code_year(self) -> int:
+        if self.submitted_at:
+            try:
+                return int(self.submitted_at.year)
+            except Exception:
+                pass
+        return int(timezone.now().year)
+
+    def ensure_record_code(self):
+        if self.record_code:
+            return
+        year = self._compute_record_code_year()
+        with transaction.atomic():
+            seq, _ = ScoutingRecordCodeSequence.objects.select_for_update().get_or_create(year=year)
+            seq.last_number = int(seq.last_number or 0) + 1
+            seq.save(update_fields=['last_number'])
+            self.record_code = self._format_record_code(seq.last_number, year)
+
+    def save(self, *args, **kwargs):
+        if not self.record_code:
+            self.ensure_record_code()
+        return super().save(*args, **kwargs)
+
     def __str__(self):
-        return f'ScoutingReport {self.id}'
+        return f'ScoutingReport {self.record_code or self.id}'
 
 
 class AlertRule(models.Model):
@@ -288,3 +379,117 @@ class AlertRule(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class ProductionVolumeSubmission(models.Model):
+    class SourceType(models.TextChoices):
+        REGULATOR = 'regulator', 'regulator'
+        EXPORTER = 'exporter', 'exporter'
+        COOPERATIVE = 'cooperative', 'cooperative'
+
+    class Status(models.TextChoices):
+        DRAFT = 'draft', 'draft'
+        SUBMITTED = 'submitted', 'submitted'
+        APPROVED = 'approved', 'approved'
+        REJECTED = 'rejected', 'rejected'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    year = models.PositiveIntegerField()
+    month = models.PositiveIntegerField()  # 1-12
+
+    county = models.CharField(max_length=128, blank=True, default='')
+    sub_county = models.CharField(max_length=128, blank=True, default='')
+    ward = models.CharField(max_length=128, blank=True, default='')
+    village = models.CharField(max_length=128, blank=True, default='')
+
+    tonnage_mt = models.DecimalField(max_digits=12, decimal_places=2)
+
+    source_type = models.CharField(max_length=16, choices=SourceType.choices)
+    source_entity = models.ForeignKey(
+        'accounts.Entity',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='production_volume_submissions',
+    )
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='production_volume_submissions',
+    )
+
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.SUBMITTED)
+    notes = models.TextField(blank=True, default='')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-year', '-month', '-updated_at']
+        indexes = [
+            models.Index(fields=['-year', '-month']),
+            models.Index(fields=['county', 'ward']),
+            models.Index(fields=['source_type']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        where = ' / '.join([x for x in [self.county, self.ward, self.village] if x])
+        return f'ProductionVolume {self.year}-{self.month:02d} {where} ({self.tonnage_mt}mt)'
+
+
+class BroadcastCampaign(models.Model):
+    class Status(models.TextChoices):
+        QUEUED = 'queued', 'queued'
+        SENDING = 'sending', 'sending'
+        COMPLETED = 'completed', 'completed'
+        FAILED = 'failed', 'failed'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    county = models.CharField(max_length=128, blank=True, default='')
+    ward = models.CharField(max_length=128, blank=True, default='')
+    village = models.CharField(max_length=128, blank=True, default='')
+    message = models.TextField()
+
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.QUEUED)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='broadcast_campaigns',
+    )
+    total_recipients = models.PositiveIntegerField(default=0)
+    sent_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        where = ' / '.join([x for x in [self.county, self.ward, self.village] if x]) or 'All'
+        return f'Broadcast {where} ({self.status})'
+
+
+class BroadcastRecipient(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    campaign = models.ForeignKey(BroadcastCampaign, on_delete=models.CASCADE, related_name='recipients')
+    farmer = models.ForeignKey('api.FarmerProfile', null=True, blank=True, on_delete=models.SET_NULL, related_name='broadcast_deliveries')
+    phone_number = models.CharField(max_length=32)
+    status = models.CharField(max_length=16, blank=True, default='queued')
+    error = models.TextField(blank=True, default='')
+    provider_response = models.JSONField(default=dict, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-sent_at', '-id']
+        indexes = [
+            models.Index(fields=['campaign', 'status']),
+            models.Index(fields=['phone_number']),
+        ]

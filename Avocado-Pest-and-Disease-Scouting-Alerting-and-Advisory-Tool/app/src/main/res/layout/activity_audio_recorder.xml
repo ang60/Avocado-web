@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/white"
+    android:fillViewport="true"
+    tools:context=".ui.audio.AudioRecorderActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="32dp">
+        <ImageView
+            android:id="@+id/activity_audio_recorder_mic_image"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_marginTop="64dp"
+            android:src="@drawable/audio_mic_close" />
+        <TextView
+            android:id="@+id/audio_recorder_status_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Status will appear here"
+            android:textColor="@android:color/black"
+            android:textSize="16sp" />
+        <TextView
+            android:id="@+id/audio_recorder_progress_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="32dp"
+            android:text="0:00:00"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="@color/ink" />
+        <Button
+            android:id="@+id/activity_audio_recorder_start_stop_recording_button"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:padding="12dp"
+            app:backgroundTint="@null"
+            android:text="Start Recording"
+            android:textSize="18sp"
+            android:textColor="@color/white"
+            android:textAllCaps="false"
+            app:cornerRadius="16dp"
+            android:elevation="1dp"
+            android:background="@drawable/button_background_3"
+            android:foreground="@drawable/custom_ripple_1"/>
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_weight="1"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:gravity="bottom">
+            <Button
+                android:id="@+id/activity_audio_recorder_cancel_button"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:padding="12dp"
+                android:text="Cancel"
+                android:textAllCaps="false"
+                android:textColor="#344054"
+                android:textSize="18sp"
+                app:backgroundTint="@null"
+                app:cornerRadius="16dp"
+                android:elevation="1dp"
+                android:background="@drawable/button_background_4"
+                android:foreground="@drawable/custom_ripple_1"/>
+            <Button
+                android:id="@+id/activity_audio_recorder_done_recording_button"
+                style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:padding="12dp"
+                app:backgroundTint="@null"
+                android:text="Done"
+                android:textSize="18sp"
+                android:textColor="@color/white"
+                android:textAllCaps="false"
+                app:cornerRadius="16dp"
+                android:elevation="1dp"
+                android:background="@drawable/button_background_3"
+                android:foreground="@drawable/custom_ripple_1"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

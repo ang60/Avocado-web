@@ -8,6 +8,7 @@ import { OptimizedImage } from '../components/OptimizedImage';
 import { approveKephisLift, fetchKephisQuarantineBlocks, openKephisExportCsv, recommendKephisLift, requestKephisLift } from '../api/realApi';
 import { getApiErrorMessage } from '../api/errors';
 import { getAuthUser } from '../auth';
+import { REGULATORY_TERMS } from '../terms';
 
 export type KEPHISQuarantineEmbedTab = 'quarantine' | 'risk-intel' | 'alerts';
 
@@ -495,7 +496,7 @@ export function KEPHISQuarantine(props?: KEPHISQuarantineProps) {
             </p>
           </div>
 
-          {/* Pest-Free Blocks */}
+          {/* Export-cleared blocks (regulated term) */}
           <div 
             className="p-6 rounded-lg border-2"
             style={{ 
@@ -512,7 +513,7 @@ export function KEPHISQuarantine(props?: KEPHISQuarantineProps) {
                     color: '#717182',
                   }}
                 >
-                  Pest-Free Blocks
+                  {REGULATORY_TERMS.pestFreeBlockLabel}
                 </p>
                 <p 
                   className="text-4xl font-bold"

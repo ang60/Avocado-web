@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Use <shape> instead of <vector> for better android system support -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <solid
+        android:color="@color/text_input_color_2" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/text_input_color_1" />
+    <corners
+        android:bottomLeftRadius="0dp"
+        android:bottomRightRadius="14dp"
+        android:topLeftRadius="0dp"
+        android:topRightRadius="14dp" />
+
+</shape>

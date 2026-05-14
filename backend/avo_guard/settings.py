@@ -9,11 +9,12 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load env from predictable paths (not only the shell cwd).
-# After splitting repo into `backend/` + `frontend/`, many servers still keep `.env`
-# at the monorepo root (`Avocado-web/.env`) instead of `backend/.env`.
-_REPO_ROOT = BASE_DIR.parent
-load_dotenv(_REPO_ROOT / ".env")
-load_dotenv(BASE_DIR / ".env", override=True)  # backend wins over repo root
+# - Standalone backend repo: use `backend/.env` (or repo root if settings live one level up).
+# - Monorepo: optional `../.env` when a sibling `frontend/` exists (shared secrets at repo root).
+_maybe_monorepo_root = BASE_DIR.parent
+if (_maybe_monorepo_root / "frontend").is_dir():
+    load_dotenv(_maybe_monorepo_root / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 load_dotenv()  # optional: cwd-based overrides for local dev
 
 
@@ -47,8 +48,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'accounts',
-    'api',
-    'pest_scouting',
+    'api.apps.ApiConfig',
+    'pest_scouting.apps.PestScoutingConfig',
     'case_management',
     'knowledge_base',
     'kephis_quarantine',

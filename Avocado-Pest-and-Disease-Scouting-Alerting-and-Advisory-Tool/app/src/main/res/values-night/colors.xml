@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Primary palette -->
+    <color name="primary">#FF1A1A1A</color>
+    <color name="primary_variant">#FF000000</color>
+    <color name="on_primary">#FFFFFFFF</color>
+
+    <!-- Secondary palette (cool gray accent) -->
+    <color name="secondary">#FF9E9E9E</color>
+    <color name="secondary_variant">#FF707070</color>
+    <color name="on_secondary">#FF000000</color>
+
+    <!-- Neutral -->
+    <color name="background">#FFF5F5F5</color>
+    <color name="on_background">#FF000000</color>
+
+    <color name="surface">#FFFFFFFF</color>
+    <color name="on_surface">#FF000000</color>
+
+    <!-- Error -->
+    <color name="error">#FFB00020</color>
+    <color name="on_error">#FFFFFFFF</color>
+
+    <color name="edit_text_color">#1A1A1A</color>
+
+    <color name="forest">#1B4332</color>
+    <color name="sage">#2D6A4F</color>
+    <color name="mint">#40916C</color>
+    <color name="background_sand">#F5F5F0</color>
+    <color name="ink">#1A1A1A</color>
+    <color name="slate">#6B7280</color>
+    <color name="mist">#9CA3AF</color>
+    <color name="active_bg">#F2FAF6</color>
+    <color name="active_border">#2E6A4F</color>
+    <color name="warning_bg">#FEF3C7</color>
+    <color name="warning_border">#F59E0B</color>
+    <color name="danger_bg">#FEE2E2</color>
+    <color name="danger_border">#EF4444</color>
+    <color name="success_bg">#D1FAE5</color>
+    <color name="success_border">#10B981</color>
+    <color name="info_bg">#DBEAFE</color>
+    <color name="info_border">#0EA5E9</color>
+</resources>

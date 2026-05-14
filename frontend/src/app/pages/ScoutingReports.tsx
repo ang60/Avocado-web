@@ -2,6 +2,7 @@ import { Search, Smartphone, Phone, CheckCircle, AlertCircle, Image as ImageIcon
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { OptimizedImage } from '../components/OptimizedImage';
+import { ScoutingSubmissionReviewBody } from '../components/ScoutingSubmissionReviewBody';
 import {
   Pagination,
   PaginationContent,
@@ -19,13 +20,15 @@ import {
   SelectValue,
 } from "../components/ui/select";
 
-import type { SeverityLevel } from '../api/types';
+import type { SeverityLevel, RecentScoutingRecord, RecentTrapActivityRow } from '../api/types';
 import { getApiErrorMessage } from '../api/errors';
 import { fetchScoutingReports, type ScoutingReport } from '../api/scoutingApi';
 import { createCase } from '../api/caseApi';
-import { confirmScoutingIdentification } from '../api/realApi';
+import { confirmScoutingIdentification, fetchDashboard } from '../api/realApi';
 import { getAuthUser } from '../auth';
 import { FarmerScoutingReports } from './FarmerScoutingReports';
+import { DashboardScoutingTrapPanels } from '../components/DashboardScoutingTrapPanels';
+import { splitGalleryUrls } from '../utils/scoutingPayloadDisplay';
 
 type FilterType = 'all' | 'needs-review' | 'my-assigned' | 'ussd';
 
@@ -78,9 +81,40 @@ export function ScoutingReports() {
   const [createCaseSubmitting, setCreateCaseSubmitting] = useState(false);
   const [createCaseSuccess, setCreateCaseSuccess] = useState<string | null>(null);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [mergedFieldFeed, setMergedFieldFeed] = useState<{
+    recentScoutingRecords: RecentScoutingRecord[];
+    recentTrapActivity: RecentTrapActivityRow[];
+    todayDateKey?: string;
+  } | null>(null);
 
   const authUser = getAuthUser();
-  const isAgronomistUser = authUser?.role_details?.role_name === 'Agronomist';
+  const roleName = (authUser?.role_details?.role_name || authUser?.role?.role_name || '').trim();
+  /** Agronomist, Administrator, and privileged (staff) users see merged registry + dashboard feed */
+  const showMergedScoutingOverview = useMemo(() => {
+    if (authUser?.is_privileged) return true;
+    const r = roleName.toLowerCase();
+    return r === 'agronomist' || r === 'administrator' || r === 'admin';
+  }, [authUser?.is_privileged, roleName]);
+
+  useEffect(() => {
+    if (!showMergedScoutingOverview) return;
+    let cancelled = false;
+    fetchDashboard()
+      .then((d) => {
+        if (cancelled) return;
+        setMergedFieldFeed({
+          recentScoutingRecords: d.recentScoutingRecords,
+          recentTrapActivity: d.recentTrapActivity ?? [],
+          todayDateKey: d.todayDateKey,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setMergedFieldFeed(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showMergedScoutingOverview]);
 
   useEffect(() => {
     if (!createCaseModalItem) {
@@ -271,15 +305,6 @@ export function ScoutingReports() {
     );
   }
 
-  if (loadingFeed) {
-    return (
-      <div className="animate-pulse space-y-4 p-4">
-        <div className="h-10 bg-slate-200 rounded w-64" />
-        <div className="h-64 bg-slate-200 rounded-lg" />
-      </div>
-    );
-  }
-
   return (
     <>
       <div
@@ -449,9 +474,35 @@ export function ScoutingReports() {
       )}
       </div>
 
+      {showMergedScoutingOverview && mergedFieldFeed ? (
+        <section className="mb-4 sm:mb-5">
+          <h3 className="mb-2 text-base sm:text-lg" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+            Registry + mobile app (merged)
+          </h3>
+          <p className="mb-3 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            Same feed as the main dashboard API: weekly scouting from the field registry and the smartphone app, plus trap
+            check-ins.
+          </p>
+          <DashboardScoutingTrapPanels
+            recentScoutingRecords={mergedFieldFeed.recentScoutingRecords}
+            recentTrapActivity={mergedFieldFeed.recentTrapActivity}
+            todayDateKey={mergedFieldFeed.todayDateKey}
+          />
+        </section>
+      ) : null}
+
       {/* Feed List — stacked cards on mobile; table-style row from lg */}
       <div className="min-w-0 space-y-2 lg:-mx-1 lg:touch-pan-x lg:overflow-x-auto lg:px-1">
-        <div className="min-w-0 space-y-2 lg:min-w-[900px]">
+        {loadingFeed ? (
+          <div
+            className="rounded-lg border p-10 text-center"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+          >
+            <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading scouting feed…</p>
+          </div>
+        ) : (
+          <>
+            <div className="min-w-0 space-y-2 lg:min-w-[900px]">
         {/* Select all — mobile only (desktop uses column header row) */}
         <div
           className="mb-1 flex items-center gap-3 rounded-lg border p-2 lg:hidden"
@@ -617,11 +668,14 @@ export function ScoutingReports() {
           const findingText =
             item.status === 'clean' ? item.finding : `${item.finding} Detected`;
 
-          const mediaBlock =
-            item.source === 'app' && item.mediaPreview ? (
+          const thumb =
+            splitGalleryUrls(item).images[0] ||
+            (typeof item.mediaPreview === 'string' && item.mediaPreview.trim() ? item.mediaPreview.trim() : null);
+
+          const mediaBlock = thumb ? (
               <div className="relative shrink-0">
                 <OptimizedImage
-                  src={item.mediaPreview}
+                  src={thumb}
                   alt="Scouting preview"
                   width={40}
                   height={40}
@@ -992,10 +1046,12 @@ export function ScoutingReports() {
             </Pagination>
           </div>
         )}
+          </>
+        )}
       </div>
 
       {/* Empty State */}
-      {filteredFeed.length === 0 && (
+      {!loadingFeed && filteredFeed.length === 0 && (
         <div 
           className="p-12 rounded-lg border text-center"
           style={{ 
@@ -1028,7 +1084,7 @@ export function ScoutingReports() {
           onClick={() => setReviewModalItem(null)}
         >
           <div 
-            className="rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             style={{ 
               backgroundColor: '#FFFFFF', 
               borderRadius: '8px',
@@ -1064,152 +1120,9 @@ export function ScoutingReports() {
               </button>
             </div>
 
-            {/* Modal Content */}
+            {/* Modal Content — full mobile payload (rawPayload + model fields) */}
             <div className="p-6">
-              {/* Submission Details */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <p 
-                    className="text-xs uppercase tracking-wider mb-1"
-                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
-                  >
-                    Farmer
-                  </p>
-                  <p 
-                    style={{ 
-                      fontFamily: 'IBM Plex Sans, sans-serif', 
-                      color: '#1B4332',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {reviewModalItem.farmerName}
-                  </p>
-                </div>
-                <div>
-                  <p 
-                    className="text-xs uppercase tracking-wider mb-1"
-                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
-                  >
-                    County
-                  </p>
-                  <p 
-                    style={{ 
-                      fontFamily: 'IBM Plex Sans, sans-serif', 
-                      color: '#1B4332',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {reviewModalItem.county}
-                  </p>
-                </div>
-                <div>
-                  <p 
-                    className="text-xs uppercase tracking-wider mb-1"
-                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
-                  >
-                    Submission Source
-                  </p>
-                  <p 
-                    style={{ 
-                      fontFamily: 'IBM Plex Sans, sans-serif', 
-                      color: '#1B4332',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {reviewModalItem.source === 'app' ? 'Mobile App' : `USSD ${reviewModalItem.ussdCode}`}
-                  </p>
-                </div>
-                <div>
-                  <p 
-                    className="text-xs uppercase tracking-wider mb-1"
-                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
-                  >
-                    Timestamp
-                  </p>
-                  <p 
-                    style={{ 
-                      fontFamily: 'IBM Plex Mono, monospace', 
-                      color: '#1B4332',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {reviewModalItem.timestamp}
-                  </p>
-                </div>
-              </div>
-
-              {/* Finding */}
-              <div className="mb-6">
-                <p 
-                  className="text-xs uppercase tracking-wider mb-2"
-                  style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
-                >
-                  Finding
-                </p>
-                <div 
-                  className="p-4 rounded-lg"
-                  style={{ 
-                    backgroundColor: reviewModalItem.status === 'clean' ? '#DCFCE7' : '#FEE2E2',
-                    borderRadius: '8px',
-                  }}
-                >
-                  <p 
-                    className="text-lg"
-                    style={{ 
-                      fontFamily: 'IBM Plex Sans, sans-serif', 
-                      color: reviewModalItem.status === 'clean' ? '#15803D' : '#C0392B',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {reviewModalItem.status === 'clean' ? reviewModalItem.finding : `${reviewModalItem.finding} Detected`}
-                  </p>
-                </div>
-              </div>
-
-              {/* Media Preview */}
-              {reviewModalItem.source === 'app' && reviewModalItem.mediaPreview && (
-                <div className="mb-6">
-                  <p 
-                    className="text-xs uppercase tracking-wider mb-2"
-                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
-                  >
-                    Photo Evidence
-                  </p>
-                  <OptimizedImage
-                    src={reviewModalItem.mediaPreview}
-                    alt="Field evidence"
-                    priority
-                    className="w-full rounded-lg border"
-                    style={{
-                      borderColor: '#E0DDD6',
-                      borderRadius: '8px',
-                      maxHeight: '400px',
-                      objectFit: 'cover',
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Review Notes */}
-              <div className="mb-6">
-                <label 
-                  className="block text-xs uppercase tracking-wider mb-2"
-                  style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
-                >
-                  Review Notes
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="Add your review notes here..."
-                  className="w-full px-4 py-3 rounded-lg border outline-none focus:ring-2 transition-all"
-                  style={{
-                    fontFamily: 'IBM Plex Sans, sans-serif',
-                    borderColor: '#E0DDD6',
-                    borderRadius: '8px',
-                    color: '#1B4332',
-                  }}
-                />
-              </div>
+              <ScoutingSubmissionReviewBody report={reviewModalItem} showReviewNotes />
             </div>
 
             {/* Modal Footer */}
@@ -1420,7 +1333,7 @@ export function ScoutingReports() {
                   />
                 </div>
 
-                {isAgronomistUser ? (
+                {showMergedScoutingOverview ? (
                   <label className="flex cursor-pointer items-center gap-2">
                     <input
                       type="checkbox"

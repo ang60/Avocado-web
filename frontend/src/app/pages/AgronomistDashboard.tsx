@@ -9,10 +9,12 @@ import {
   Microscope,
   Search,
   ShieldCheck,
+  Smartphone,
   Waves,
 } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import { KenyaHeatMap } from '../components/KenyaHeatMap';
+import { DashboardScoutingTrapPanels } from '../components/DashboardScoutingTrapPanels';
 import { TableScroll } from '../components/TableScroll';
 import { AppToast } from '../components/AppToast';
 import { getApiErrorMessage } from '../api/errors';
@@ -27,11 +29,21 @@ import {
   fetchKnowledgeEntries,
   fetchScoutingAuditLog,
   fetchScoutingFeed,
+  fetchDashboard,
   updateFarmerComplianceStatus,
   type KnowledgeEntryDto,
   type ScoutingBlockOverviewRow,
 } from '../api/realApi';
-import type { FarmerListRow, ScoutingFeedItem } from '../api/types';
+import type { FarmerListRow, RecentScoutingRecord, RecentTrapActivityRow, ScoutingFeedItem } from '../api/types';
+import {
+  beneficialSummaryLine,
+  diseaseLabelsFromReport,
+  diseaseMetaSummaryLine,
+  gpsLineFromPayload,
+  mobileBlockLineFromReport,
+  pestRowsFromReport,
+  trapUseRows,
+} from '../utils/scoutingPayloadDisplay';
 
 type AgronomistTab =
   | 'overview'
@@ -88,6 +100,11 @@ export function AgronomistDashboard() {
   const [triageActionLoading, setTriageActionLoading] = useState(false);
   const [triageDiagnosisDraft, setTriageDiagnosisDraft] = useState('');
   const [triageProtocolDraft, setTriageProtocolDraft] = useState('');
+  const [mergedFieldFeed, setMergedFieldFeed] = useState<{
+    recentScoutingRecords: RecentScoutingRecord[];
+    recentTrapActivity: RecentTrapActivityRow[];
+    todayDateKey?: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,8 +116,9 @@ export function AgronomistDashboard() {
       fetchScoutingBlockOverview(),
       fetchScoutingAuditLog(),
       fetchFarmersList(),
+      fetchDashboard().catch(() => null),
     ])
-      .then(([scouting, kb, analytics, blockOverview, audit, farmerRows]) => {
+      .then(([scouting, kb, analytics, blockOverview, audit, farmerRows, dashboard]) => {
         if (cancelled) return;
         setFeed(scouting);
         setKbEntries(kb);
@@ -127,6 +145,15 @@ export function AgronomistDashboard() {
           }))
         );
         setError(null);
+        if (dashboard) {
+          setMergedFieldFeed({
+            recentScoutingRecords: dashboard.recentScoutingRecords,
+            recentTrapActivity: dashboard.recentTrapActivity ?? [],
+            todayDateKey: dashboard.todayDateKey,
+          });
+        } else {
+          setMergedFieldFeed(null);
+        }
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -414,6 +441,23 @@ export function AgronomistDashboard() {
             ))}
           </div>
 
+          {mergedFieldFeed ? (
+            <div className="mb-4">
+              <h3 className="mb-2 text-base sm:text-lg" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                Registry + mobile app (merged)
+              </h3>
+              <p className="mb-3 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                Same feed as the main dashboard API: weekly scouting from the field registry and the smartphone app, plus trap
+                check-ins.
+              </p>
+              <DashboardScoutingTrapPanels
+                recentScoutingRecords={mergedFieldFeed.recentScoutingRecords}
+                recentTrapActivity={mergedFieldFeed.recentTrapActivity}
+                todayDateKey={mergedFieldFeed.todayDateKey}
+              />
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div className="rounded-lg border p-4 sm:p-6" style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6' }}>
               <h3 className="mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
@@ -450,10 +494,23 @@ export function AgronomistDashboard() {
             </p>
           </div>
           <TableScroll>
-            <table className="w-full min-w-[760px]">
+            <table className="w-full min-w-[1240px]">
               <thead>
                 <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
-                  {['Timestamp', 'Farm / Block', 'County', 'Finding', 'Media', 'KB Deep Link', 'Action'].map((h) => (
+                  {[
+                    'Timestamp',
+                    'Farm / block',
+                    'Variety',
+                    'Traps',
+                    'Pests',
+                    'Diseases',
+                    'Beneficials',
+                    'Disease / GPS',
+                    'Finding',
+                    'Media',
+                    'KB Deep Link',
+                    'Action',
+                  ].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs uppercase" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                       {h}
                     </th>
@@ -464,19 +521,78 @@ export function AgronomistDashboard() {
                 {triageQueue.map((r, i) => {
                   const kb = detectKbMatch(r, kbEntries);
                   const isVerified = verifiedIds.has(r.id);
+                  const appBlock = mobileBlockLineFromReport(r);
+                  const trapLine = trapUseRows(r)
+                    .map((t) => `${t.type} (×${t.count}${t.avg ? `, avg ${t.avg}` : ''})`)
+                    .join(' · ');
+                  const pestLine = pestRowsFromReport(r)
+                    .map((p) => (p.perTrap ? `${p.name} (${p.perTrap}/trap)` : p.name))
+                    .join(' · ');
+                  const diseaseLine = diseaseLabelsFromReport(r).join(' · ');
+                  const benLine = beneficialSummaryLine(r);
+                  const disGps = [diseaseMetaSummaryLine(r), gpsLineFromPayload(r)].filter(Boolean).join(' · ');
                   return (
                     <tr key={r.id} style={{ borderBottom: i === triageQueue.length - 1 ? 'none' : '1px solid #E0DDD6' }}>
                       <td className="px-4 py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                         {r.timestamp}
                       </td>
-                      <td className="px-4 py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                        {r.farmName} / {r.blockId}
+                      <td className="max-w-[200px] px-4 py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                        <div className="font-medium">{r.farmName}</div>
+                        <div className="text-xs" style={{ color: '#717182' }}>
+                          {r.blockId} · {r.county}
+                        </div>
+                        {appBlock ? (
+                          <div className="mt-0.5 truncate text-xs" style={{ color: '#455A64' }} title={appBlock}>
+                            App: {appBlock}
+                          </div>
+                        ) : null}
                       </td>
-                      <td className="px-4 py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                        {r.county}
+                      <td
+                        className="max-w-[88px] px-4 py-3 text-xs"
+                        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                        title={r.variety || ''}
+                      >
+                        {r.variety ? <span className="line-clamp-2">{r.variety}</span> : '—'}
                       </td>
-                      <td className="px-4 py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
-                        {r.finding || 'Unknown finding'}
+                      <td
+                        className="max-w-[120px] px-4 py-3 text-xs"
+                        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                        title={trapLine}
+                      >
+                        {trapLine ? <span className="line-clamp-3">{trapLine}</span> : '—'}
+                      </td>
+                      <td
+                        className="max-w-[120px] px-4 py-3 text-xs"
+                        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                        title={pestLine}
+                      >
+                        {pestLine ? <span className="line-clamp-3">{pestLine}</span> : '—'}
+                      </td>
+                      <td
+                        className="max-w-[100px] px-4 py-3 text-xs"
+                        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                        title={diseaseLine}
+                      >
+                        {diseaseLine ? <span className="line-clamp-2">{diseaseLine}</span> : '—'}
+                      </td>
+                      <td
+                        className="max-w-[100px] px-4 py-3 text-xs"
+                        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                        title={benLine}
+                      >
+                        {benLine ? <span className="line-clamp-2">{benLine}</span> : '—'}
+                      </td>
+                      <td
+                        className="max-w-[120px] px-4 py-3 text-[11px]"
+                        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                        title={disGps}
+                      >
+                        {disGps ? <span className="line-clamp-2 font-mono">{disGps}</span> : '—'}
+                      </td>
+                      <td className="max-w-[180px] px-4 py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                        <span className="line-clamp-3" title={r.finding || ''}>
+                          {r.finding || 'Unknown finding'}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         {r.mediaPreview ? (
@@ -617,6 +733,41 @@ export function AgronomistDashboard() {
                       <div>
                         <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>{f.name}</p>
                         <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>{f.location}</p>
+                        {f.mobileFarmFromApp &&
+                        ((f.mobileFarmFromApp.farmName || '').trim() ||
+                          (f.mobileFarmFromApp.location || '').trim() ||
+                          f.mobileFarmFromApp.numberOfBlocks != null ||
+                          (f.mobileFarmFromApp.farmSize != null && f.mobileFarmFromApp.farmSize > 0)) ? (
+                          <div
+                            className="mt-2 rounded-md border px-2 py-1.5 text-left text-[11px]"
+                            style={{ borderColor: '#BFDBFE', backgroundColor: '#F0F9FF', fontFamily: 'IBM Plex Sans, sans-serif' }}
+                          >
+                            <span className="inline-flex items-center gap-1 font-semibold" style={{ color: '#0369A1' }}>
+                              <Smartphone className="h-3 w-3 shrink-0" />
+                              App farm
+                            </span>
+                            {(f.mobileFarmFromApp.farmName || '').trim() ? (
+                              <div className="mt-0.5" style={{ color: '#1B4332' }}>
+                                {f.mobileFarmFromApp.farmName.trim()}
+                              </div>
+                            ) : null}
+                            {(f.mobileFarmFromApp.location || '').trim() ? (
+                              <div style={{ color: '#475569' }}>{f.mobileFarmFromApp.location.trim()}</div>
+                            ) : null}
+                            {f.mobileFarmFromApp.numberOfBlocks != null && f.mobileFarmFromApp.numberOfBlocks > 0 ? (
+                              <div className="mt-0.5" style={{ color: '#64748B' }}>
+                                {f.mobileFarmFromApp.numberOfBlocks} block{f.mobileFarmFromApp.numberOfBlocks === 1 ? '' : 's'}
+                                {f.mobileFarmFromApp.farmSize != null && f.mobileFarmFromApp.farmSize > 0
+                                  ? ` · ${f.mobileFarmFromApp.farmSize} ha`
+                                  : ''}
+                              </div>
+                            ) : f.mobileFarmFromApp.farmSize != null && f.mobileFarmFromApp.farmSize > 0 ? (
+                              <div className="mt-0.5" style={{ color: '#64748B' }}>
+                                {f.mobileFarmFromApp.farmSize} ha
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                     </td>
                     <td className="px-4 py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>

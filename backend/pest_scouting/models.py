@@ -6,6 +6,13 @@ from django.conf import settings
 class FarmBlock(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='farm_blocks')
+    farm = models.ForeignKey(
+        'Farm',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='blocks',
+    )
     block_name = models.CharField(max_length=255)
     number_of_trees = models.PositiveIntegerField()
     # Polygon vertices for the farm block boundary.
@@ -209,4 +216,67 @@ class ScoutingReview(models.Model):
 
     class Meta:
         ordering = ['-reviewed_at']
+
+
+class Farm(models.Model):
+    """Logical farm row for the mobile app (multi-farm per farmer)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pest_scouting_farms')
+    farm_name = models.CharField(max_length=255)
+    location = models.CharField(max_length=512, blank=True, default='')
+    number_of_blocks = models.PositiveIntegerField(default=0)
+    farm_size = models.FloatField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.farm_name} ({self.farmer_id})'
+
+
+class TrapLog(models.Model):
+    """Trap check-in / trap metadata from the mobile app."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trap_logs')
+    farm = models.ForeignKey(Farm, null=True, blank=True, on_delete=models.SET_NULL, related_name='trap_logs')
+    trap_name = models.CharField(max_length=255)
+    number_of_traps = models.PositiveIntegerField(default=0)
+    photo = models.URLField(max_length=2048, blank=True, default='')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f'{self.trap_name} x{self.number_of_traps}'
+
+
+class ProblemReport(models.Model):
+    class ProblemType(models.TextChoices):
+        PEST = 'Pest', 'Pest'
+        DISEASE = 'Disease', 'Disease'
+        OTHER = 'Other', 'Other'
+
+    class Urgency(models.TextChoices):
+        LOW = 'Low', 'Low'
+        MEDIUM = 'Medium', 'Medium'
+        HIGH = 'High', 'High'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    farmer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='problem_reports')
+    problem_type = models.CharField(max_length=32, choices=ProblemType.choices, default=ProblemType.OTHER)
+    urgency = models.CharField(max_length=16, choices=Urgency.choices, default=Urgency.LOW)
+    photo = models.URLField(max_length=2048, blank=True, default='')
+    description = models.TextField(blank=True, default='')
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f'{self.problem_type} ({self.farmer_id})'
 

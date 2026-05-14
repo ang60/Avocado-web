@@ -36,6 +36,20 @@ export interface ScoutingFeedItem {
   actionsTakenList?: string[];
   outcomeList?: string[];
   rawPayload?: Record<string, unknown>;
+  variety?: string | null;
+  reportLocation?: string | null;
+  blockTreeCount?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  additionalNotes?: string | null;
+  remarks?: string | null;
+  gpsLatitude?: string | null;
+  gpsLongitude?: string | null;
+  mediaGallery?: string[];
+  recordTypeOfTrap?: string;
+  recordNumberOfTrap?: number;
+  recordTrapsReplaced?: number;
+  recordPestsPerTrap?: string | null;
 }
 
 export interface DashboardMetricCard {
@@ -45,13 +59,14 @@ export interface DashboardMetricCard {
   trendUp?: boolean;
   trendPercent?: number;
   trendVs?: string;
-  icon: 'activity' | 'alert' | 'check' | 'clock';
+  icon: 'activity' | 'alert' | 'check' | 'clock' | 'target';
   iconBg: string;
   iconColor: string;
 }
 
 export interface TriageQueueItem {
   id: string;
+  caseCode?: string;
   farm: string;
   location: string;
   severity: 'high' | 'medium' | 'low';
@@ -63,6 +78,8 @@ export interface TriageQueueItem {
 
 export interface RecentScoutingRecord {
   id: string;
+  recordCode?: string;
+  weeklyRecordId?: string | null;
   scout: string;
   farm: string;
   location: string;
@@ -71,12 +88,44 @@ export interface RecentScoutingRecord {
   blocksInspected: number;
   issuesFound: number;
   status: string;
+  /** `registry` = api.ScoutingReport; `mobile_app` = pest_scouting weekly record from smartphone */
+  source?: 'registry' | 'mobile_app';
+  trapSummary?: string;
+  findingSummary?: string;
+  blockName?: string;
+  /** Mobile weekly raw: variety */
+  variety?: string;
+  /** Short comma-separated pest names (with counts when provided by app) */
+  pestSummary?: string;
+  diseaseSummary?: string;
+  /** Mobile composite block label (e.g. county + block + trees) */
+  mobileBlockLine?: string;
+  /** Weekly JSON `farm_name` as typed in the app */
+  farmNameAsSubmitted?: string;
+  /** Weekly JSON `location` (ward / free text) */
+  submissionLocation?: string;
+  beneficialSummary?: string;
+  diseaseMetaSummary?: string;
+  gpsSummary?: string;
+}
+
+export interface RecentTrapActivityRow {
+  id: string;
+  trapName: string;
+  numberOfTraps: number;
+  farm: string;
+  location: string;
+  county: string;
+  date: string;
+  time: string;
 }
 
 export interface WeeklyTrendPoint {
   week: string;
   cases: number;
   resolved: number;
+  /** Weekly mobile records + non–app-mirror scouting reports in that 7-day window */
+  fieldReports?: number;
 }
 
 export interface WeeklyCompliancePoint {
@@ -98,8 +147,59 @@ export interface DashboardPayload {
   pestDistribution: PestSlice[];
   triageQueue: TriageQueueItem[];
   recentScoutingRecords: RecentScoutingRecord[];
+  /** Trap check-ins from the mobile app (`pest_scouting.TrapLog`). */
+  recentTrapActivity?: RecentTrapActivityRow[];
   complianceSummary: { target: number; current: number };
   todayLabel: string;
+  /** ISO date (YYYY-MM-DD) for matching `RecentScoutingRecord.date` to “today”. */
+  todayDateKey?: string;
+}
+
+export type ProductionSourceType = 'regulator' | 'exporter' | 'cooperative';
+export type ProductionSubmissionStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+
+export interface ProductionVolumeSubmission {
+  id: string;
+  year: number;
+  month: number;
+  county: string;
+  sub_county: string;
+  ward: string;
+  village: string;
+  tonnage_mt: number;
+  source_type: ProductionSourceType;
+  source_entity?: string | null;
+  sourceEntityName?: string | null;
+  status: ProductionSubmissionStatus;
+  notes?: string;
+  submittedBy?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ProductionResolvedRow {
+  key: string[]; // [county] or [county, ward] or [county, ward, village]
+  year: number;
+  month: number;
+  resolved_tonnage_mt: number;
+  resolved_from: ProductionSourceType;
+  status: ProductionSubmissionStatus;
+  inputs: ProductionVolumeSubmission[];
+}
+
+export interface BroadcastCampaign {
+  id: string;
+  county: string;
+  ward: string;
+  village: string;
+  message: string;
+  status: string;
+  total_recipients: number;
+  sent_count: number;
+  failed_count: number;
+  createdBy?: string | null;
+  created_at?: string;
+  recipientsPreview?: Array<{ id: string; phone_number: string; status: string; error?: string }>;
 }
 
 export interface NavbarUser {
@@ -249,6 +349,17 @@ export interface FarmerListRow {
   /** Placeholder: linked exporter id from `data/exporters.ts` */
   linkedExporter?: string;
   complianceStatus?: 'compliant' | 'needs-follow-up';
+  /**
+   * Latest farm row from the mobile app (`pest_scouting.Farm`) — name, location,
+   * blocks and size captured during onboarding / farm setup on device.
+   */
+  mobileFarmFromApp?: {
+    farmName: string;
+    location: string;
+    numberOfBlocks: number | null;
+    farmSize: number | null;
+    updatedAt: string;
+  } | null;
 }
 
 export interface ComplianceFarmerRow {
@@ -352,6 +463,9 @@ export interface AdminEntityRow {
 /** Farmer detail — extends list row with rich profile */
 export interface FarmerDetailPayload {
   id: string;
+  farmerCode?: string;
+  /** Registry / generated farmer code shown as HCDA-style registration when present */
+  hcdaRegNo?: string;
   name: string;
   farmName: string;
   location: string;
@@ -374,9 +488,72 @@ export interface FarmerDetailPayload {
   };
   weeklyScoutingLogs: { week: string; completed: boolean; date: string; scout: string }[];
   complianceScore: number;
+  complianceStatus?: string;
   activeCases: { id: string; issue: string; severity: string; status: string; date: string }[];
   recentActivities: { type: string; description: string; date: string; user: string }[];
-  blocks: { id: string; name: string; acres: number; trees: number; status: string; lastInspection: string }[];
+  blocks: {
+    id: string;
+    name: string;
+    acres: number;
+    trees: number;
+    status: string;
+    lastInspection: string;
+    source?: 'app' | 'registry';
+  }[];
+  trapLogsFromApp?: {
+    trapName: string;
+    numberOfTraps: number;
+    photo: string;
+    timestamp: string;
+  }[];
+  problemReportsFromApp?: {
+    problemType: string;
+    urgency: string;
+    description: string;
+    photo: string;
+    timestamp: string;
+  }[];
+  /** Latest mobile Farm row (sanitized counts / sizes); omit when no app farm synced */
+  mobileFarmFromApp?: {
+    farmName: string;
+    location: string;
+    numberOfBlocks: number | null;
+    farmSize: number | null;
+    updatedAt: string;
+  } | null;
+  /** Latest weekly scouting payload from the mobile app (if any) */
+  latestScoutingFromApp?: {
+    id: string;
+    timestamp: string;
+    farmName: string;
+    location: string;
+    blockName: string;
+    blockTrees: number;
+    variety: string;
+    trapUse: {
+      type_of_trap?: string;
+      number_of_trap?: number;
+      average_no_of_pest_per_trap?: number;
+      typeOfTrap?: string;
+      numberOfTrap?: number;
+      averageNoOfPestPerTrap?: number;
+    }[];
+    anyPestsObserved: string;
+    pestsObserved: string[];
+    beneficialInsectsObserved: string[];
+    anyDiseasesObserved: string;
+    diseasesObserved: string[];
+    diseasePlantPart: string[];
+    diseaseCropStage: string;
+    diseaseDetectionMethod: string;
+    actionsTaken: string[];
+    outcome: string;
+    otherProductionChallenges: string[];
+    additionalNotes: string;
+    gpsLatitude: string;
+    gpsLongitude: string;
+    mediaUrls: string[];
+  } | null;
 }
 
 export interface KnowledgeBaseListPayload {

@@ -115,80 +115,6 @@ class UserViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsAdminLikeUser()]
 
     @extend_schema(
-        request=RequestPasswordResetSerializer,
-        summary='Request password reset code',
-        description='Sends a verification code to the user\'s phone and email to reset their password.',
-        responses={200: inline_serializer(name='MsgResponse', fields={'message': serializers.CharField()})}
-    )
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def request_password_reset(self, request):
-        serializer = RequestPasswordResetSerializer(data=request.data)
-        if serializer.is_valid():
-            phone_number = serializer.validated_data['phone_number']
-            email = serializer.validated_data['email']
-            user = User.objects.filter(phone_number=phone_number, email__iexact=email).first()
-            if not user:
-                return Response({'error': 'User not found with provided phone and email.'}, status=status.HTTP_404_NOT_FOUND)
-            
-            code = str(random.randint(100000, 999999))
-            OTP.objects.create(phone_number=phone_number, code=code)
-
-            # Send SMS
-            if not getattr(settings, 'OTP_SKIP_SMS', False):
-                try:
-                    send_advanta_sms(phone_number, f"Your AvoGuard password reset code is: {code}")
-                except Exception:
-                    logger.exception('[Reset] SMS failed for %s', phone_number)
-
-            # Send Email
-            try:
-                html_message = render_to_string('password_reset_email.html', {'user': user, 'otp_code': code})
-                plain_message = strip_tags(html_message)
-                send_mail(
-                    subject='AvoGuard Password Reset',
-                    message=plain_message,
-                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@avoguard.com'),
-                    recipient_list=[user.email],
-                    html_message=html_message,
-                    fail_silently=False,
-                )
-            except Exception:
-                logger.exception('[Reset] Email failed for %s', user.email)
-
-            return Response({'message': 'Reset code sent to your phone and email.'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @extend_schema(
-        request=ConfirmPasswordResetSerializer,
-        summary='Confirm password reset',
-        description='Resets the password using the code sent to the phone/email.',
-        responses={200: inline_serializer(name='MsgResponse', fields={'message': serializers.CharField()})}
-    )
-    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
-    def confirm_password_reset(self, request):
-        serializer = ConfirmPasswordResetSerializer(data=request.data)
-        if serializer.is_valid():
-            phone_number = serializer.validated_data['phone_number']
-            code = serializer.validated_data['code']
-            new_password = serializer.validated_data['new_password']
-
-            otp = OTP.objects.filter(phone_number=phone_number, code=code, is_used=False).order_by('-created_at').first()
-            if not otp:
-                return Response({'error': 'Invalid or expired reset code.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            user = User.objects.filter(phone_number=phone_number).first()
-            if not user:
-                return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-            
-            user.set_password(new_password)
-            user.save()
-            otp.is_used = True
-            otp.save()
-
-            return Response({'message': 'Password has been reset successfully.'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @extend_schema(
         request=RegisterSerializer,
         responses={
             201: OpenApiResponse(
@@ -308,24 +234,57 @@ class UserViewSet(viewsets.ModelViewSet):
                 )
 
             code = str(random.randint(100000, 999999))
-            OTP.objects.create(phone_number=phone_number, code=code)
+            otp_row = OTP.objects.create(phone_number=phone_number, code=code)
 
             # Send SMS via Advanta (optional)
+            sms_sent: bool | None = None
             if getattr(settings, 'OTP_SKIP_SMS', False):
                 logger.info('[OTP] OTP_SKIP_SMS=1; stored OTP for phone=%s', phone_number)
+                sms_sent = None
             else:
                 try:
                     send_advanta_sms(
                         phone_number=phone_number,
                         message=f"Your Avo Guard account verification code is: {code}",
                     )
+                    sms_sent = True
                 except Exception:
                     logger.exception('[OTP] SMS sending failed for phone=%s', phone_number)
+                    sms_sent = False
                     if getattr(settings, 'DEBUG', False):
                         print(f'[OTP] {phone_number} -> {code}')
 
             if getattr(settings, 'OTP_ECHO_CODE', False):
-                return Response({'detail': 'ok', 'code': code}, status=status.HTTP_200_OK)
+                return Response(
+                    {
+                        'detail': 'ok',
+                        'code': code,
+                        'sms_sent': True if sms_sent is True else (False if sms_sent is False else None),
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
+            if sms_sent is False:
+                if getattr(settings, 'DEBUG', False):
+                    return Response(
+                        {
+                            'detail': 'SMS could not be delivered; use the code below in development only.',
+                            'sms_sent': False,
+                            'code': code,
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+                otp_row.delete()
+                return Response(
+                    {
+                        'error': 'sms_unavailable',
+                        'detail': (
+                            'Could not send verification SMS (provider error). '
+                            'Try again later, or sign in with password if your account has one.'
+                        ),
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
