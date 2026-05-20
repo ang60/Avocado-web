@@ -136,9 +136,32 @@ export function FarmerDetail() {
               )}
             </div>
             
-            <p className="text-lg mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            <p className="text-lg mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
               {farmerData.farmName}
             </p>
+            {farmerData.mobileFarmFromApp && (
+              (farmerData.mobileFarmFromApp.farmName || '').trim() ||
+              (farmerData.mobileFarmFromApp.location || '').trim()
+            ) ? (
+              <div
+                className="mb-4 rounded-lg border px-3 py-2 text-sm"
+                style={{ borderColor: '#BFDBFE', backgroundColor: '#F0F9FF', fontFamily: 'IBM Plex Sans, sans-serif' }}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#0369A1' }}>
+                  As entered in mobile app
+                </p>
+                {(farmerData.mobileFarmFromApp.farmName || '').trim() ? (
+                  <p className="mt-1 font-medium" style={{ color: '#1B4332' }}>
+                    {farmerData.mobileFarmFromApp.farmName.trim()}
+                  </p>
+                ) : null}
+                {(farmerData.mobileFarmFromApp.location || '').trim() ? (
+                  <p className="text-xs" style={{ color: '#475569' }}>
+                    {farmerData.mobileFarmFromApp.location.trim()}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-2 gap-3 min-w-0 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5 lg:gap-6">
               <div>

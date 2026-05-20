@@ -3,6 +3,7 @@ export const PLACEHOLDER_FARMERS: FarmerListRow[] = [
   {
     id: 'FRM-1024',
     name: 'Peter Mwangi',
+    farmName: 'Kangema Hills Avocado Farm',
     owner: 'Kangema Avocado Growers',
     location: 'Kangema',
     county: 'Murang\'a',

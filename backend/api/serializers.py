@@ -274,11 +274,13 @@ class BroadcastCampaignSerializer(serializers.ModelSerializer):
 
 class FarmerListSerializer(serializers.ModelSerializer):
     farmerCode = serializers.CharField(source='farmer_code')
+    farmName = serializers.SerializerMethodField()
     primaryChannel = serializers.CharField(source='primary_channel')
+    location = serializers.SerializerMethodField()
     weeklyScoutingLogs = serializers.SerializerMethodField()
     lastScoutingResult = serializers.SerializerMethodField()
     exportEligibility = serializers.CharField(source='export_eligibility')
-    totalAcres = serializers.FloatField(source='total_acres')
+    totalAcres = serializers.SerializerMethodField()
     phone = serializers.CharField(source='user.phone_number')
     lastInspection = serializers.CharField(source='last_inspection')
     overdueScouts = serializers.BooleanField(source='overdue_scouts')
@@ -292,6 +294,7 @@ class FarmerListSerializer(serializers.ModelSerializer):
             'id',
             'farmerCode',
             'name',
+            'farmName',
             'owner',
             'location',
             'county',
@@ -308,6 +311,26 @@ class FarmerListSerializer(serializers.ModelSerializer):
             'complianceStatus',
             'mobileFarmFromApp',
         )
+
+    def get_farmName(self, obj):
+        farm = _pest_farm_latest_for_profile(obj)
+        if farm and (farm.farm_name or '').strip():
+            return farm.farm_name.strip()
+        return (obj.farm_name or obj.owner or '').strip()
+
+    def get_location(self, obj):
+        farm = _pest_farm_latest_for_profile(obj)
+        if farm and (farm.location or '').strip():
+            return farm.location.strip()
+        return (obj.location or '').strip()
+
+    def get_totalAcres(self, obj):
+        farm = _pest_farm_latest_for_profile(obj)
+        if farm is not None:
+            fs = float(farm.farm_size or 0)
+            if 0 < fs < 10**7:
+                return round(fs, 2)
+        return round(float(obj.total_acres or 0), 2)
 
     def get_mobileFarmFromApp(self, obj):
         return _serialize_pest_scouting_farm_row(_pest_farm_latest_for_profile(obj))

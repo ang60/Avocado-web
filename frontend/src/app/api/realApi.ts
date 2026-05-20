@@ -2,6 +2,7 @@ import type {
   CaseDetailPayload,
   CaseManagementCaseRow,
   CaseManagementPayload,
+  ComplianceFarmerRow,
   DashboardPayload,
   FarmerDetailPayload,
   FarmerListRow,
@@ -10,6 +11,7 @@ import type {
   ProductionResolvedRow,
   BroadcastCampaign,
 } from './types';
+import { complianceRowsFromFarmerList } from '../utils/complianceFarmersFromRegistry';
 import { API_BASE_URL, apiRequest, parseDrfList, type PaginatedResults } from './client';
 
 /**
@@ -98,6 +100,12 @@ export async function fetchFarmersList(): Promise<FarmerListRow[]> {
   return parseDrfList<FarmerListRow>(data);
 }
 
+/** Compliance Hub rows derived from farmer registry (mobile farm + weekly scouting). */
+export async function fetchComplianceFarmers(): Promise<ComplianceFarmerRow[]> {
+  const rows = await fetchFarmersList();
+  return complianceRowsFromFarmerList(rows);
+}
+
 export async function updateFarmerComplianceStatus(params: {
   farmerId: string;
   agronomist_compliance_status: 'compliant' | 'needs-follow-up';
@@ -113,6 +121,11 @@ export async function updateFarmerComplianceStatus(params: {
 export async function fetchFarmerDetail(farmerId: string | undefined): Promise<FarmerDetailPayload> {
   const id = String(farmerId ?? '').trim();
   return apiRequest<FarmerDetailPayload>(`/api/farmers/${id}/`);
+}
+
+/** Logged-in farmer profile (mobile farm + compliance) — same shape as detail. */
+export async function fetchFarmerMe(): Promise<FarmerDetailPayload> {
+  return apiRequest<FarmerDetailPayload>('/api/farmers/me/');
 }
 
 type BackendUser = {

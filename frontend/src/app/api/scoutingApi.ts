@@ -21,6 +21,9 @@ export type ScoutingReport = {
   triageStatus?: TriageStatus;
   triageLabel?: string | null;
   triagedAt?: string | null;
+  managementProtocol?: string | null;
+  reviewNotes?: string | null;
+  pushedToFarmer?: boolean;
   ussdCode?: string;
   farmerId?: string;
   blockUuid?: string | null;

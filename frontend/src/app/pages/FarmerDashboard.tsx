@@ -9,6 +9,7 @@ import {
   fetchKnowledgeEntries,
   fetchMyFarmBlocks,
   fetchFarmerCaseAdvisories,
+  fetchFarmerMe,
   fetchScoutingBlockOverview,
   fetchScoutingFeed,
   openHcdaPdfExport,
@@ -69,7 +70,10 @@ function advisoryStatusStyle(status: AdvisoryStatus) {
 
 export function FarmerDashboard() {
   const user = getAuthUser();
-  const farmName = user?.entity_details?.company_name || 'My Avocado Farm';
+  const [registryFarmName, setRegistryFarmName] = useState(
+    () => user?.entity_details?.company_name || 'My Avocado Farm',
+  );
+  const farmName = registryFarmName;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<UiBlock[]>([]);
@@ -114,11 +118,23 @@ export function FarmerDashboard() {
       fetchScoutingFeed(),
       fetchScoutingBlockOverview(),
       fetchFarmerCaseAdvisories(),
+      fetchFarmerMe().catch(() => null),
       fetchHcdaFarmers(),
       fetchHcdaStatistics(),
     ])
-      .then(async ([farmBlocks, scouting, blockOverview, farmerCases, hcdaRows, hcdaStats]) => {
+      .then(async ([farmBlocks, scouting, blockOverview, farmerCases, farmerMe, hcdaRows, hcdaStats]) => {
         if (cancelled) return;
+        if (farmerMe) {
+          const appFarm = farmerMe.mobileFarmFromApp?.farmName?.trim() || farmerMe.farmName?.trim();
+          if (appFarm) setRegistryFarmName(appFarm);
+          const lat = farmerMe.latestScoutingFromApp?.gpsLatitude;
+          const lng = farmerMe.latestScoutingFromApp?.gpsLongitude;
+          if (lat && lng) {
+            const la = parseFloat(lat);
+            const lo = parseFloat(lng);
+            if (!Number.isNaN(la) && !Number.isNaN(lo)) setFarmCoordinates({ lat: la, lng: lo });
+          }
+        }
         setScoutingFeed(scouting);
         const userCounty = (user?.county || '').toLowerCase();
         const userName = `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim().toLowerCase();

@@ -27,7 +27,7 @@ import { PLACEHOLDER_CASE_MANAGEMENT } from './placeholderData/caseManagementDat
 import { PLACEHOLDER_DASHBOARD } from './placeholderData/dashboardPayload';
 import { getPlaceholderFarmerDetail } from './placeholderData/farmerDetailData';
 import { PLACEHOLDER_FARMERS } from './placeholderData/farmersListData';
-import { PLACEHOLDER_COMPLIANCE_FARMERS } from './placeholderData/complianceFarmersData';
+import { complianceRowsFromFarmerList } from '../utils/complianceFarmersFromRegistry';
 import {
   PLACEHOLDER_KB_ARTICLES,
   PLACEHOLDER_KB_CATEGORIES,
@@ -161,7 +161,7 @@ export async function fetchFarmersList(): Promise<FarmerListRow[]> {
 }
 
 export async function fetchComplianceFarmers(): Promise<ComplianceFarmerRow[]> {
-  return mock(PLACEHOLDER_COMPLIANCE_FARMERS);
+  return mock(complianceRowsFromFarmerList(PLACEHOLDER_FARMERS));
 }
 
 export async function fetchKnowledgeBaseList(): Promise<KnowledgeBaseListPayload> {

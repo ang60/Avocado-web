@@ -462,6 +462,9 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
         except Exception:
             pass
 
+        if review.pushed_to_farmer:
+            _push_triage_outcome_to_farmer(record, review)
+
         return Response(
             {
                 'status': 'confirmed',
@@ -471,6 +474,34 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+
+def _push_triage_outcome_to_farmer(record: WeeklyRecord, review: ScoutingReview) -> None:
+    """Alert + advisory when agronomist confirms and opts to notify the farmer app."""
+    from advisory_services.models import Advisory
+    from alerts.utils import create_alert
+
+    label = (review.identified_label or 'Field review').strip()
+    protocol = (review.management_protocol or '').strip()
+    block_name = getattr(getattr(record, 'block', None), 'block_name', None) or 'your block'
+    body = f"Agronomist review for {block_name}: {label}"
+    if protocol:
+        body = f"{body}\n\nRecommended actions:\n{protocol}"
+    if review.review_notes:
+        body = f"{body}\n\nNotes: {review.review_notes.strip()}"
+
+    create_alert(
+        record.farmer,
+        'Scouting review ready',
+        body[:2000],
+        send_sms=True,
+    )
+    Advisory.objects.create(
+        weekly_record=record,
+        farmer=record.farmer,
+        advisory_message=body[:4000],
+        category='agronomist_review',
+    )
 
 
 @extend_schema(tags=['Pest Scouting'])

@@ -138,7 +138,7 @@ class WeeklyRecordSerializer(serializers.ModelSerializer):
 class ScoutingReportSerializer(serializers.ModelSerializer):
     farmerId = serializers.UUIDField(source='farmer.id', read_only=True)
     blockUuid = serializers.UUIDField(source='block.id', read_only=True)
-    farmName = serializers.CharField(source='farmer.entity.company_name', default='Individual Farmer')
+    farmName = serializers.SerializerMethodField()
     blockId = serializers.CharField(source='block.block_name')
     farmerName = serializers.SerializerMethodField()
     severity = serializers.SerializerMethodField()
@@ -157,6 +157,9 @@ class ScoutingReportSerializer(serializers.ModelSerializer):
     triageStatus = serializers.SerializerMethodField()
     triageLabel = serializers.SerializerMethodField()
     triagedAt = serializers.SerializerMethodField()
+    managementProtocol = serializers.SerializerMethodField()
+    reviewNotes = serializers.SerializerMethodField()
+    pushedToFarmer = serializers.SerializerMethodField()
     auditFlags = serializers.SerializerMethodField()
     rawTimestamp = serializers.SerializerMethodField()
     pestsObservedList = serializers.ListField(source='pests_observed_list', child=serializers.CharField(), read_only=True)
@@ -187,7 +190,16 @@ class ScoutingReportSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'farmerId', 'blockUuid', 'farmName', 'blockId', 'farmerName', 'severity', 'source',
             'finding', 'status', 'mediaPreview', 'timestamp', 'reviewed',
-            'county', 'assignedTo', 'triageStatus', 'triageLabel', 'triagedAt', 'auditFlags', 'rawTimestamp',
+            'county',
+            'assignedTo',
+            'triageStatus',
+            'triageLabel',
+            'triagedAt',
+            'managementProtocol',
+            'reviewNotes',
+            'pushedToFarmer',
+            'auditFlags',
+            'rawTimestamp',
             'pestsObservedList', 'diseasesObservedList', 'beneficialInsectsObservedList',
             'pestPlantPartsAffectedList', 'diseasePlantPartsAffectedList',
             'actionsTakenList', 'outcomeList', 'rawPayload',
@@ -203,7 +215,33 @@ class ScoutingReportSerializer(serializers.ModelSerializer):
         return format(obj.pests_per_trap, 'f').rstrip('0').rstrip('.') or '0'
 
     @extend_schema_field(serializers.CharField())
+    def get_farmName(self, obj):
+        raw = obj.raw_payload if isinstance(obj.raw_payload, dict) else {}
+        fn = str(raw.get('farm_name') or '').strip()
+        if fn:
+            return fn
+        try:
+            from pest_scouting.models import Farm
+
+            farm = Farm.objects.filter(farmer_id=obj.farmer_id).order_by('-updated_at').values_list('farm_name', flat=True).first()
+            if farm and str(farm).strip():
+                return str(farm).strip()
+        except Exception:
+            pass
+        entity = getattr(obj.farmer, 'entity', None)
+        if entity and getattr(entity, 'company_name', None):
+            return entity.company_name
+        fp = getattr(obj.farmer, 'farmer_profile', None)
+        if fp and (fp.farm_name or '').strip():
+            return fp.farm_name.strip()
+        return 'Individual Farmer'
+
+    @extend_schema_field(serializers.CharField())
     def get_farmerName(self, obj):
+        raw = obj.raw_payload if isinstance(obj.raw_payload, dict) else {}
+        fn = str(raw.get('farmer_name') or '').strip()
+        if fn:
+            return fn
         if obj.farmer.first_name and obj.farmer.last_name:
             return f"{obj.farmer.first_name} {obj.farmer.last_name}"
         return obj.farmer.phone_number
@@ -305,6 +343,21 @@ class ScoutingReportSerializer(serializers.ModelSerializer):
         if not review:
             return None
         return review.reviewed_at.isoformat()
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_managementProtocol(self, obj):
+        review = getattr(obj, 'triage_review', None)
+        return (review.management_protocol or '').strip() or None if review else None
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_reviewNotes(self, obj):
+        review = getattr(obj, 'triage_review', None)
+        return (review.review_notes or '').strip() or None if review else None
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_pushedToFarmer(self, obj):
+        review = getattr(obj, 'triage_review', None)
+        return bool(review and review.pushed_to_farmer)
 
     @extend_schema_field(serializers.ListField(child=serializers.CharField()))
     def get_auditFlags(self, obj):

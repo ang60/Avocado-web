@@ -456,6 +456,27 @@ class FarmerViewSet(viewsets.ReadOnlyModelViewSet):
             )
         )
 
+    @action(detail=False, methods=['get'], url_path='me', permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        """Logged-in farmer's registry row (mobile farm + compliance), for web/mobile parity."""
+        farmer = (
+            _scoped_farmers_qs(request.user)
+            .select_related('user')
+            .prefetch_related(
+                Prefetch(
+                    'user__pest_scouting_farms',
+                    queryset=PestScoutingFarm.objects.order_by('-updated_at'),
+                )
+            )
+            .first()
+        )
+        if not farmer:
+            return Response({'detail': 'Farmer profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            FarmerDetailSerializer(farmer, context={'request': request}).data,
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated, require_permission('nav.farmers')])
     def compliance_status(self, request, pk=None):
         farmer = self.get_object()

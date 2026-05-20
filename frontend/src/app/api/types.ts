@@ -26,6 +26,9 @@ export interface ScoutingFeedItem {
   triageStatus?: 'pending' | 'confirmed' | 'needs_follow_up';
   triageLabel?: string | null;
   triagedAt?: string | null;
+  managementProtocol?: string | null;
+  reviewNotes?: string | null;
+  pushedToFarmer?: boolean;
   auditFlags?: string[];
   rawTimestamp?: string;
   pestsObservedList?: string[];
@@ -328,6 +331,8 @@ export interface FarmerListRow {
   id: string;
   farmerCode?: string;
   name: string;
+  /** Prefer this over `owner` when present — synced from mobile `pest_scouting.Farm` */
+  farmName?: string;
   owner: string;
   location: string;
   county: string;
@@ -375,6 +380,8 @@ export interface ComplianceFarmerRow {
   reportStatus: 'incomplete' | 'pending-approval' | 'export-ready';
   lastUpdate: string;
   phoneNumber: string;
+  /** From mobile onboarding (`pest_scouting.Farm`) when present */
+  mobileFarmFromApp?: FarmerListRow['mobileFarmFromApp'];
 }
 
 export interface KnowledgeArticleSummary {

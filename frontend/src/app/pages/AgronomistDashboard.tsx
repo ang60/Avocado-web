@@ -40,10 +40,12 @@ import {
   diseaseLabelsFromReport,
   diseaseMetaSummaryLine,
   gpsLineFromPayload,
+  farmSnapshotFromReport,
   mobileBlockLineFromReport,
   pestRowsFromReport,
   trapUseRows,
 } from '../utils/scoutingPayloadDisplay';
+import { MobileFarmChip } from '../utils/mobileFarmDisplay';
 
 type AgronomistTab =
   | 'overview'
@@ -733,41 +735,7 @@ export function AgronomistDashboard() {
                       <div>
                         <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>{f.name}</p>
                         <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>{f.location}</p>
-                        {f.mobileFarmFromApp &&
-                        ((f.mobileFarmFromApp.farmName || '').trim() ||
-                          (f.mobileFarmFromApp.location || '').trim() ||
-                          f.mobileFarmFromApp.numberOfBlocks != null ||
-                          (f.mobileFarmFromApp.farmSize != null && f.mobileFarmFromApp.farmSize > 0)) ? (
-                          <div
-                            className="mt-2 rounded-md border px-2 py-1.5 text-left text-[11px]"
-                            style={{ borderColor: '#BFDBFE', backgroundColor: '#F0F9FF', fontFamily: 'IBM Plex Sans, sans-serif' }}
-                          >
-                            <span className="inline-flex items-center gap-1 font-semibold" style={{ color: '#0369A1' }}>
-                              <Smartphone className="h-3 w-3 shrink-0" />
-                              App farm
-                            </span>
-                            {(f.mobileFarmFromApp.farmName || '').trim() ? (
-                              <div className="mt-0.5" style={{ color: '#1B4332' }}>
-                                {f.mobileFarmFromApp.farmName.trim()}
-                              </div>
-                            ) : null}
-                            {(f.mobileFarmFromApp.location || '').trim() ? (
-                              <div style={{ color: '#475569' }}>{f.mobileFarmFromApp.location.trim()}</div>
-                            ) : null}
-                            {f.mobileFarmFromApp.numberOfBlocks != null && f.mobileFarmFromApp.numberOfBlocks > 0 ? (
-                              <div className="mt-0.5" style={{ color: '#64748B' }}>
-                                {f.mobileFarmFromApp.numberOfBlocks} block{f.mobileFarmFromApp.numberOfBlocks === 1 ? '' : 's'}
-                                {f.mobileFarmFromApp.farmSize != null && f.mobileFarmFromApp.farmSize > 0
-                                  ? ` · ${f.mobileFarmFromApp.farmSize} ha`
-                                  : ''}
-                              </div>
-                            ) : f.mobileFarmFromApp.farmSize != null && f.mobileFarmFromApp.farmSize > 0 ? (
-                              <div className="mt-0.5" style={{ color: '#64748B' }}>
-                                {f.mobileFarmFromApp.farmSize} ha
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
+                        <MobileFarmChip row={f} title="App farm" />
                       </div>
                     </td>
                     <td className="px-4 py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
@@ -1035,10 +1003,14 @@ export function AgronomistDashboard() {
 
             <div className="mb-4 grid grid-cols-1 gap-2 rounded-lg border p-3 sm:grid-cols-2" style={{ borderColor: '#E0DDD6' }}>
               <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Farmer:</strong> {activeTriageModal.report.farmerName || 'Unknown'}</p>
-              <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Farm:</strong> {activeTriageModal.report.farmName}</p>
-              <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Block:</strong> {activeTriageModal.report.blockId}</p>
+              <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Farm (app):</strong> {farmSnapshotFromReport(activeTriageModal.report).farmName || activeTriageModal.report.farmName || '—'}</p>
+              <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Location (app):</strong> {farmSnapshotFromReport(activeTriageModal.report).location || activeTriageModal.report.reportLocation || '—'}</p>
+              <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Block:</strong> {mobileBlockLineFromReport(activeTriageModal.report) || activeTriageModal.report.blockId}</p>
               <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>County:</strong> {activeTriageModal.report.county}</p>
               <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Reported finding:</strong> {activeTriageModal.report.finding || 'Unknown'}</p>
+              {activeTriageModal.report.triageLabel ? (
+                <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Prior diagnosis:</strong> {activeTriageModal.report.triageLabel}</p>
+              ) : null}
               <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}><strong>Submitted:</strong> {activeTriageModal.report.timestamp}</p>
             </div>
 

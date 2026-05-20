@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   Download, CheckCircle, AlertCircle, XCircle, 
@@ -7,6 +7,13 @@ import {
   Calendar, Filter, ChevronDown
 } from 'lucide-react';
 import { TableScroll } from '../components/TableScroll';
+import { fetchComplianceFarmers } from '../api/realApi';
+import type { ComplianceFarmerRow } from '../api/types';
+import { MobileFarmChip } from '../utils/mobileFarmDisplay';
+import {
+  complianceCountyMatches,
+  uniqueCountyOptions,
+} from '../utils/complianceFarmersFromRegistry';
 
 type ReportType = 
   | 'phytosanitary' 
@@ -68,154 +75,6 @@ const reportCards: ReportCard[] = [
     description: 'Case triage times and resolution performance',
     icon: Zap,
     color: '#7C3AED',
-  },
-];
-
-// Compliance data for Phytosanitary report
-interface ComplianceFarmerData {
-  id: string;
-  name: string;
-  farmName: string;
-  location: string;
-  county: string;
-  scoutingHistory: [boolean, boolean, boolean, boolean];
-  riskLevel: 'high' | 'medium' | 'low';
-  submissionMode: 'app' | 'ussd';
-  reportStatus: 'incomplete' | 'pending-approval' | 'export-ready';
-  lastUpdate: string;
-  phoneNumber: string;
-}
-
-const complianceFarmers: ComplianceFarmerData[] = [
-  {
-    id: 'TRC-2024-001',
-    name: 'Peter Mwangi',
-    farmName: 'Kangema Avocado Growers',
-    location: 'Kangema',
-    county: 'Murang\'a',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'high',
-    submissionMode: 'app',
-    reportStatus: 'pending-approval',
-    lastUpdate: 'Mar 14, 2026',
-    phoneNumber: '+254 722 345 678',
-  },
-  {
-    id: 'TRC-2024-002',
-    name: 'Grace Wanjiku',
-    farmName: 'Gatanga Green Farms',
-    location: 'Gatanga',
-    county: 'Murang\'a',
-    scoutingHistory: [true, true, false, true],
-    riskLevel: 'medium',
-    submissionMode: 'ussd',
-    reportStatus: 'incomplete',
-    lastUpdate: 'Mar 13, 2026',
-    phoneNumber: '+254 733 456 789',
-  },
-  {
-    id: 'TRC-2024-003',
-    name: 'David Kipchirchir',
-    farmName: 'Tigoni Avocado Estates',
-    location: 'Tigoni',
-    county: 'Kiambu',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'low',
-    submissionMode: 'app',
-    reportStatus: 'export-ready',
-    lastUpdate: 'Mar 13, 2026',
-    phoneNumber: '+254 711 234 567',
-  },
-  {
-    id: 'TRC-2024-004',
-    name: 'Faith Njeri',
-    farmName: 'Meru Sunrise Orchards',
-    location: 'Meru Town',
-    county: 'Meru',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'low',
-    submissionMode: 'app',
-    reportStatus: 'export-ready',
-    lastUpdate: 'Mar 12, 2026',
-    phoneNumber: '+254 720 678 901',
-  },
-  {
-    id: 'TRC-2024-005',
-    name: 'John Kimani',
-    farmName: 'Kiambu Highland Farms',
-    location: 'Kiambu Town',
-    county: 'Kiambu',
-    scoutingHistory: [true, false, true, false],
-    riskLevel: 'medium',
-    submissionMode: 'ussd',
-    reportStatus: 'incomplete',
-    lastUpdate: 'Mar 12, 2026',
-    phoneNumber: '+254 712 567 890',
-  },
-  {
-    id: 'TRC-2024-006',
-    name: 'Mary Wambui',
-    farmName: 'Nyeri Valley Growers',
-    location: 'Nyeri Town',
-    county: 'Nyeri',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'low',
-    submissionMode: 'app',
-    reportStatus: 'export-ready',
-    lastUpdate: 'Mar 11, 2026',
-    phoneNumber: '+254 734 678 901',
-  },
-  {
-    id: 'TRC-2024-007',
-    name: 'Samuel Omondi',
-    farmName: 'Bungoma Green Valley',
-    location: 'Bungoma',
-    county: 'Bungoma',
-    scoutingHistory: [false, false, false, true],
-    riskLevel: 'high',
-    submissionMode: 'ussd',
-    reportStatus: 'incomplete',
-    lastUpdate: 'Mar 8, 2026',
-    phoneNumber: '+254 745 123 456',
-  },
-  {
-    id: 'TRC-2024-008',
-    name: 'Jane Wambui',
-    farmName: 'Limuru Avocado Hub',
-    location: 'Limuru',
-    county: 'Kiambu',
-    scoutingHistory: [true, true, true, false],
-    riskLevel: 'low',
-    submissionMode: 'app',
-    reportStatus: 'pending-approval',
-    lastUpdate: 'Mar 10, 2026',
-    phoneNumber: '+254 723 987 654',
-  },
-  {
-    id: 'TRC-2024-009',
-    name: 'Joseph Kariuki',
-    farmName: 'Thika Green Farms',
-    location: 'Thika',
-    county: 'Kiambu',
-    scoutingHistory: [true, true, true, true],
-    riskLevel: 'medium',
-    submissionMode: 'app',
-    reportStatus: 'export-ready',
-    lastUpdate: 'Mar 14, 2026',
-    phoneNumber: '+254 715 234 567',
-  },
-  {
-    id: 'TRC-2024-010',
-    name: 'Lucy Wanjiru',
-    farmName: 'Embu Highland Estates',
-    location: 'Embu',
-    county: 'Embu',
-    scoutingHistory: [true, true, false, false],
-    riskLevel: 'high',
-    submissionMode: 'ussd',
-    reportStatus: 'incomplete',
-    lastUpdate: 'Mar 9, 2026',
-    phoneNumber: '+254 728 456 789',
   },
 ];
 
@@ -315,10 +174,42 @@ export function ComplianceHub() {
   const [dateRange, setDateRange] = useState('last-30-days');
   const [selectedRegion, setSelectedRegion] = useState('all');
   const [exportFormat, setExportFormat] = useState<ExportFormat>('pdf');
+  const [registryFarmers, setRegistryFarmers] = useState<ComplianceFarmerRow[]>([]);
+  const [farmersLoading, setFarmersLoading] = useState(true);
+  const [farmersError, setFarmersError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setFarmersLoading(true);
+    setFarmersError(null);
+    fetchComplianceFarmers()
+      .then((rows) => {
+        if (!cancelled) setRegistryFarmers(rows);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setFarmersError(err instanceof Error ? err.message : 'Failed to load farmer registry');
+          setRegistryFarmers([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setFarmersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const regionOptions = useMemo(() => uniqueCountyOptions(registryFarmers), [registryFarmers]);
+
+  const filteredFarmers = useMemo(
+    () => registryFarmers.filter((f) => complianceCountyMatches(f.county, selectedRegion)),
+    [registryFarmers, selectedRegion],
+  );
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedFarmers(complianceFarmers.map(f => f.id));
+      setSelectedFarmers(filteredFarmers.map((f) => f.id));
     } else {
       setSelectedFarmers([]);
     }
@@ -525,13 +416,11 @@ export function ComplianceHub() {
                   color: '#1B4332',
                 }}
               >
-                <option value="all">All Regions</option>
-                <option value="muranga">Murang'a County</option>
-                <option value="kiambu">Kiambu County</option>
-                <option value="nyeri">Nyeri County</option>
-                <option value="meru">Meru County</option>
-                <option value="embu">Embu County</option>
-                <option value="bungoma">Bungoma County</option>
+                {regionOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: '#717182' }} />
             </div>
@@ -586,10 +475,25 @@ export function ComplianceHub() {
         </div>
       </div>
 
+      {farmersError && (
+        <div
+          className="mb-4 rounded-lg border px-4 py-3 text-sm"
+          style={{ borderColor: '#FECACA', backgroundColor: '#FEF2F2', color: '#C0392B', fontFamily: 'IBM Plex Sans, sans-serif' }}
+        >
+          {farmersError}
+        </div>
+      )}
+
+      {farmersLoading && (
+        <p className="mb-4 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+          Loading farmer registry…
+        </p>
+      )}
+
       {/* Report Content - Render based on selected report type */}
       {selectedReport === 'phytosanitary' && (
         <PhytosanitaryReport 
-          farmers={complianceFarmers}
+          farmers={filteredFarmers}
           selectedFarmers={selectedFarmers}
           onSelectAll={handleSelectAll}
           onSelectFarmer={handleSelectFarmer}
@@ -599,8 +503,8 @@ export function ComplianceHub() {
 
       {selectedReport === 'area-risk' && <AreaRiskReport />}
       {selectedReport === 'ipm-audit' && <IPMAuditReport />}
-      {selectedReport === 'farmer-ranking' && <FarmerRankingReport />}
-      {selectedReport === 'system-adoption' && <SystemAdoptionReport />}
+      {selectedReport === 'farmer-ranking' && <FarmerRankingReport farmers={filteredFarmers} />}
+      {selectedReport === 'system-adoption' && <SystemAdoptionReport farmers={filteredFarmers} />}
       {selectedReport === 'agronomist-efficiency' && <AgronomistEfficiencyReport />}
     </>
   );
@@ -614,7 +518,7 @@ function PhytosanitaryReport({
   onSelectFarmer,
   onEmailReports 
 }: { 
-  farmers: ComplianceFarmerData[];
+  farmers: ComplianceFarmerRow[];
   selectedFarmers: string[];
   onSelectAll: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectFarmer: (id: string) => void;
@@ -623,7 +527,9 @@ function PhytosanitaryReport({
   const navigate = useNavigate();
   
   const exportReadyCount = farmers.filter(f => f.reportStatus === 'export-ready').length;
-  const exportReadyPercentage = Math.round((exportReadyCount / farmers.length) * 100);
+  const exportReadyPercentage = farmers.length
+    ? Math.round((exportReadyCount / farmers.length) * 100)
+    : 0;
   const pendingLogsCount = farmers.filter(f => f.reportStatus === 'incomplete').length;
   const activeOutbreaksCount = farmers.filter(f => f.riskLevel === 'high').length;
 
@@ -834,7 +740,17 @@ function PhytosanitaryReport({
               </tr>
             </thead>
             <tbody>
-              {farmers.map((farmer, index) => (
+              {farmers.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-10 text-center text-sm"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}
+                  >
+                    No farmers match this region filter. Adjust region or check the farmer registry.
+                  </td>
+                </tr>
+              ) : farmers.map((farmer, index) => (
                 <tr 
                   key={farmer.id}
                   className="hover:bg-gray-50/50 transition-colors"
@@ -876,6 +792,11 @@ function PhytosanitaryReport({
                       <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
                         {farmer.location}, {farmer.county}
                       </p>
+                      {farmer.mobileFarmFromApp && (
+                        <div className="mt-2">
+                          <MobileFarmChip row={farmer} title="App farm (onboarding)" />
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -1381,14 +1302,54 @@ function IPMAuditReport() {
 }
 
 // Farmer Compliance Ranking Report
-function FarmerRankingReport() {
-  const rankingData = [
-    { rank: 1, name: 'David Kipchirchir', county: 'Kiambu', scoutingConsistency: 100, cleanBlocks: 95, mvwr: 100 },
-    { rank: 2, name: 'Faith Njeri', county: 'Meru', scoutingConsistency: 100, cleanBlocks: 92, mvwr: 100 },
-    { rank: 3, name: 'Mary Wambui', county: 'Nyeri', scoutingConsistency: 100, cleanBlocks: 88, mvwr: 100 },
-    { rank: 4, name: 'Peter Mwangi', county: 'Murang\'a', scoutingConsistency: 100, cleanBlocks: 75, mvwr: 100 },
-    { rank: 5, name: 'John Kimani', county: 'Kiambu', scoutingConsistency: 75, cleanBlocks: 80, mvwr: 75 },
-  ];
+function FarmerRankingReport({ farmers }: { farmers: ComplianceFarmerRow[] }) {
+  const rankingData = useMemo(() => {
+    return [...farmers]
+      .map((f) => {
+        const weeks = f.scoutingHistory.filter(Boolean).length;
+        const scoutingConsistency = Math.round((weeks / 4) * 100);
+        const cleanBlocks =
+          f.riskLevel === 'low' ? 90 : f.riskLevel === 'medium' ? 75 : 55;
+        return {
+          name: f.name,
+          county: f.county,
+          scoutingConsistency,
+          cleanBlocks,
+          mvwr: scoutingConsistency,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.scoutingConsistency - a.scoutingConsistency ||
+          b.cleanBlocks - a.cleanBlocks,
+      )
+      .slice(0, 10)
+      .map((row, index) => ({ rank: index + 1, ...row }));
+  }, [farmers]);
+
+  const avgScouting =
+    farmers.length > 0
+      ? Math.round(
+          farmers.reduce(
+            (sum, f) => sum + f.scoutingHistory.filter(Boolean).length * 25,
+            0,
+          ) / farmers.length,
+        )
+      : 0;
+  const avgClean =
+    farmers.length > 0
+      ? Math.round(
+          farmers.reduce(
+            (sum, f) =>
+              sum + (f.riskLevel === 'low' ? 90 : f.riskLevel === 'medium' ? 75 : 55),
+            0,
+          ) / farmers.length,
+        )
+      : 0;
+  const avgMvwr = avgScouting;
+  const needsTraining = farmers.filter(
+    (f) => f.scoutingHistory.filter(Boolean).length < 3,
+  ).length;
 
   return (
     <>
@@ -1410,7 +1371,7 @@ function FarmerRankingReport() {
             Avg Scouting Consistency
           </p>
           <p className="text-3xl mb-1" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            91%
+            {avgScouting}%
           </p>
           <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}>
             Weekly compliance
@@ -1433,7 +1394,7 @@ function FarmerRankingReport() {
             Clean Blocks
           </p>
           <p className="text-3xl mb-1" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            86%
+            {avgClean}%
           </p>
           <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#15803D' }}>
             No pest detected
@@ -1456,7 +1417,7 @@ function FarmerRankingReport() {
             MVWR Completion
           </p>
           <p className="text-3xl mb-1" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            95%
+            {avgMvwr}%
           </p>
           <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1E40AF' }}>
             Minimum viable records
@@ -1479,7 +1440,7 @@ function FarmerRankingReport() {
             Needs Training
           </p>
           <p className="text-3xl mb-1" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            3
+            {needsTraining}
           </p>
           <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#D97706' }}>
             Below 80% threshold
@@ -1642,7 +1603,13 @@ function FarmerRankingReport() {
 }
 
 // System Adoption Report
-function SystemAdoptionReport() {
+function SystemAdoptionReport({ farmers }: { farmers: ComplianceFarmerRow[] }) {
+  const appCount = farmers.filter((f) => f.submissionMode === 'app').length;
+  const ussdCount = farmers.length - appCount;
+  const appPct = farmers.length ? Math.round((appCount / farmers.length) * 100) : 0;
+  const ussdPct = farmers.length ? Math.round((ussdCount / farmers.length) * 100) : 0;
+  const withMobileFarm = farmers.filter((f) => f.mobileFarmFromApp).length;
+
   return (
     <>
       {/* Metrics */}
@@ -1663,10 +1630,11 @@ function SystemAdoptionReport() {
             Smartphone App
           </p>
           <p className="text-3xl mb-1" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            62%
+            {appPct}%
           </p>
           <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1E40AF' }}>
-            7 farmers using app
+            {appCount} farmer{appCount === 1 ? '' : 's'} using app
+            {withMobileFarm > 0 ? ` · ${withMobileFarm} with app farm onboarding` : ''}
           </p>
         </div>
 
@@ -1686,10 +1654,10 @@ function SystemAdoptionReport() {
             USSD/SMS
           </p>
           <p className="text-3xl mb-1" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
-            38%
+            {ussdPct}%
           </p>
           <p className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#D97706' }}>
-            5 farmers using USSD
+            {ussdCount} farmer{ussdCount === 1 ? '' : 's'} using USSD
           </p>
         </div>
 
