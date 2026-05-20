@@ -72,6 +72,8 @@ public class AdvisoryFragment extends Fragment implements AdvisoryAdapter.Adviso
 
         progressDialog.show();
         getAdvisory();
+
+        binding.fragmentMainAdvisoryActionRequiredRadioButton.performClick();
     }
 
     @Override
@@ -172,6 +174,7 @@ public class AdvisoryFragment extends Fragment implements AdvisoryAdapter.Adviso
                                     advisoryObject.setTimestamp(advisory.getString("timestamp"));
                                     advisoryObject.setActionTakenStatus(advisory.getString("action_taken_status"));
                                     advisoryObject.setTimeAgo(advisory.getString("time_ago"));
+                                    advisoryObject.setCategory(advisory.getString("category"));
 
                                     if (advisoryObject.getActionsTaken().equals("null") && advisoryObject.getOutcome().equals("null")) {
                                         advisoryObject.setCategory("Action Required");
@@ -185,8 +188,6 @@ public class AdvisoryFragment extends Fragment implements AdvisoryAdapter.Adviso
                                 advisoryAdapter.setAdvisoryList(advisoryArrayList);
                                 advisoryAdapter.setAdvisoryListFull(advisoryArrayList);
                                 advisoryAdapter.getFilter().filter("Action Required");
-
-                                binding.fragmentMainAdvisoryActionRequiredRadioButton.performClick();
                             }
                         } catch (JSONException e) {
                             throw new RuntimeException(e);

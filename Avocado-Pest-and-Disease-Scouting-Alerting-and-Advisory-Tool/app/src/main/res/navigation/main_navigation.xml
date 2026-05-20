@@ -13,6 +13,9 @@
         <action
             android:id="@+id/action_main_navigation_home_to_advisory_fragment"
             app:destination="@id/navigation_advisory" />
+        <action
+            android:id="@+id/action_main_navigation_home_to_settings_fragment"
+            app:destination="@id/navigation_settings" />
     </fragment>
     <fragment
         android:id="@+id/navigation_advisory"

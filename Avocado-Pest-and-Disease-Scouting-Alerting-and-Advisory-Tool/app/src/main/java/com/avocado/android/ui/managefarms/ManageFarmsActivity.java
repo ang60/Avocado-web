@@ -11,24 +11,29 @@ import com.androidnetworking.common.Priority;
 import com.androidnetworking.error.ANError;
 import com.androidnetworking.interfaces.JSONObjectRequestListener;
 import com.androidnetworking.interfaces.StringRequestListener;
+import com.avocado.android.R;
 import com.avocado.android.data.model.Farm;
 import com.avocado.android.databinding.ActivityManageFarmsBinding;
-import com.avocado.android.ui.record.FarmBlockAdapter;
 import com.avocado.android.ui.start.StartActivity;
-import com.avocado.android.ui.views.AutoFitGridLayoutManager;
 import com.avocado.android.ui.views.ProgressDialog;
+import com.avocado.android.utils.Config;
 import com.avocado.android.utils.Constants;
+import com.avocado.android.utils.FileManager;
 import com.avocado.android.utils.TokenManager;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -39,11 +44,13 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
     private ProgressDialog progressDialog;
     private AddNewFarmBottomSheetDialog addNewFarmBottomSheetDialog;
     private EditFarmBottomSheetDialog editFarmBottomSheetDialog;
+    private Gson gson;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        gson = new GsonBuilder().setPrettyPrinting().create();
         binding = ActivityManageFarmsBinding.inflate(getLayoutInflater());
         progressDialog = ProgressDialog.create(this, "Loading...");
         addNewFarmBottomSheetDialog = new AddNewFarmBottomSheetDialog();
@@ -94,7 +101,7 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
         args.putString("farmName", farm.getFarmName());
         args.putString("location", farm.getLocation());
         args.putString("numberOfBlocks", String.valueOf(farm.getNumberOfBlocks()));
-        args.putString("numberOfTrees", String.valueOf(farm.getTotalTrees()));
+        args.putString("farmSize", String.valueOf(farm.getFarmSize()));
 
         editFarmBottomSheetDialog.setArguments(args);
         editFarmBottomSheetDialog.show(getSupportFragmentManager(), "EditFarmBottomSheetDialog");
@@ -117,25 +124,25 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
     }
 
     @Override
-    public void onAddNewFarm(String farmName, String location, String numberOfBlocks, String numberOfTrees) {
-        if (farmName.isEmpty() || location.isEmpty() || numberOfBlocks.isEmpty() || numberOfTrees.isEmpty()) {
+    public void onAddNewFarm(String farmName, String location, String numberOfBlocks, String farmSize) {
+        if (farmName.isEmpty() || location.isEmpty() || numberOfBlocks.isEmpty() || farmSize.isEmpty()) {
             Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
             return;
         }
 
         progressDialog.show();
-        addFarm(farmName, location, numberOfBlocks, numberOfTrees);
+        addFarm(farmName, location, numberOfBlocks, farmSize);
     }
 
     @Override
-    public void onEditFarm(String farmId, String farmName, String location, String numberOfBlocks, String numberOfTrees) {
-        if (farmName.isEmpty() || location.isEmpty() || numberOfBlocks.isEmpty() || numberOfTrees.isEmpty()) {
+    public void onEditFarm(String farmId, String farmName, String location, String numberOfBlocks, String farmSize) {
+        if (farmName.isEmpty() || location.isEmpty() || numberOfBlocks.isEmpty() || farmSize.isEmpty()) {
             Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
             return;
         }
 
         progressDialog.show();
-        editFarm(farmId, farmName, location, numberOfBlocks, numberOfTrees);
+        editFarm(farmId, farmName, location, numberOfBlocks, farmSize);
     }
 
     private void setupRecyclerView() {
@@ -158,7 +165,7 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
         }
     }
 
-    public void addFarm(String farmName, String location, String numberOfBlocks, String numberOfTrees) {
+    public void addFarm(String farmName, String location, String numberOfBlocks, String farmSize) {
         TokenManager tokenManager = new TokenManager(getApplicationContext());
         String accessToken = tokenManager.getAccessToken();
         String userId = tokenManager.getUserId();
@@ -169,7 +176,7 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
             body.put("farm_name", farmName);
             body.put("location", location);
             body.put("number_of_blocks", numberOfBlocks);
-            body.put("total_trees", numberOfTrees);
+            body.put("farm_size", farmSize);
         } catch (JSONException e) {
             Log.e("addFarm", e.toString());
             return;
@@ -204,6 +211,8 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
     public void getFarms() {
         TokenManager tokenManager = new TokenManager(getApplicationContext());
         String accessToken = tokenManager.getAccessToken();
+        String directory = Config.getBaseDirectory() + "/farms";
+        String fileName = "farms.json";
 
         AndroidNetworking.get(Constants.BASE_URL + Constants.GET_FARMS_URL)
                 .addHeaders("Authorization", "Bearer " + accessToken)
@@ -213,12 +222,11 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
                 .getAsJSONObject(new JSONObjectRequestListener() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        progressDialog.dismiss();
                         Log.d("getFarms", response.toString());
 
                         try {
                             JSONArray farms = response.getJSONArray("results");
-                            ArrayList<Farm> farmsArrayList = new ArrayList<>();
+                            List<Farm> farmsArrayList = new ArrayList<>();
 
                             if (farms.length() == 0) {
                                 Toast.makeText(getApplicationContext(), "No farms found", Toast.LENGTH_SHORT).show();
@@ -232,13 +240,16 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
                                     farmObject.setFarmName(farm.getString("farm_name"));
                                     farmObject.setLocation(farm.getString("location"));
                                     farmObject.setNumberOfBlocks(farm.getInt("number_of_blocks"));
-                                    farmObject.setTotalTrees(farm.getInt("total_trees"));
+                                    farmObject.setFarmSize(farm.getDouble("farm_size"));
                                     farmsArrayList.add(farmObject);
                                 }
                             }
 
                             farmAdapter.setFarmList(farmsArrayList);
                             farmAdapter.setFarmListFull(farmsArrayList);
+
+                            FileManager.saveJson(getApplicationContext(), directory, fileName, gson.toJson(farmsArrayList));
+                            progressDialog.dismiss();
 
                         } catch (JSONException e) {
                             throw new RuntimeException(e);
@@ -256,7 +267,7 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
                 });
     }
 
-    public void editFarm(String farmId, String farmName, String location, String numberOfBlocks, String numberOfTrees) {
+    public void editFarm(String farmId, String farmName, String location, String numberOfBlocks, String farmSize) {
         TokenManager tokenManager = new TokenManager(getApplicationContext());
         String accessToken = tokenManager.getAccessToken();
         String userId = tokenManager.getUserId();
@@ -267,7 +278,7 @@ public class ManageFarmsActivity extends AppCompatActivity implements FarmsAdapt
             body.put("farm_name", farmName);
             body.put("location", location);
             body.put("number_of_blocks", numberOfBlocks);
-            body.put("total_trees", numberOfTrees);
+            body.put("farm_size", farmSize);
         } catch (JSONException e) {
             Log.e("editFarm", e.toString());
             return;

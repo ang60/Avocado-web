@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load env from predictable paths (not only the shell cwd).
-# - Standalone backend repo: use `backend/.env` (or repo root if settings live one level up).
+# - Standalone API repo: use `avo_guard_backend/.env` (or repo root if settings live one level up).
 # - Monorepo: optional `../.env` when a sibling `frontend/` exists (shared secrets at repo root).
 _maybe_monorepo_root = BASE_DIR.parent
 if (_maybe_monorepo_root / "frontend").is_dir():

@@ -6,7 +6,7 @@ public class Farm {
     private String farmName;
     private String location;
     private int numberOfBlocks;
-    private int totalTrees;
+    private double farmSize;
 
     public String getFarmId() {
         return farmId;
@@ -40,15 +40,15 @@ public class Farm {
         this.numberOfBlocks = numberOfBlocks;
     }
 
-    public int getTotalTrees() {
-        return totalTrees;
+    public double getFarmSize() {
+        return farmSize;
     }
 
-    public void setTotalTrees(int totalTrees) {
-        this.totalTrees = totalTrees;
+    public void setFarmSize(double farmSize) {
+        this.farmSize = farmSize;
     }
 
     public String toString() {
-        return farmName + " - " + location + " - " + numberOfBlocks + " blocks - " + totalTrees + " trees";
+        return farmName + " - " + location + " - " + numberOfBlocks + " blocks - " + farmSize + " acres";
     }
 }

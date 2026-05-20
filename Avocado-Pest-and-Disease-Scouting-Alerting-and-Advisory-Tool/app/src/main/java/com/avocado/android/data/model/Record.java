@@ -6,14 +6,18 @@ public class Record {
     private String blockName;
     private String location;
     private String timestamp;
+    private boolean isPending;
+    private String filePath;
 
     public Record() {}
 
-    public Record(String farmName, String blockName, String location, String timestamp) {
+    public Record(String farmName, String blockName, String location, String timestamp, boolean isPending, String filePath) {
         this.farmName = farmName;
         this.blockName = blockName;
         this.location = location;
         this.timestamp = timestamp;
+        this.isPending = isPending;
+        this.filePath = filePath;
     }
 
     // Getters and setters for the fields
@@ -48,5 +52,21 @@ public class Record {
 
     public void setTimestamp(String timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public boolean isPending() {
+        return isPending;
+    }
+
+    public void setPending(boolean pending) {
+        isPending = pending;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 }

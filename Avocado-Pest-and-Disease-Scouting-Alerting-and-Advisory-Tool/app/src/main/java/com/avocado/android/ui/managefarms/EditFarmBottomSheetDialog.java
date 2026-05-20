@@ -62,21 +62,21 @@ public class EditFarmBottomSheetDialog extends BottomSheetDialogFragment {
         String farmName = args.getString("farmName", "");
         String location = args.getString("location", "");
         String numberOfBlocks = args.getString("numberOfBlocks", "");
-        String numberOfTrees = args.getString("numberOfTrees", "");
+        String farmSize = args.getString("farmSize", "");
 
         Log.d("setFarmDetails", "farmName: " + farmName);
 
         binding.dialogEditFarmFarmNameEditText.setText(farmName);
         binding.dialogEditFarmLocationEditText.setText(location);
         binding.dialogEditFarmNumberOfBlocksEditText.setText(numberOfBlocks);
-        binding.dialogEditFarmTotalTreesEditText.setText(numberOfTrees);
+        binding.dialogEditFarmFarmSizeEditText.setText(farmSize);
     }
 
     private void clearDetails() {
         binding.dialogEditFarmFarmNameEditText.setText("");
         binding.dialogEditFarmLocationEditText.setText("");
         binding.dialogEditFarmNumberOfBlocksEditText.setText("");
-        binding.dialogEditFarmTotalTreesEditText.setText("");
+        binding.dialogEditFarmFarmSizeEditText.setText("");
     }
 
     public void setListener(EditFarmListener listener) {
@@ -92,16 +92,16 @@ public class EditFarmBottomSheetDialog extends BottomSheetDialogFragment {
         String farmName = binding.dialogEditFarmFarmNameEditText.getText().toString();
         String location = binding.dialogEditFarmLocationEditText.getText().toString();
         String numberOfBlocks = binding.dialogEditFarmNumberOfBlocksEditText.getText().toString();
-        String numberOfTrees = binding.dialogEditFarmTotalTreesEditText.getText().toString();
+        String farmSize = binding.dialogEditFarmFarmSizeEditText.getText().toString();
 
-        if (!farmId.isEmpty() || !farmName.isEmpty() || !location.isEmpty() || !numberOfBlocks.isEmpty() || !numberOfTrees.isEmpty()) {
-            listener.onEditFarm(farmId, farmName, location, numberOfBlocks, numberOfTrees);
+        if (!farmId.isEmpty() || !farmName.isEmpty() || !location.isEmpty() || !numberOfBlocks.isEmpty() || !farmSize.isEmpty()) {
+            listener.onEditFarm(farmId, farmName, location, numberOfBlocks, farmSize);
             clearDetails();
             dismiss();
         }
     }
 
     public interface EditFarmListener {
-        void onEditFarm(String farmId, String farmName, String location, String numberOfBlocks, String numberOfTrees);
+        void onEditFarm(String farmId, String farmName, String location, String numberOfBlocks, String farmSize);
     }
 }

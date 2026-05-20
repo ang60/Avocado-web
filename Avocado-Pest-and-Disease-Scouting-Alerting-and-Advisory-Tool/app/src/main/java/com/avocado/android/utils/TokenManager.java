@@ -61,7 +61,7 @@ public class TokenManager {
         return currentTime > timeToLive;
     }
 
-    public void saveUserData(String id, String firstName, String lastName, String email, String phoneNumber, String role, String county) {
+    public void saveUserData(String id, String firstName, String lastName, String email, String phoneNumber, String role, String county, String profilePicture) {
         sharedPreferences.edit()
                 .putString(ID, id)
                 .putString(FIRST_NAME, firstName)
@@ -70,6 +70,7 @@ public class TokenManager {
                 .putString(PHONE_NUMBER, phoneNumber)
                 .putString(ROLE, role)
                 .putString(COUNTY, county)
+                .putString(Constants.PROFILE_PICTURE, profilePicture)
                 .apply();
     }
 
@@ -82,6 +83,7 @@ public class TokenManager {
                 .remove(PHONE_NUMBER)
                 .remove(ROLE)
                 .remove(COUNTY)
+                .remove(Constants.PROFILE_PICTURE)
                 .apply();
     }
 
@@ -113,6 +115,10 @@ public class TokenManager {
         return sharedPreferences.getString(COUNTY, "");
     }
 
+    public String getProfilePicture() {
+        return sharedPreferences.getString(Constants.PROFILE_PICTURE, "");
+    }
+
     public void setFirstName(String firstName) {
         sharedPreferences.edit()
                 .putString(FIRST_NAME, firstName)
@@ -134,6 +140,12 @@ public class TokenManager {
     public void setCounty(String county) {
         sharedPreferences.edit()
                 .putString(COUNTY, county)
+                .apply();
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        sharedPreferences.edit()
+                .putString(Constants.PROFILE_PICTURE, profilePicture)
                 .apply();
     }
 }

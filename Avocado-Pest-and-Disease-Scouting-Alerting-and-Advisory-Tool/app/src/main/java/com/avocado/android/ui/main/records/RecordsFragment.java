@@ -1,5 +1,6 @@
 package com.avocado.android.ui.main.records;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,24 +14,36 @@ import com.androidnetworking.AndroidNetworking;
 import com.androidnetworking.common.Priority;
 import com.androidnetworking.error.ANError;
 import com.androidnetworking.interfaces.JSONObjectRequestListener;
+import com.avocado.android.R;
 import com.avocado.android.data.model.Alert;
+import com.avocado.android.data.model.Data;
 import com.avocado.android.data.model.Record;
 import com.avocado.android.databinding.FragmentMainRecordsBinding;
 import com.avocado.android.ui.main.home.AlertsAdapter;
+import com.avocado.android.ui.record.RecordActivity;
 import com.avocado.android.ui.start.StartActivity;
 import com.avocado.android.ui.views.ProgressDialog;
+import com.avocado.android.ui.views.RadioButton;
+import com.avocado.android.ui.views.RadioGroup;
+import com.avocado.android.utils.Config;
 import com.avocado.android.utils.Constants;
+import com.avocado.android.utils.DateTimeManager;
+import com.avocado.android.utils.FileManager;
 import com.avocado.android.utils.TokenManager;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -42,6 +55,8 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
     private FragmentMainRecordsBinding binding;
     private RecordsAdapter recordsAdapter;
     private ProgressDialog progressDialog;
+    private Gson gson;
+    private File[] files;
 
     ArrayList<Record> recordList = new ArrayList<>();
 
@@ -50,6 +65,7 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
         recordsViewModel = new ViewModelProvider(this).get(RecordsViewModel.class);
         binding = FragmentMainRecordsBinding.inflate(inflater, container, false);
         progressDialog = ProgressDialog.create(requireContext(), "Loading...");
+        gson = new GsonBuilder().setPrettyPrinting().create();
 
         return binding.getRoot();
     }
@@ -60,10 +76,12 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
 
         observeViewModel();
         setupRecyclerView();
+        setupListeners();
         checkTokenExpired();
 
         progressDialog.show();
-        getRecords();
+        // getRecords();
+        binding.fragmentMainRecordsCategoriesAllRadioButton.performClick();
     }
 
     @Override
@@ -75,6 +93,18 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
     @Override
     public void onRecordClick(Record record, int position) {
 
+    }
+
+    @Override
+    public void onRecordDeleteClick(Record record, int position) {
+        showDeleteDialog(record, position);
+    }
+
+    @Override
+    public void onRecordEditClick(Record record, int position) {
+        Intent intent = new Intent(requireContext(), RecordActivity.class);
+        intent.putExtra("Record", record.getFilePath());
+        startActivity(intent);
     }
 
     private void observeViewModel() {
@@ -99,6 +129,39 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
         rv.setAdapter(recordsAdapter);
     }
 
+    private void setupListeners() {
+        binding.fragmentMainRecordsCategoriesRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, RadioButton checkedButton, int checkedId) {
+                if (checkedId == R.id.fragment_main_records_categories_all_radio_button) {
+                    progressDialog.show();
+                    getRecords();
+                }
+                else if (checkedId == R.id.fragment_main_records_categories_pending_radio_button) {
+                    progressDialog.show();
+                    getPendingRecords();
+                }
+            }
+        });
+    }
+
+    private void showDeleteDialog(Record record, int position) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Delete Record");
+        builder.setMessage("Are you sure you want to delete this record?");
+        builder.setPositiveButton("Yes", (dialogInterface, i) -> {
+            dialogInterface.dismiss();
+            deleteRecord(record, position);
+        });
+
+        builder.setNegativeButton("No", (dialogInterface, i) -> {
+            dialogInterface.dismiss();
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
     private void checkTokenExpired() {
         TokenManager tokenManager = new TokenManager(requireContext());
         if (tokenManager.isTokenExpired()) {
@@ -111,7 +174,14 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
         }
     }
 
-    public void getRecords() {
+    private void deleteRecord(Record record, int position) {
+        if (record.isPending() && FileManager.deleteFile(files[position])) {
+            Toast.makeText(requireContext(), "Record deleted successfully", Toast.LENGTH_SHORT).show();
+            recordsAdapter.removeRecord(position);
+        }
+    }
+
+    private void getRecords() {
         TokenManager tokenManager = new TokenManager(requireContext());
         String accessToken = tokenManager.getAccessToken();
 
@@ -130,7 +200,7 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
                             JSONArray records = response.getJSONArray("results");
                             recordsViewModel.setTotalRecords(records.length() + "");
                             recordsViewModel.setDoneRecords(records.length() + "");
-                            recordsViewModel.setPendingRecords("0");
+                            recordsViewModel.setPendingRecords(getPendingRecordsCount() + "");
 
                             if (records.length() == 0) {
                                 Toast.makeText(requireContext(), "No records found", Toast.LENGTH_SHORT).show();
@@ -152,8 +222,12 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
                                     recordObject.setLocation(location);
                                     recordObject.setBlockName(blockName);
                                     recordObject.setTimestamp(date[0] + " " + time[0] + ":" + time[1]);
+                                    recordObject.setPending(false);
+                                    recordObject.setFilePath("");
+
                                     recordList.add(recordObject);
                                 }
+
                                 recordsAdapter.setRecordList(recordList);
                                 recordsAdapter.setRecordListFull(recordList);
                             }
@@ -172,5 +246,40 @@ public class RecordsFragment extends Fragment implements RecordsAdapter.RecordLi
                         Log.d("getRecords", anError.getErrorCode() + "");
                     }
                 });
+    }
+
+    private int getPendingRecordsCount() {
+        String directory = Config.getBaseDirectory() + "/records";
+        File[] files = FileManager.getJsonFilesInDirectory(requireContext(), directory);
+        return files.length;
+    }
+
+    private void getPendingRecords() {
+        String directory = Config.getBaseDirectory() + "/records";
+        files = FileManager.getJsonFilesInDirectory(requireContext(), directory);
+
+        progressDialog.dismiss();
+        recordList.clear();
+
+        if (files.length == 0)
+            Toast.makeText(requireContext(), "No records found", Toast.LENGTH_SHORT).show();
+
+        for (File file : files) {
+            String json = FileManager.readJsonFromFile(file);
+            Data data = gson.fromJson(json, Data.class);
+
+            Record record = new Record();
+            record.setFarmName(data.farmName);
+            record.setLocation(data.location);
+            record.setBlockName(data.blockName);
+            record.setTimestamp(DateTimeManager.convertEpochToDate3(Long.parseLong(data.startTimestamp)));
+            record.setPending(true);
+            record.setFilePath(file.getAbsolutePath());
+
+            recordList.add(record);
+        }
+
+        recordsAdapter.setRecordList(recordList);
+        recordsAdapter.setRecordListFull(recordList);
     }
 }

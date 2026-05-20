@@ -21,6 +21,7 @@ public class Constants {
     public static final String UPDATE_ALERTS_MARK_AS_READ_URL = "/api/alerts/alerts/{id}/mark_as_read/";
     public static final String UPDATE_ALERTS_MARK_ALL_AS_READ_URL = "/api/alerts/alerts/mark_all_as_read/";
     public static final String POST_PROBLEM_REPORT_URL = "/api/pest-scouting/problem-reports/";
+    public static final String UPLOAD_PROFILE_PICTURE_URL = "/api/users/upload_profile_picture/";
 
     public static final String SHARED_PREFERENCES = "Mifugo Wallet Shared Preferences";
     public static final String REFRESH_TOKEN = "Refresh Token";
@@ -34,6 +35,7 @@ public class Constants {
     public static final String PHONE_NUMBER = "Phone Number";
     public static final String ROLE = "Role";
     public static final String COUNTY = "County";
+    public static final String PROFILE_PICTURE = "Profile Picture";
 
     public static final String TIME_TO_LIVE = "Time To Live";
 

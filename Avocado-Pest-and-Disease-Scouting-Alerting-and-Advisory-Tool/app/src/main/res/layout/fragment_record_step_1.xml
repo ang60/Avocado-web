@@ -177,13 +177,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content" />
             </LinearLayout>
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/fragment_record_step_1_farm_blocks_recycler_view"
+            <com.avocado.android.ui.views.AutoFitGridRadioGroup
+                android:id="@+id/fragment_record_step_1_farm_blocks_auto_fit_radio_group"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_height="wrap_content"
                 android:layout_marginBottom="32dp"
-                android:nestedScrollingEnabled="false"/>
+                app:column_width="176dp"
+                app:horizontal_spacing="0dp"
+                app:vertical_spacing="0dp">
+            </com.avocado.android.ui.views.AutoFitGridRadioGroup>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -192,58 +194,53 @@
                 android:textColor="#5C7778"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"/>
-            <com.avocado.android.ui.views.RecursiveRadioGroup
+            <com.avocado.android.ui.views.RadioGroup
                 android:id="@+id/fragment_record_step_1_avocado_variety_radio_group"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
-                <LinearLayout
+                <com.avocado.android.ui.views.RadioButtonFourteen
+                    android:id="@+id/fragment_record_step_1_avocado_variety_hass_radio_button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-                    <com.avocado.android.ui.views.RadioButtonFourteen
-                        android:id="@+id/fragment_record_step_1_avocado_variety_hass_radio_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:image="@mipmap/hass_avocado"
-                        app:text="Hass"
-                        app:description="Most popular export variety. Medium to large fruit with pebbly skin that turns black when ripe. Rich, nutty flavor."/>
-                    <com.avocado.android.ui.views.RadioButtonFourteen
-                        android:id="@+id/fragment_record_step_1_avocado_variety_fuerte_radio_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:image="@mipmap/avocado_fuerte"
-                        app:text="Fuerte"
-                        app:description="Pear-shaped with smooth green skin that stays green when ripe. Buttery texture with a mild, creamy flavor."/>
-                    <com.avocado.android.ui.views.RadioButtonFourteen
-                        android:id="@+id/fragment_record_step_1_avocado_variety_choquette_radio_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:image="@mipmap/choquette_avocado"
-                        app:text="Choquette"
-                        app:description="Large, glossy green fruit with light, sweet flavor. Very juicy with a smooth, creamy texture."/>
-                    <com.avocado.android.ui.views.RadioButtonFourteen
-                        android:id="@+id/fragment_record_step_1_avocado_variety_lula_radio_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        app:image="@mipmap/lula_avocado"
-                        app:text="Lula"
-                        app:description="Medium to large pear-shaped fruit with smooth green skin. Good flavor with moderate oil content."/>
-                    <com.avocado.android.ui.views.RadioButtonFourteen
-                        android:id="@+id/fragment_record_step_1_avocado_variety_reed_radio_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        app:image="@mipmap/reed_avocado"
-                        app:text="Reed"
-                        app:description="Large, round fruit with thick green skin that remains green when ripe. Rich, nutty flavor."/>
-                    <com.avocado.android.ui.views.RadioButtonFourteen
-                        android:id="@+id/fragment_record_step_1_avocado_variety_pinkerton_radio_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        app:image="@mipmap/pinkerton_avocado"
-                        app:text="Pinkerton"
-                        app:description="Long, pear-shaped fruit with medium-thick skin. Excellent flavor with high oil content."/>
-                </LinearLayout>
+                    app:image="@mipmap/hass_avocado"
+                    app:text="Hass"
+                    app:description="Most popular export variety. Medium to large fruit with pebbly skin that turns black when ripe. Rich, nutty flavor."/>
+                <com.avocado.android.ui.views.RadioButtonFourteen
+                    android:id="@+id/fragment_record_step_1_avocado_variety_fuerte_radio_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:image="@mipmap/avocado_fuerte"
+                    app:text="Fuerte"
+                    app:description="Pear-shaped with smooth green skin that stays green when ripe. Buttery texture with a mild, creamy flavor."/>
+                <com.avocado.android.ui.views.RadioButtonFourteen
+                    android:id="@+id/fragment_record_step_1_avocado_variety_choquette_radio_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:image="@mipmap/choquette_avocado"
+                    app:text="Choquette"
+                    app:description="Large, glossy green fruit with light, sweet flavor. Very juicy with a smooth, creamy texture."/>
+                <com.avocado.android.ui.views.RadioButtonFourteen
+                    android:id="@+id/fragment_record_step_1_avocado_variety_lula_radio_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:image="@mipmap/lula_avocado"
+                    app:text="Lula"
+                    app:description="Medium to large pear-shaped fruit with smooth green skin. Good flavor with moderate oil content."/>
+                <com.avocado.android.ui.views.RadioButtonFourteen
+                    android:id="@+id/fragment_record_step_1_avocado_variety_reed_radio_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:image="@mipmap/reed_avocado"
+                    app:text="Reed"
+                    app:description="Large, round fruit with thick green skin that remains green when ripe. Rich, nutty flavor."/>
+                <com.avocado.android.ui.views.RadioButtonFourteen
+                    android:id="@+id/fragment_record_step_1_avocado_variety_pinkerton_radio_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:image="@mipmap/pinkerton_avocado"
+                    app:text="Pinkerton"
+                    app:description="Long, pear-shaped fruit with medium-thick skin. Excellent flavor with high oil content."/>
                 <com.avocado.android.ui.views.RadioButtonThree
                     android:id="@+id/fragment_record_step_1_avocado_variety_i_dont_know_radio_button"
                     android:layout_width="match_parent"
@@ -251,7 +248,7 @@
                     android:layout_marginTop="8dp"
                     app:image="@drawable/ic_red_question_mark"
                     app:text="I don't know the variety" />
-            </com.avocado.android.ui.views.RecursiveRadioGroup>
+            </com.avocado.android.ui.views.RadioGroup>
             <LinearLayout
                 android:id="@+id/fragment_record_step_1_i_dont_know_linear_layout"
                 android:orientation="vertical"

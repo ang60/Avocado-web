@@ -3,16 +3,21 @@ package com.avocado.android.data.model;
 public class FarmBlock {
 
     private String id;
+    private String farmId;
+    private String farmName;
     private String name;
     private int numberOfTrees;
     private boolean isSelected;
+    private String location;
 
     public FarmBlock() {
 
     }
 
-    public FarmBlock(String id, String name, int numberOfTrees, boolean isSelected) {
+    public FarmBlock(String id, String farmId, String farmName, String name, int numberOfTrees, boolean isSelected) {
         this.id = id;
+        this.farmId = farmId;
+        this.farmName = farmName;
         this.name = name;
         this.numberOfTrees = numberOfTrees;
         this.isSelected = isSelected;
@@ -24,6 +29,22 @@ public class FarmBlock {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getFarmId() {
+        return farmId;
+    }
+
+    public void setFarmId(String farmId) {
+        this.farmId = farmId;
+    }
+
+    public String getFarmName() {
+        return farmName;
+    }
+
+    public void setFarmName(String farmName) {
+        this.farmName = farmName;
     }
 
     public String getName() {
@@ -53,5 +74,13 @@ public class FarmBlock {
     @Override
     public String toString() {
         return name + " (" + numberOfTrees + " trees)";
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 }

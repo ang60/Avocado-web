@@ -7,17 +7,19 @@ public class Alert {
     private String title;
     private String message;
     private boolean isRead;
+    private String category;
     private String timestamp;
     private String timeAgo;
 
     public Alert() {}
 
-    public Alert(String id, String farmer, String title, String message, boolean isRead, String timestamp, String timeAgo) {
+    public Alert(String id, String farmer, String title, String message, boolean isRead, String category, String timestamp, String timeAgo) {
         this.id = id;
         this.farmer = farmer;
         this.title = title;
         this.message = message;
         this.isRead = isRead;
+        this.category = category;
         this.timestamp = timestamp;
         this.timeAgo = timeAgo;
     }
@@ -60,6 +62,14 @@ public class Alert {
 
     public void setRead(boolean read) {
         isRead = read;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     public String getTimestamp() {

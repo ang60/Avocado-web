@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,6 +14,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.androidnetworking.AndroidNetworking;
@@ -35,21 +37,32 @@ import com.avocado.android.ui.record.dialogs.IdontKnowBottomSheetDialog;
 import com.avocado.android.ui.record.dialogs.IdontKnowWriteDownBottomSheetDialog;
 import com.avocado.android.ui.start.StartActivity;
 import com.avocado.android.ui.views.AudioFileView;
+import com.avocado.android.ui.views.AutoFitGridLayout;
 import com.avocado.android.ui.views.AutoFitGridLayoutManager;
+import com.avocado.android.ui.views.AutoFitGridRadioGroup;
 import com.avocado.android.ui.views.PhotoFileView;
 import com.avocado.android.ui.views.ProgressDialog;
+import com.avocado.android.ui.views.RadioButton;
+import com.avocado.android.ui.views.RadioButtonSixteen;
+import com.avocado.android.ui.views.RadioGroup;
+import com.avocado.android.ui.views.RecursiveRadioGroup;
 import com.avocado.android.ui.views.WriteDownFileView;
+import com.avocado.android.utils.Config;
 import com.avocado.android.utils.Constants;
 import com.avocado.android.utils.DateTimeManager;
+import com.avocado.android.utils.FileManager;
 import com.avocado.android.utils.TokenManager;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -68,10 +81,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import static android.app.Activity.RESULT_OK;
 
-public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.FarmBlockListener, OnAudioListener, OnPhotoListener, OnWriteListener {
+public class RecordStep1Fragment extends Fragment implements OnAudioListener, OnPhotoListener, OnWriteListener {
 
     private RecordsViewModel recordsViewModel;
-    private FarmBlockAdapter farmBlockAdapter;
     private FragmentRecordStep1Binding binding;
 
     private ActivityResultLauncher<Intent> photoPickerLauncher;
@@ -91,9 +103,11 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
     private ProgressDialog progressDialog;
 
     private ArrayAdapter<Farm> farmAdapter;
-    private List<Farm> farmList = new ArrayList<>();
 
     private String farmId = "";
+    private File dontKnowVarietyPhoto = null;
+
+    private Gson gson;
 
     public static RecordStep1Fragment newInstance() {
         return new RecordStep1Fragment();
@@ -102,6 +116,8 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
     @Nullable
@@ -109,12 +125,14 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        recordsViewModel = new ViewModelProvider(this).get(RecordsViewModel.class);
+        // Activity-scoped Android ViewModel so all fragments inside the same activity share one ViewModel instance
+        // requireActivity() returns the activity that created the fragment
+        recordsViewModel = new ViewModelProvider(requireActivity()).get(RecordsViewModel.class);
+
         binding = FragmentRecordStep1Binding.inflate(inflater, container, false);
         idontKnowBottomSheetDialog = new IdontKnowBottomSheetDialog();
         idontKnowWriteDownBottomSheetDialog = new IdontKnowWriteDownBottomSheetDialog();
         progressDialog = ProgressDialog.create(requireContext(), "Loading...");
-        farmAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, farmList);
 
         idontKnowBottomSheetDialog.setOnAudioListener(this);
         idontKnowBottomSheetDialog.setOnPhotoListener(this);
@@ -131,19 +149,17 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
 
         checkTokenExpired();
 
+        setRecordData();
         observeViewModel();
-        setupRecyclerView();
         setupListeners(view);
         setupPhotoPicker();
         setupAudioPicker();
         setupManageFarms();
         setupManageBlocks();
+        restoreState();
 
         binding.fragmentRecordStep1NoFarmsLinearLayout.setVisibility(View.GONE);
         binding.fragmentRecordStep1NoFarmBlocksLinearLayout.setVisibility(View.GONE);
-
-        progressDialog.show();
-        getFarms();
     }
 
     @Override
@@ -151,29 +167,102 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
         super.onResume();
     }
 
-    private void setupRecyclerView() {
-        farmBlockAdapter = new FarmBlockAdapter(this);
-        RecyclerView rv = binding.fragmentRecordStep1FarmBlocksRecyclerView;
+    private void setRecordData() {
+        Bundle bundle = getArguments();
+        if (bundle == null) return;
 
-        rv.setLayoutManager(new AutoFitGridLayoutManager(requireContext(), 160));
-        rv.setAdapter(farmBlockAdapter);
+        if (!bundle.getString("Record","").isEmpty()) {
+            String filePath = bundle.getString("Record");
+            if (filePath == null) return;
+
+            File file = new File(filePath);
+            String json = FileManager.readJsonFromFile(file);
+
+            recordsViewModel.data = gson.fromJson(json, Data.class);
+            getDontKnowVarietyPhoto();
+
+            Log.d("RecordStep1Fragment", "setRecordData: " + json);
+        }
+    }
+
+    private void getDontKnowVarietyPhoto() {
+        String directory = Config.getBaseDirectory() + "/images";
+
+        try {
+            recordsViewModel.data.dontKnowVarietyPhoto = FileManager.getFile(requireContext(),
+                    directory, "dontKnowVarietyPhoto.jpg");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void setRecord() {
+
+    }
+
+    private void insertFarmBlocks(List<FarmBlock> farmBlocks) {
+        AutoFitGridRadioGroup autoFitGridRadioGroup = binding.fragmentRecordStep1FarmBlocksAutoFitRadioGroup;
+        autoFitGridRadioGroup.removeAllViews();
+
+        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+
+        for (FarmBlock farmBlock : farmBlocks) {
+            RadioButtonSixteen radioButton = new RadioButtonSixteen(requireContext());
+            radioButton.setTag(farmBlock);
+            radioButton.setId(View.generateViewId());
+            radioButton.setLayoutParams(params);
+            radioButton.setImageResource(R.drawable.ic_tree);
+            radioButton.setTitle(farmBlock.getName());
+            radioButton.setSubTitle(farmBlock.getNumberOfTrees() + " Trees");
+            autoFitGridRadioGroup.addView(radioButton);
+        }
+    }
+
+    private void setFarmBlockVisibility(String farmId) {
+        AutoFitGridRadioGroup autoFitGridRadioGroup = binding.fragmentRecordStep1FarmBlocksAutoFitRadioGroup;
+        for (int i = 0; i < autoFitGridRadioGroup.getChildCount(); i++) {
+            RadioButton radioButton = (RadioButton)autoFitGridRadioGroup.getChildAt(i);
+            radioButton.setChecked(false);
+
+            FarmBlock farmBlock = (FarmBlock)autoFitGridRadioGroup.getChildAt(i).getTag();
+            if (farmBlock.getFarmId().equals(farmId)) {
+                autoFitGridRadioGroup.getChildAt(i).setVisibility(View.VISIBLE);
+
+                if (farmBlock.getId().equals(recordsViewModel.data.blockId))
+                    autoFitGridRadioGroup.getChildAt(i).performClick();
+            }
+            else {
+                autoFitGridRadioGroup.getChildAt(i).setVisibility(View.GONE);
+            }
+        }
     }
 
     private void observeViewModel() {
-        recordsViewModel.getFarmList().observe(getViewLifecycleOwner(), farm -> {
-            farmAdapter.notifyDataSetChanged();
+        recordsViewModel.getFarmList().observe(getViewLifecycleOwner(), farms -> {
+            farmAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line, farms);
+            binding.fragmentRecordStep1SelectFarmAutoCompleteTextView.setAdapter(farmAdapter);
+
+            for (int i = 0; i < farmAdapter.getCount(); i++) {
+                if (farmAdapter.getItem(i).getFarmId().equals(recordsViewModel.data.farmId)) {
+                    binding.fragmentRecordStep1SelectFarmAutoCompleteTextView.setText(farmAdapter.getItem(i).toString(), false);
+                    recordsViewModel.setSelectedFarm(farmAdapter.getItem(i).toString());
+                    break;
+                }
+            }
         });
 
         recordsViewModel.getFarmBlockList().observe(getViewLifecycleOwner(), farmBlocks -> {
-            farmBlockAdapter.setFarmBlockList(farmBlocks);
-            farmBlockAdapter.setFarmBlockListFull(farmBlocks);
+            insertFarmBlocks(farmBlocks);
         });
 
-        recordsViewModel.getPosition().observe(getViewLifecycleOwner(), position -> {
-            if (position == -1)
-                binding.fragmentRecordStep1ContinueButton.setVisibility(View.INVISIBLE);
-            else
-                binding.fragmentRecordStep1ContinueButton.setVisibility(View.VISIBLE);
+        recordsViewModel.getSelectedFarmId().observe(getViewLifecycleOwner(), farmId -> {
+            setFarmBlockVisibility(farmId);
+        });
+
+        recordsViewModel.getSelectedFarm().observe(getViewLifecycleOwner(), farmName -> {
+            setFarmBlockVisibility(recordsViewModel.data.farmId);
         });
     }
 
@@ -194,13 +283,25 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
             }
         });
 
-        binding.fragmentRecordStep1SelectFarmAutoCompleteTextView.setAdapter(farmAdapter);
         binding.fragmentRecordStep1SelectFarmAutoCompleteTextView.setOnItemClickListener((adapterView, view1, i, l) -> {
-            farmId = farmList.get(i).getFarmId();
+            if (recordsViewModel.getFarmList().getValue() == null
+                    || recordsViewModel.getFarmList().getValue().isEmpty()) return;
+            farmId = recordsViewModel.getFarmList().getValue().get(i).getFarmId();
+            recordsViewModel.data.blockId = "";
+            recordsViewModel.data.farmId = farmId;
+            recordsViewModel.setSelectedFarmId(farmId);
+        });
 
-            if (farmId.isEmpty()) return;
-            progressDialog.show();
-            getBlocks(farmId);
+        binding.fragmentRecordStep1FarmBlocksAutoFitRadioGroup.setOnCheckedChangeListener(new AutoFitGridRadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(AutoFitGridRadioGroup group, RadioButton checkedButton, int checkedId) {
+                FarmBlock farmBlock = (FarmBlock) checkedButton.getTag();
+                recordsViewModel.data.blockId = farmBlock.getId();
+                recordsViewModel.data.farmName = farmBlock.getFarmName();
+                recordsViewModel.data.location = farmBlock.getLocation();
+                recordsViewModel.data.blockName = farmBlock.getName();
+
+            }
         });
 
         binding.fragmentRecordStep1AvocadoVarietyIDontKnowRadioButton.setOnClickListener(new View.OnClickListener() {
@@ -211,14 +312,12 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
         });
 
         binding.fragmentRecordStep1BackButton.setOnClickListener(v ->
-                Navigation.findNavController(v).popBackStack()
+                requireActivity().getOnBackPressedDispatcher().onBackPressed()
         );
 
         binding.fragmentRecordStep1ContinueButton.setOnClickListener(v ->
                 {
-                    if (recordsViewModel.getPosition().getValue() == null
-                            || recordsViewModel.getPosition().getValue() == -1
-                            || binding.fragmentRecordStep1AvocadoVarietyRadioGroup.getCheckedRadioButton() == null)
+                    if (recordsViewModel.data.blockId == null || recordsViewModel.data.blockId.isEmpty())
                         return;
 
                     setData();
@@ -228,21 +327,40 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
         );
     }
 
+    private void restoreState() {
+        if (recordsViewModel.data.farmId == null || recordsViewModel.data.farmId.isEmpty()
+                || recordsViewModel.data.blockId == null || recordsViewModel.data.blockId.isEmpty()
+                || recordsViewModel.data.variety == null || recordsViewModel.data.variety.isEmpty()) return;
+
+        RadioGroup radioGroup = binding.fragmentRecordStep1AvocadoVarietyRadioGroup;
+        for (int i = 0; i < radioGroup.getChildCount(); i++) {
+            RadioButton radioButton = (RadioButton) radioGroup.getChildAt(i);
+            if (radioButton.getText().equals(recordsViewModel.data.variety)) {
+                radioButton.performClick();
+                break;
+            }
+        }
+
+        File dontKnowVarietyPhoto = recordsViewModel.data.dontKnowVarietyPhoto;
+        if (dontKnowVarietyPhoto == null) return;
+
+        addPhotoView(dontKnowVarietyPhoto);
+    }
+
     private void setData() {
         TokenManager tokenManager = new TokenManager(requireContext());
         String userId = tokenManager.getUserId();
 
-        Data.farmName = recordsViewModel.getFarmBlockList().getValue().get(recordsViewModel.getPosition().getValue()).getName();
-        Data.blockName = recordsViewModel.getFarmBlockList().getValue().get(recordsViewModel.getPosition().getValue()).getName();
+        recordsViewModel.data.farmerId = userId;
+        recordsViewModel.data.startDate = DateTimeManager.convertEpochToDate2(System.currentTimeMillis());
+        recordsViewModel.data.dontKnowVariety = false;
+        recordsViewModel.data.dontKnowVarietyPhoto = dontKnowVarietyPhoto;
+        recordsViewModel.data.dontKnowVarietyNote = "";
+        recordsViewModel.data.variety = getVariety();
 
-        Data.farmerId = userId;
-        Data.startDate = DateTimeManager.convertEpochToDate2(System.currentTimeMillis());
-        Data.blockId = recordsViewModel.getFarmBlockList().getValue().get(recordsViewModel.getPosition().getValue()).getId();
-        Data.dontKnowVariety = false;
-        Data.dontKnowVarietyPhoto = null;
-        Data.dontKnowVarietyNote = "";
-
-        Data.variety = getVariety();
+        // Set start timestamp if not set. Allows update of previously saved records
+        if (recordsViewModel.data.startTimestamp == null || recordsViewModel.data.startTimestamp.isEmpty())
+            recordsViewModel.data.startTimestamp = String.valueOf(System.currentTimeMillis());
     }
 
     private String getVariety() {
@@ -256,20 +374,6 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
     public void onDestroyView() {
         super.onDestroyView();
         binding = null; // prevent memory leaks
-    }
-
-    @Override
-    public void onFarmBlockClick(FarmBlock farmBlock, int position) {
-        // Deselect previous item
-        if (recordsViewModel.getPosition().getValue() != null && recordsViewModel.getPosition().getValue() > -1) {
-            Objects.requireNonNull(recordsViewModel.getFarmBlockList().getValue()).get(recordsViewModel.getPosition().getValue()).setSelected(false);
-            farmBlockAdapter.notifyItemChanged(recordsViewModel.getPosition().getValue());
-        }
-
-        // Select new item
-        recordsViewModel.setPosition(position);
-        farmBlock.setSelected(!farmBlock.isSelected());
-        farmBlockAdapter.notifyItemChanged(position);
     }
 
     @Override
@@ -329,31 +433,37 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
 
         if (data != null && data.getData() != null) {
             resultUri = data.getData();
-            requireActivity().getContentResolver().takePersistableUriPermission(
-                    resultUri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-            );
+            requireActivity().getContentResolver().takePersistableUriPermission(resultUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
         } else {
             resultUri = cameraImageUri;
         }
 
         try {
-            PhotoFileView photoFileView = new PhotoFileView(requireContext());
-            photoFileView.setDescription("Photo taken of the avocado variety");
-            photoFileView.setImageUri(resultUri);
-            photoFileView.setOnCancelClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    binding.fragmentRecordStep1IDontKnowLinearLayout.removeView(photoFileView);
-                }
-            });
+            String extension = FileManager.getFileExtensionSafe(requireContext(), resultUri);
+            String fileName = "dontKnowVarietyPhoto." + extension;
+            dontKnowVarietyPhoto = FileManager.getFileFromUri(requireContext(), resultUri, fileName);
 
-            binding.fragmentRecordStep1IDontKnowLinearLayout.removeAllViews();
-            binding.fragmentRecordStep1IDontKnowLinearLayout.addView(photoFileView);
+            addPhotoView(dontKnowVarietyPhoto);
 
         } catch (Exception e) {
             Log.d("IdontKnowBottomSheetDialog", "Error saving photo");
         }
+    }
+
+    private void addPhotoView(File file) {
+        PhotoFileView photoFileView = new PhotoFileView(requireContext());
+        photoFileView.setDescription("Photo taken of the avocado variety");
+        photoFileView.setImageFile(file);
+        photoFileView.setOnCancelClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.fragmentRecordStep1IDontKnowLinearLayout.removeView(photoFileView);
+            }
+        });
+
+        binding.fragmentRecordStep1IDontKnowLinearLayout.removeAllViews();
+        binding.fragmentRecordStep1IDontKnowLinearLayout.addView(photoFileView);
     }
 
     private Uri createCameraImageUri() {
@@ -485,7 +595,7 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
         manageFarmsLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
             if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                 progressDialog.show();
-                getFarms();
+                //getFarms();
             }
         });
     }
@@ -495,7 +605,7 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
             if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                 if (farmId.isEmpty()) return;
                 progressDialog.show();
-                getBlocks(farmId);
+                //getBlocks();
             }
         });
     }
@@ -520,123 +630,5 @@ public class RecordStep1Fragment extends Fragment implements FarmBlockAdapter.Fa
 
     private void addBlock() {
         binding.fragmentRecordStep1NoFarmBlocksLinearLayout.setVisibility(View.VISIBLE);
-    }
-
-    private void getFarms() {
-        TokenManager tokenManager = new TokenManager(requireContext());
-        String accessToken = tokenManager.getAccessToken();
-
-        AndroidNetworking.get(Constants.BASE_URL + Constants.GET_FARMS_URL)
-                .addHeaders("Authorization", "Bearer " + accessToken)
-                .addHeaders("Content-Type", "application/json")
-                .setPriority(Priority.HIGH)
-                .build()
-                .getAsJSONObject(new JSONObjectRequestListener() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        Log.d("getFarms", response.toString());
-
-                        try {
-                            JSONArray farms = response.getJSONArray("results");
-                            if (farms.length() == 0) {
-                                progressDialog.dismiss();
-                                Toast.makeText(requireContext(), "No farms found", Toast.LENGTH_SHORT).show();
-                                addFarm();
-                            } else {
-                                Toast.makeText(requireContext(), "Farms loaded successfully", Toast.LENGTH_SHORT).show();
-                                binding.fragmentRecordStep1NoFarmsLinearLayout.setVisibility(View.GONE);
-                                binding.fragmentRecordStep1SelectFarmTextInputLayout.setVisibility(View.VISIBLE);
-
-                                //List<Farm> farmsList = new ArrayList<>();
-                                farmList.clear();
-                                for (int i = 0; i < farms.length(); i++) {
-                                    JSONObject farm = farms.getJSONObject(i);
-                                    Farm farmObject = new Farm();
-                                    farmObject.setFarmId(farm.getString("id"));
-                                    farmObject.setFarmName(farm.getString("farm_name"));
-                                    farmObject.setLocation(farm.getString("location"));
-                                    farmObject.setNumberOfBlocks(farm.getInt("number_of_blocks"));
-                                    farmObject.setTotalTrees(farm.getInt("total_trees"));
-                                    farmList.add(farmObject);
-                                }
-                                //recordsViewModel.setFarmList(farmsList);
-                                farmAdapter.notifyDataSetChanged();
-
-                                if (!farmList.isEmpty()) {
-                                    binding.fragmentRecordStep1SelectFarmAutoCompleteTextView.setText(farmList.get(0).toString(), false);
-                                    farmId = farmList.get(0).getFarmId();
-                                    getBlocks(farmId);
-                                }
-                            }
-                        } catch (JSONException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public void onError(ANError anError) {
-                        progressDialog.dismiss();
-                        Toast.makeText(requireContext(), "Failed load farms", Toast.LENGTH_SHORT).show();
-                        Log.d("getFarm", anError.toString());
-                        Log.d("getFarm", anError.getErrorBody());
-                        Log.d("getFarm", anError.getErrorCode() + "");
-                    }
-                });
-    }
-
-    private void getBlocks(String farmId) {
-        TokenManager tokenManager = new TokenManager(requireContext());
-        String accessToken = tokenManager.getAccessToken();
-
-        AndroidNetworking.get(Constants.BASE_URL + Constants.GET_BLOCKS_URL)
-                .addHeaders("Authorization", "Bearer " + accessToken)
-                .addHeaders("Content-Type", "application/json")
-                .setPriority(Priority.HIGH)
-                .build()
-                .getAsJSONObject(new JSONObjectRequestListener() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        progressDialog.dismiss();
-                        Log.d("getBlock", response.toString());
-
-                        try {
-                            JSONArray blocks = response.getJSONArray("results");
-                            if (blocks.length() == 0) {
-                                Toast.makeText(requireContext(), "No blocks found", Toast.LENGTH_SHORT).show();
-                                addBlock();
-                            } else {
-                                Toast.makeText(requireContext(), "Blocks loaded successfully", Toast.LENGTH_SHORT).show();
-                                binding.fragmentRecordStep1NoFarmBlocksLinearLayout.setVisibility(View.GONE);
-
-                                ArrayList<FarmBlock> blockArrayList = new ArrayList<>();
-                                for (int i = 0; i < blocks.length(); i++) {
-                                    JSONObject block = blocks.getJSONObject(i);
-                                    if (!farmId.equals(block.getJSONObject("farm_name").getString("id")))
-                                        continue;
-
-                                    FarmBlock blockObject = new FarmBlock();
-                                    blockObject.setId(block.getString("id"));
-                                    blockObject.setName(block.getString("block_name"));
-                                    blockObject.setNumberOfTrees(Integer.parseInt(block.getString("number_of_trees")));
-                                    blockArrayList.add(blockObject);
-                                }
-
-                                recordsViewModel.setFarmBlockList(blockArrayList);
-
-                            }
-                        } catch (JSONException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public void onError(ANError anError) {
-                        progressDialog.dismiss();
-                        Toast.makeText(requireContext(), "Failed to load blocks", Toast.LENGTH_SHORT).show();
-                        Log.d("getBlock", anError.toString());
-                        Log.d("getBlock", anError.getErrorBody());
-                        Log.d("getBlock", anError.getErrorCode() + "");
-                    }
-                });
     }
 }

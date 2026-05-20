@@ -1,8 +1,10 @@
 package com.avocado.android.ui.views;
 
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.AttributeSet;
 import android.widget.ImageView;
@@ -12,6 +14,14 @@ import android.widget.Toast;
 
 import com.avocado.android.R;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import androidx.core.content.FileProvider;
+
+import static androidx.core.content.ContentProviderCompat.requireContext;
+
 public class PhotoFileView extends LinearLayout {
 
     private ImageView imageView;
@@ -19,6 +29,7 @@ public class PhotoFileView extends LinearLayout {
     private TextView descriptionTextView;
 
     private Uri imageUri;
+    private File imageFile;
 
     public PhotoFileView(Context context) {
         super(context);
@@ -65,15 +76,24 @@ public class PhotoFileView extends LinearLayout {
         this.imageUri = uri;
     }
 
+    public void setImageFile(File imageFile) {
+        this.imageFile = imageFile;
+    }
+
     private void openImage() {
-        if (imageUri == null) return;
+        if (imageUri == null && imageFile == null) return;
 
         Context context = getContext();
+
+        // Create URI using FileProvider
+        Uri imageUri = FileProvider.getUriForFile(context,
+                context.getPackageName() + ".provider", imageFile);
 
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.setDataAndType(imageUri, "image/*");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setClipData(ClipData.newRawUri("", imageUri));
 
         try {
             context.startActivity(intent);

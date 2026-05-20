@@ -1,6 +1,7 @@
 package com.avocado.android.ui.start.createaccount;
 
 import android.os.Bundle;
+import android.text.method.LinkMovementMethod;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,9 +30,9 @@ public class CreateAccountFragment extends Fragment {
 
         binding = FragmentStartCreateAccountBinding.inflate(inflater, container, false);
         binding.fragmentStartCreateAccountYourLocationAutoCompleteTextView.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line, getCounties()));
-        View root = binding.getRoot();
+        binding.fragmentStartCreateAccountTermsOfServiceText.setMovementMethod(LinkMovementMethod.getInstance());
 
-        return root;
+        return binding.getRoot();
     }
 
     @Override

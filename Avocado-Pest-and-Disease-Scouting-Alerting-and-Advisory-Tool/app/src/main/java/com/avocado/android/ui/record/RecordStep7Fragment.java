@@ -34,12 +34,14 @@ import java.util.List;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
 
 import static android.app.Activity.RESULT_OK;
 
 public class RecordStep7Fragment extends Fragment {
 
+    private RecordsViewModel recordsViewModel;
     private FragmentRecordStep7Binding binding;
     ProgressDialog progressDialog;
 
@@ -57,6 +59,10 @@ public class RecordStep7Fragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+        // Activity-scoped Android ViewModel so all fragments inside the same activity share one ViewModel instance
+        // requireActivity() returns the activity that created the fragment
+        recordsViewModel = new ViewModelProvider(requireActivity()).get(RecordsViewModel.class);
+
         binding = FragmentRecordStep7Binding.inflate(inflater, container, false);
         progressDialog = ProgressDialog.create(requireContext(), "Loading...");
         return binding.getRoot();
@@ -72,21 +78,21 @@ public class RecordStep7Fragment extends Fragment {
         setupListeners(view);
 
         TokenManager tokenManager = new TokenManager(requireContext());
-        Data.location = tokenManager.getCounty();
+        recordsViewModel.data.location = tokenManager.getCounty();
 
-        binding.fragmentRecordStep7FarmInformationBlockTextView.setText(Data.blockName);
-        binding.fragmentRecordStep7FarmInformationVarietyTextView.setText(Data.variety);
+        binding.fragmentRecordStep7FarmInformationBlockTextView.setText(recordsViewModel.data.blockName);
+        binding.fragmentRecordStep7FarmInformationVarietyTextView.setText(recordsViewModel.data.variety);
         binding.fragmentRecordStep7FarmInformationGpsCoordinatesTextView.setText("Ready");
 
         List<String> trapUseList = new ArrayList<>();
-        for (TrapUse trapUse : Data.trapUse) {
+        for (TrapUse trapUse : recordsViewModel.data.trapUse) {
             trapUseList.add(trapUse.getTypeOfTrap() + " - " + trapUse.getNumberOfTraps() + " traps - " + trapUse.getAverageNumberOfPestsPerTrap() + " pests/trap");
         }
         binding.fragmentRecordStep7TrapsTrapsStatusTextView.setText(trapUseList.toString());
 
         List<String> pestObservedList = new ArrayList<>();
         List<String> pestCountList = new ArrayList<>();
-        for (PestsObserved pestsObserved : Data.pestsObserved) {
+        for (PestsObserved pestsObserved : recordsViewModel.data.pestsObserved) {
             pestObservedList.add(pestsObserved.getName());
             pestCountList.add(pestsObserved.getName() + ": " + pestsObserved.getNumberPerTrap());
         }
@@ -94,16 +100,16 @@ public class RecordStep7Fragment extends Fragment {
         binding.fragmentRecordStep7PestsPestsCountTextView.setText(pestCountList.toString());
         binding.fragmentRecordStep7PestsTreesAffectedTextView.setText(String.valueOf(0));
 
-        binding.fragmentRecordStep7BeneficialInsectsObservedTextView.setText(Data.beneficialInsectsObserved.toString());
+        binding.fragmentRecordStep7BeneficialInsectsObservedTextView.setText(recordsViewModel.data.beneficialInsectsObserved.toString());
 
-        binding.fragmentRecordStep7DiseasesDiseasesObservedTextView.setText(Data.diseases.toString());
+        binding.fragmentRecordStep7DiseasesDiseasesObservedTextView.setText(recordsViewModel.data.diseases.toString());
 
-        binding.fragmentRecordStep7ControlActionsActionsTakenTextView.setText(Data.actionsTaken.toString());
-        binding.fragmentRecordStep7ControlActionsOutcomeTextView.setText(Data.outcome);
+        binding.fragmentRecordStep7ControlActionsActionsTakenTextView.setText(recordsViewModel.data.actionsTaken.toString());
+        binding.fragmentRecordStep7ControlActionsOutcomeTextView.setText(recordsViewModel.data.outcome);
 
-        binding.fragmentRecordStep7SurveyInformationStartDateTextView.setText(Data.startDate);
-        binding.fragmentRecordStep7SurveyInformationEndDateTextView.setText(Data.endDate);
-        binding.fragmentRecordStep7SurveyInformationDurationTextView.setText(DateTimeManager.duration(DateTimeManager.convertDateToEpoch2(Data.startDate), DateTimeManager.convertDateToEpoch2(Data.endDate)));
+        binding.fragmentRecordStep7SurveyInformationStartDateTextView.setText(recordsViewModel.data.startDate);
+        binding.fragmentRecordStep7SurveyInformationEndDateTextView.setText(recordsViewModel.data.endDate);
+        binding.fragmentRecordStep7SurveyInformationDurationTextView.setText(DateTimeManager.duration(DateTimeManager.convertDateToEpoch2(recordsViewModel.data.startDate), DateTimeManager.convertDateToEpoch2(recordsViewModel.data.endDate)));
     }
 
     private void observeViewModel() {
@@ -174,7 +180,7 @@ public class RecordStep7Fragment extends Fragment {
                 JSONObject body = new JSONObject();
                 try {
                     JSONArray trapUseArray = new JSONArray();
-                    for (TrapUse trapUse : Data.trapUse) {
+                    for (TrapUse trapUse : recordsViewModel.data.trapUse) {
 
                         JSONObject trapUseObj = new JSONObject();
                         trapUseObj.put("type_of_trap", trapUse.getTypeOfTrap());
@@ -186,7 +192,7 @@ public class RecordStep7Fragment extends Fragment {
                     }
 
                     JSONArray pestObservedArray = new JSONArray();
-                    for (PestsObserved pestsObserved : Data.pestsObserved) {
+                    for (PestsObserved pestsObserved : recordsViewModel.data.pestsObserved) {
 
                         JSONObject pestObservedObj = new JSONObject();
                         pestObservedObj.put("name", pestsObserved.getName());
@@ -197,45 +203,46 @@ public class RecordStep7Fragment extends Fragment {
                     }
 
                     body.put("farmer", userId);
-                    body.put("block", Data.blockId);
-                    body.put("dont_know_variety", Data.dontKnowVariety);
-                    body.put("dont_know_variety_photo", Data.dontKnowVarietyPhoto);
-                    body.put("dont_know_variety_note", Data.dontKnowVarietyNote);
-                    body.put("variety", Data.variety);
+                    body.put("block", recordsViewModel.data.blockId);
+                    body.put("dont_know_variety", recordsViewModel.data.dontKnowVariety);
+                    body.put("dont_know_variety_photo", recordsViewModel.data.dontKnowVarietyPhoto);
+                    body.put("dont_know_variety_note", recordsViewModel.data.dontKnowVarietyNote);
+                    body.put("variety", recordsViewModel.data.variety);
                     body.put("trap_use", trapUseArray);
-                    body.put("dont_know_trap_photo", Data.dontKnowTrapPhoto);
-                    body.put("other_trap_photo", Data.otherTrapPhoto);
-                    body.put("any_pests_observed", Data.anyPestsObserved);
+                    body.put("dont_know_trap_photo", recordsViewModel.data.dontKnowTrapPhoto);
+                    body.put("other_trap_photo", recordsViewModel.data.otherTrapPhoto);
+                    body.put("any_pests_observed", recordsViewModel.data.anyPestsObserved);
                     body.put("pests_observed", pestObservedArray);
-                    body.put("dont_know_pest", Data.dontKnowPest);
-                    body.put("dont_know_pest_photo", Data.dontKnowPestPhoto);
-                    body.put("dont_know_pest_note", Data.dontKnowPestNote);
-                    body.put("beneficial_insects_observed", new JSONArray(Data.beneficialInsectsObserved));
-                    body.put("dont_know_beneficial_insects_observed", Data.dontKnowBeneficialInsectsObserved);
-                    body.put("dont_know_beneficial_insects_observed_photo", Data.dontKnowBeneficialInsectsObservedPhoto);
-                    body.put("dont_know_beneficial_insects_observed_note", Data.dontKnowBeneficialInsectsObservedNote);
-                    body.put("other_production_challenges", new JSONArray(Data.otherProductionChallenges));
-                    body.put("any_diseases_observed", Data.anyDiseasesObserved);
-                    body.put("disease", new JSONArray(Data.diseases));
-                    body.put("disease_plant_part", new JSONArray(Data.diseasePlantPart));
-                    body.put("disease_crop_stage", Data.diseaseCropStage);
-                    body.put("disease_detection_method", Data.diseaseDetectionMethod);
-                    body.put("dont_know_disease", Data.dontKnowDisease);
-                    body.put("dont_know_disease_note", Data.dontKnowDiseaseNote);
-                    body.put("actions_taken", new JSONArray(Data.actionsTaken));
-                    body.put("outcome", Data.outcome);
-                    body.put("remarks", Data.remarks);
-                    body.put("start_date", Data.startDate);
-                    body.put("end_date", Data.endDate);
-                    body.put("location", Data.location);
-                    body.put("gps_latitude", Data.gpsLatitude);
-                    body.put("gps_longitude", Data.gpsLongitude);
+                    body.put("dont_know_pest", recordsViewModel.data.dontKnowPest);
+                    body.put("dont_know_pest_photo", recordsViewModel.data.dontKnowPestPhoto);
+                    body.put("dont_know_pest_note", recordsViewModel.data.dontKnowPestNote);
+                    body.put("beneficial_insects_observed", new JSONArray(recordsViewModel.data.beneficialInsectsObserved));
+                    body.put("dont_know_beneficial_insects_observed", recordsViewModel.data.dontKnowBeneficialInsectsObserved);
+                    body.put("dont_know_beneficial_insects_observed_photo", recordsViewModel.data.dontKnowBeneficialInsectsObservedPhoto);
+                    body.put("dont_know_beneficial_insects_observed_note", recordsViewModel.data.dontKnowBeneficialInsectsObservedNote);
+                    body.put("other_production_challenges", new JSONArray(recordsViewModel.data.otherProductionChallenges));
+                    body.put("any_diseases_observed", recordsViewModel.data.anyDiseasesObserved);
+                    body.put("disease", new JSONArray(recordsViewModel.data.diseases));
+                    body.put("disease_plant_part", new JSONArray(recordsViewModel.data.diseasePlantPart));
+                    body.put("disease_crop_stage", recordsViewModel.data.diseaseCropStage);
+                    body.put("disease_detection_method", recordsViewModel.data.diseaseDetectionMethod);
+                    body.put("dont_know_disease", recordsViewModel.data.dontKnowDisease);
+                    body.put("dont_know_disease_note", recordsViewModel.data.dontKnowDiseaseNote);
+                    body.put("actions_taken", new JSONArray(recordsViewModel.data.actionsTaken));
+                    body.put("outcome", recordsViewModel.data.outcome);
+                    body.put("remarks", recordsViewModel.data.remarks);
+                    body.put("start_date", recordsViewModel.data.startDate);
+                    body.put("end_date", recordsViewModel.data.endDate);
+                    body.put("location", recordsViewModel.data.location);
+                    body.put("gps_latitude", recordsViewModel.data.gpsLatitude);
+                    body.put("gps_longitude", recordsViewModel.data.gpsLongitude);
                 } catch (Exception e) {
                     Log.d("RecordStep7Fragment WeeklyRecord", e.toString());
                 }
 
                 try {
-                    postWeeklyRecord1(body);
+                    postWeeklyRecord(body);
+                    //postWeeklyRecord1(body);
                 } catch (JSONException e) {
                     progressDialog.dismiss();
                     Log.d("RecordStep7Fragment WeeklyRecord", e.toString());
@@ -276,41 +283,40 @@ public class RecordStep7Fragment extends Fragment {
 
         AndroidNetworking.upload(Constants.BASE_URL + Constants.WEEKLY_RECORDS_URL)
                 .addHeaders("Authorization", "Bearer " + accessToken)
-                //.addHeaders("Content-Type", "application/json")
                 .addMultipartParameter("farmer", tokenManager.getUserId())
-                .addMultipartParameter("block", Data.blockId)
-                .addMultipartParameter("dont_know_variety", String.valueOf(Data.dontKnowVariety))
-                .addMultipartFile("dont_know_variety_photo", Data.dontKnowVarietyPhoto)
-                .addMultipartParameter("dont_know_variety_note", Data.dontKnowVarietyNote)
-                .addMultipartParameter("variety", Data.variety)
-                .addMultipartParameter("trap_use", new JSONArray(Data.trapUse).toString())
-                .addMultipartFile("dont_know_trap_photo", Data.dontKnowTrapPhoto)
-                .addMultipartFile("other_trap_photo", Data.otherTrapPhoto)
-                .addMultipartParameter("any_pests_observed", Data.anyPestsObserved)
-                .addMultipartParameter("pests_observed", new JSONArray(Data.pestsObserved).toString())
-                .addMultipartParameter("dont_know_pest", String.valueOf(Data.dontKnowPest))
-                .addMultipartFile("dont_know_pest_photo", Data.dontKnowPestPhoto)
-                .addMultipartParameter("dont_know_pest_note", Data.dontKnowPestNote)
-                .addMultipartParameter("beneficial_insects_observed", new JSONArray(Data.beneficialInsectsObserved).toString())
-                .addMultipartParameter("dont_know_beneficial_insects_observed", String.valueOf(Data.dontKnowBeneficialInsectsObserved))
-                .addMultipartFile("dont_know_beneficial_insects_observed_photo", Data.dontKnowBeneficialInsectsObservedPhoto)
-                .addMultipartParameter("dont_know_beneficial_insects_observed_note", Data.dontKnowBeneficialInsectsObservedNote)
-                .addMultipartParameter("other_production_challenges", new JSONArray(Data.otherProductionChallenges).toString())
-                .addMultipartParameter("any_diseases_observed", Data.anyDiseasesObserved)
-                .addMultipartParameter("disease", new JSONArray(Data.diseases).toString())
-                .addMultipartParameter("disease_plant_part", new JSONArray(Data.diseasePlantPart).toString())
-                .addMultipartParameter("disease_crop_stage", Data.diseaseCropStage)
-                .addMultipartParameter("disease_detection_method", Data.diseaseDetectionMethod)
-                .addMultipartParameter("dont_know_disease", String.valueOf(Data.dontKnowDisease))
-                .addMultipartParameter("dont_know_disease_note", Data.dontKnowDiseaseNote)
-                .addMultipartParameter("actions_taken", new JSONArray(Data.actionsTaken).toString())
-                .addMultipartParameter("outcome", Data.outcome)
-                .addMultipartParameter("remarks", Data.remarks)
-                .addMultipartParameter("start_date", Data.startDate)
-                .addMultipartParameter("end_date", Data.endDate)
-                .addMultipartParameter("location", Data.location)
-                .addMultipartParameter("gps_latitude", Data.gpsLatitude)
-                .addMultipartParameter("gps_longitude", Data.gpsLongitude)
+                .addMultipartParameter("block", recordsViewModel.data.blockId)
+                .addMultipartParameter("dont_know_variety", String.valueOf(recordsViewModel.data.dontKnowVariety))
+                .addMultipartFile("dont_know_variety_photo", recordsViewModel.data.dontKnowVarietyPhoto)
+                .addMultipartParameter("dont_know_variety_note", recordsViewModel.data.dontKnowVarietyNote)
+                .addMultipartParameter("variety", recordsViewModel.data.variety)
+                .addMultipartParameter("trap_use", new JSONArray(recordsViewModel.data.trapUse).toString())
+                .addMultipartFile("dont_know_trap_photo", recordsViewModel.data.dontKnowTrapPhoto)
+                .addMultipartFile("other_trap_photo", recordsViewModel.data.otherTrapPhoto)
+                .addMultipartParameter("any_pests_observed", recordsViewModel.data.anyPestsObserved)
+                .addMultipartParameter("pests_observed", new JSONArray(recordsViewModel.data.pestsObserved).toString())
+                .addMultipartParameter("dont_know_pest", String.valueOf(recordsViewModel.data.dontKnowPest))
+                .addMultipartFile("dont_know_pest_photo", recordsViewModel.data.dontKnowPestPhoto)
+                .addMultipartParameter("dont_know_pest_note", recordsViewModel.data.dontKnowPestNote)
+                .addMultipartParameter("beneficial_insects_observed", new JSONArray(recordsViewModel.data.beneficialInsectsObserved).toString())
+                .addMultipartParameter("dont_know_beneficial_insects_observed", String.valueOf(recordsViewModel.data.dontKnowBeneficialInsectsObserved))
+                .addMultipartFile("dont_know_beneficial_insects_observed_photo", recordsViewModel.data.dontKnowBeneficialInsectsObservedPhoto)
+                .addMultipartParameter("dont_know_beneficial_insects_observed_note", recordsViewModel.data.dontKnowBeneficialInsectsObservedNote)
+                .addMultipartParameter("other_production_challenges", new JSONArray(recordsViewModel.data.otherProductionChallenges).toString())
+                .addMultipartParameter("any_diseases_observed", recordsViewModel.data.anyDiseasesObserved)
+                .addMultipartParameter("disease", new JSONArray(recordsViewModel.data.diseases).toString())
+                .addMultipartParameter("disease_plant_part", new JSONArray(recordsViewModel.data.diseasePlantPart).toString())
+                .addMultipartParameter("disease_crop_stage", recordsViewModel.data.diseaseCropStage)
+                .addMultipartParameter("disease_detection_method", recordsViewModel.data.diseaseDetectionMethod)
+                .addMultipartParameter("dont_know_disease", String.valueOf(recordsViewModel.data.dontKnowDisease))
+                .addMultipartParameter("dont_know_disease_note", recordsViewModel.data.dontKnowDiseaseNote)
+                .addMultipartParameter("actions_taken", new JSONArray(recordsViewModel.data.actionsTaken).toString())
+                .addMultipartParameter("outcome", recordsViewModel.data.outcome)
+                .addMultipartParameter("remarks", recordsViewModel.data.remarks)
+                .addMultipartParameter("start_date", recordsViewModel.data.startDate)
+                .addMultipartParameter("end_date", recordsViewModel.data.endDate)
+                .addMultipartParameter("location", recordsViewModel.data.location)
+                .addMultipartParameter("gps_latitude", recordsViewModel.data.gpsLatitude)
+                .addMultipartParameter("gps_longitude", recordsViewModel.data.gpsLongitude)
                 .setPriority(Priority.HIGH)
                 .build()
                 .getAsJSONObject(new JSONObjectRequestListener() {
@@ -318,6 +324,7 @@ public class RecordStep7Fragment extends Fragment {
                     public void onResponse(JSONObject response) {
                         progressDialog.dismiss();
                         Toast.makeText(requireContext(), "Record submitted successfully", Toast.LENGTH_SHORT).show();
+                        Log.d("RecordStep7Fragment WeeklyRecord Response", body.toString());
                         Log.d("RecordStep7Fragment WeeklyRecord Response", response.toString());
 
                         complete();
@@ -326,6 +333,7 @@ public class RecordStep7Fragment extends Fragment {
                     @Override
                     public void onError(ANError anError) {
                         progressDialog.dismiss();
+                        Log.d("RecordStep7Fragment WeeklyRecord Response", body.toString());
                         Log.d("RecordStep7Fragment WeeklyRecord Response", anError.getErrorBody());
                         Log.d("RecordStep7Fragment WeeklyRecord Response", "" + anError.getErrorCode());
                     }

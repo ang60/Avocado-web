@@ -49,5 +49,16 @@
             android:text="Jan 6, 2026"
             android:textStyle="bold" />
     </LinearLayout>
+    <ImageView
+        android:id="@+id/record_layout_edit_image_view"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_marginEnd="16dp"
+        android:src="@drawable/ic_pencil" />
+    <ImageView
+        android:id="@+id/record_layout_delete_image_view"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/ic_waste_basket"/>
 
 </LinearLayout>

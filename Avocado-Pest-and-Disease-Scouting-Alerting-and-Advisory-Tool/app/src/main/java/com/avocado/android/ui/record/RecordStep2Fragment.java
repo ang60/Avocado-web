@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import com.avocado.android.R;
 import com.avocado.android.data.model.Data;
@@ -36,6 +37,7 @@ import com.avocado.android.ui.views.RadioButton;
 import com.avocado.android.ui.views.RadioGroup;
 import com.avocado.android.ui.views.TrapUseView;
 import com.avocado.android.ui.views.WriteDownFileView;
+import com.avocado.android.utils.FileManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -72,6 +74,8 @@ public class RecordStep2Fragment extends Fragment implements OnAudioListener, On
     private TakePhotoBottomSheetDialog takePhotoBottomSheetDialog;
 
     private boolean takeOtherTrapPhoto = false;
+    private File dontKnowTrapPhoto = null;
+    private File otherTrapPhoto = null;
 
     public static RecordStep2Fragment newInstance() {
         return new RecordStep2Fragment();
@@ -87,7 +91,10 @@ public class RecordStep2Fragment extends Fragment implements OnAudioListener, On
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        recordsViewModel = new ViewModelProvider(this).get(RecordsViewModel.class);
+        // Activity-scoped Android ViewModel so all fragments inside the same activity share one ViewModel instance
+        // requireActivity() returns the activity that created the fragment
+        recordsViewModel = new ViewModelProvider(requireActivity()).get(RecordsViewModel.class);
+
         binding = FragmentRecordStep2Binding.inflate(inflater, container, false);
         idontKnowBottomSheetDialog = new IdontKnowBottomSheetDialog();
         idontKnowWriteDownBottomSheetDialog = new IdontKnowWriteDownBottomSheetDialog();
@@ -178,7 +185,10 @@ public class RecordStep2Fragment extends Fragment implements OnAudioListener, On
         });
 
         binding.fragmentRecordStep2BackButton.setOnClickListener(v ->
-                Navigation.findNavController(v).popBackStack()
+            {
+                setData();
+                Navigation.findNavController(v).popBackStack();
+            }
         );
 
         binding.fragmentRecordStep2ContinueButton.setOnClickListener(v ->
@@ -194,14 +204,14 @@ public class RecordStep2Fragment extends Fragment implements OnAudioListener, On
     }
 
     private void restoreState() {
-        if (Data.anyTrapsInstalled == null || Data.trapUse == null) return;
+        if (recordsViewModel.data.anyTrapsInstalled == null || recordsViewModel.data.trapUse == null) return;
 
-        if (Data.anyTrapsInstalled.equalsIgnoreCase("Yes"))
+        if (recordsViewModel.data.anyTrapsInstalled.equalsIgnoreCase("Yes"))
             binding.fragmentRecordStep2WereAnyTrapsInstalledYesRadioButton.performClick();
-        else if (Data.anyTrapsInstalled.equalsIgnoreCase("No"))
+        else if (recordsViewModel.data.anyTrapsInstalled.equalsIgnoreCase("No"))
             binding.fragmentRecordStep2WereAnyTrapsInstalledNoRadioButton.performClick();
 
-        for (TrapUse trapUse : Data.trapUse) {
+        for (TrapUse trapUse : recordsViewModel.data.trapUse) {
             addTrapUse(trapUse.getTypeOfTrap(), trapUse.getNumberOfTraps(), trapUse.getAverageNumberOfPestsPerTrap());
 
             AutoFitGridLayout autoFitGridLayout = binding.fragmentRecordStep2TrapsGridLayout;
@@ -214,13 +224,23 @@ public class RecordStep2Fragment extends Fragment implements OnAudioListener, On
                 }
             }
         }
+
+        File otherTrapPhoto = recordsViewModel.data.otherTrapPhoto;
+        if (otherTrapPhoto == null) return;
+
+        addOtherPhotoView(otherTrapPhoto);
+
+        File dontKnowTrapPhoto = recordsViewModel.data.dontKnowTrapPhoto;
+        if (dontKnowTrapPhoto == null) return;
+
+        addTrapPhotoView(dontKnowTrapPhoto);
     }
 
     private void setData() {
-        Data.anyTrapsInstalled = binding.fragmentRecordStep2WereAnyTrapsInstalledYesNoRadioGroup.getCheckedRadioButtonText();
-        Data.trapUse = getTrapUses();
-        Data.dontKnowTrapPhoto = null;
-        Data.otherTrapPhoto = null;
+        recordsViewModel.data.anyTrapsInstalled = binding.fragmentRecordStep2WereAnyTrapsInstalledYesNoRadioGroup.getCheckedRadioButtonText();
+        recordsViewModel.data.trapUse = getTrapUses();
+        recordsViewModel.data.dontKnowTrapPhoto = dontKnowTrapPhoto;
+        recordsViewModel.data.otherTrapPhoto = otherTrapPhoto;
     }
 
     private List<TrapUse> getTrapUses() {
@@ -365,38 +385,54 @@ public class RecordStep2Fragment extends Fragment implements OnAudioListener, On
 
         try {
             if (takeOtherTrapPhoto) {
-                PhotoFileView photoFileView = new PhotoFileView(requireContext());
-                photoFileView.setDescription("Photo taken of other trap");
-                photoFileView.setImageUri(resultUri);
-                photoFileView.setOnCancelClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        binding.fragmentRecordStep2OtherTrapPhotoLinearLayout.removeView(photoFileView);
-                    }
-                });
+                String extension = FileManager.getFileExtensionSafe(requireContext(), resultUri);
+                String fileName = "otherTrapPhoto." + extension;
+                otherTrapPhoto = FileManager.getFileFromUri(requireContext(), resultUri, fileName);
 
-                binding.fragmentRecordStep2OtherTrapPhotoLinearLayout.removeAllViews();
-                binding.fragmentRecordStep2OtherTrapPhotoLinearLayout.addView(photoFileView);
-                takeOtherTrapPhoto = false;
+                addOtherPhotoView(otherTrapPhoto);
             }
             else {
-                PhotoFileView photoFileView = new PhotoFileView(requireContext());
-                photoFileView.setDescription("Photo taken of the trap");
-                photoFileView.setImageUri(resultUri);
-                photoFileView.setOnCancelClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        binding.fragmentRecordStep2IDontKnowLinearLayout.removeView(photoFileView);
-                    }
-                });
+                String extension = FileManager.getFileExtensionSafe(requireContext(), resultUri);
+                String fileName = "dontKnowTrapPhoto." + extension;
+                dontKnowTrapPhoto = FileManager.getFileFromUri(requireContext(), resultUri, fileName);
 
-                binding.fragmentRecordStep2IDontKnowLinearLayout.removeAllViews();
-                binding.fragmentRecordStep2IDontKnowLinearLayout.addView(photoFileView);
+                addTrapPhotoView(dontKnowTrapPhoto);
             }
 
         } catch (Exception e) {
             Log.d("IdontKnowBottomSheetDialog", "Error saving photo");
         }
+    }
+
+    private void addOtherPhotoView(File file) {
+        PhotoFileView photoFileView = new PhotoFileView(requireContext());
+        photoFileView.setDescription("Photo taken of other trap");
+        photoFileView.setImageFile(file);
+        photoFileView.setOnCancelClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.fragmentRecordStep2OtherTrapPhotoLinearLayout.removeView(photoFileView);
+            }
+        });
+
+        binding.fragmentRecordStep2OtherTrapPhotoLinearLayout.removeAllViews();
+        binding.fragmentRecordStep2OtherTrapPhotoLinearLayout.addView(photoFileView);
+        takeOtherTrapPhoto = false;
+    }
+
+    private void addTrapPhotoView(File file) {
+        PhotoFileView photoFileView = new PhotoFileView(requireContext());
+        photoFileView.setDescription("Photo taken of the trap");
+        photoFileView.setImageFile(file);
+        photoFileView.setOnCancelClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.fragmentRecordStep2IDontKnowLinearLayout.removeView(photoFileView);
+            }
+        });
+
+        binding.fragmentRecordStep2IDontKnowLinearLayout.removeAllViews();
+        binding.fragmentRecordStep2IDontKnowLinearLayout.addView(photoFileView);
     }
 
     private Uri createCameraImageUri() {

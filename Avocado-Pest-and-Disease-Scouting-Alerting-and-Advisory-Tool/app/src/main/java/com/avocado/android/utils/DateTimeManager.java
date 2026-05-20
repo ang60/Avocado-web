@@ -45,17 +45,6 @@ public class DateTimeManager {
         return dt.format(formatter);
     }
 
-    public static long convertDateToEpoch(String dateString) {
-        DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern("MMM dd, yyyy");
-
-        LocalDate date = LocalDate.parse(dateString, formatter);
-
-        return date.atStartOfDay(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli();
-    }
-
     public static String convertEpochToDate2(long epochMillis) {
 
         // convert using device default timezone
@@ -67,6 +56,30 @@ public class DateTimeManager {
                 DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         return dt.format(formatter);
+    }
+
+    public static String convertEpochToDate3(long epochMillis) {
+
+        // convert using device default timezone
+        LocalDateTime dt = Instant.ofEpochMilli(epochMillis)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+        return dt.format(formatter);
+    }
+
+    public static long convertDateToEpoch(String dateString) {
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("MMM dd, yyyy");
+
+        LocalDate date = LocalDate.parse(dateString, formatter);
+
+        return date.atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
     }
 
     public static long convertDateToEpoch2(String dateString) {

@@ -33,6 +33,7 @@ import com.avocado.android.ui.views.PhotoFileView;
 import com.avocado.android.ui.views.RadioButton;
 import com.avocado.android.ui.views.RadioGroup;
 import com.avocado.android.ui.views.WriteDownFileView;
+import com.avocado.android.utils.FileManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -67,6 +68,8 @@ public class RecordStep4Fragment extends Fragment implements OnAudioListener, On
     private IdontKnowBottomSheetDialog idontKnowBottomSheetDialog;
     private IdontKnowWriteDownBottomSheetDialog idontKnowWriteDownBottomSheetDialog;
 
+    private File dontKnowBeneficialInsectsObservedPhoto = null;
+
     public static RecordStep4Fragment newInstance() {
         return new RecordStep4Fragment();
     }
@@ -81,7 +84,10 @@ public class RecordStep4Fragment extends Fragment implements OnAudioListener, On
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        recordsViewModel = new ViewModelProvider(this).get(RecordsViewModel.class);
+        // Activity-scoped Android ViewModel so all fragments inside the same activity share one ViewModel instance
+        // requireActivity() returns the activity that created the fragment
+        recordsViewModel = new ViewModelProvider(requireActivity()).get(RecordsViewModel.class);
+
         binding = FragmentRecordStep4Binding.inflate(inflater, container, false);
         idontKnowBottomSheetDialog = new IdontKnowBottomSheetDialog();
         idontKnowWriteDownBottomSheetDialog = new IdontKnowWriteDownBottomSheetDialog();
@@ -120,7 +126,10 @@ public class RecordStep4Fragment extends Fragment implements OnAudioListener, On
         });
 
         binding.fragmentRecordStep4BackButton.setOnClickListener(v ->
-                Navigation.findNavController(v).popBackStack()
+                {
+                    setData();
+                    Navigation.findNavController(v).popBackStack();
+                }
         );
 
         binding.fragmentRecordStep4ContinueButton.setOnClickListener(v ->
@@ -132,9 +141,9 @@ public class RecordStep4Fragment extends Fragment implements OnAudioListener, On
     }
 
     private void restoreState() {
-        if (Data.beneficialInsectsObserved == null) return;
+        if (recordsViewModel.data.beneficialInsectsObserved == null) return;
 
-        for (String beneficialInsectsObserved : Data.beneficialInsectsObserved) {
+        for (String beneficialInsectsObserved : recordsViewModel.data.beneficialInsectsObserved) {
             AutoFitGridLayout autoFitGridLayout = binding.fragmentRecordStep4BeneficialInsectsObservedGridLayout;
             for (int i = 0; i < autoFitGridLayout.getChildCount(); i++) {
                 CheckBoxFour checkBox = (CheckBoxFour) autoFitGridLayout.getChildAt(i);
@@ -144,13 +153,18 @@ public class RecordStep4Fragment extends Fragment implements OnAudioListener, On
                 }
             }
         }
+
+        File dontKnowBeneficialInsectsObservedPhoto = recordsViewModel.data.dontKnowBeneficialInsectsObservedPhoto;
+        if (dontKnowBeneficialInsectsObservedPhoto == null) return;
+
+        addPhotoView(dontKnowBeneficialInsectsObservedPhoto);
     }
 
     private void setData() {
-        Data.beneficialInsectsObserved = getBeneficialInsectsObserved();
-        Data.dontKnowBeneficialInsectsObserved = false;
-        Data.dontKnowBeneficialInsectsObservedPhoto = null;
-        Data.dontKnowBeneficialInsectsObservedNote = "";
+        recordsViewModel.data.beneficialInsectsObserved = getBeneficialInsectsObserved();
+        recordsViewModel.data.dontKnowBeneficialInsectsObserved = false;
+        recordsViewModel.data.dontKnowBeneficialInsectsObservedPhoto = null;
+        recordsViewModel.data.dontKnowBeneficialInsectsObservedNote = "";
     }
 
     private List<String> getBeneficialInsectsObserved() {
@@ -238,22 +252,30 @@ public class RecordStep4Fragment extends Fragment implements OnAudioListener, On
         }
 
         try {
-            PhotoFileView photoFileView = new PhotoFileView(requireContext());
-            photoFileView.setDescription("Photo taken of the insect");
-            photoFileView.setImageUri(resultUri);
-            photoFileView.setOnCancelClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    binding.fragmentRecordStep4IDontKnowLinearLayout.removeView(photoFileView);
-                }
-            });
+            String extension = FileManager.getFileExtensionSafe(requireContext(), resultUri);
+            String fileName = "dontKnowBeneficialInsectsObservedPhoto." + extension;
+            dontKnowBeneficialInsectsObservedPhoto = FileManager.getFileFromUri(requireContext(), resultUri, fileName);
 
-            binding.fragmentRecordStep4IDontKnowLinearLayout.removeAllViews();
-            binding.fragmentRecordStep4IDontKnowLinearLayout.addView(photoFileView);
+            addPhotoView(dontKnowBeneficialInsectsObservedPhoto);
 
         } catch (Exception e) {
             Log.d("IdontKnowBottomSheetDialog", "Error saving photo");
         }
+    }
+
+    private void addPhotoView(File file) {
+        PhotoFileView photoFileView = new PhotoFileView(requireContext());
+        photoFileView.setDescription("Photo taken of the insect");
+        photoFileView.setImageFile(file);
+        photoFileView.setOnCancelClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.fragmentRecordStep4IDontKnowLinearLayout.removeView(photoFileView);
+            }
+        });
+
+        binding.fragmentRecordStep4IDontKnowLinearLayout.removeAllViews();
+        binding.fragmentRecordStep4IDontKnowLinearLayout.addView(photoFileView);
     }
 
     private Uri createCameraImageUri() {

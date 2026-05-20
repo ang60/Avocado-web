@@ -182,10 +182,10 @@
                     android:minHeight="0dp"
                     app:buttonTint="@color/check_box_color_1"/>
                 <TextView
-                    android:id="@+id/fragment_start_create_account_by_continuing_you_agree_to_our_terms_of_service_text"
+                    android:id="@+id/fragment_start_create_account_terms_of_service_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/by_continuing_you_agree_to_our_terms_of_service"
+                    android:text="@string/terms_of_service"
                     android:textSize="12sp"
                     android:textColor="#5C7778"
                     android:layout_marginBottom="32dp"/>

@@ -21,6 +21,8 @@ public class RecordsAdapter extends RecyclerView.Adapter<RecordsAdapter.ViewHold
 
     public interface RecordListener {
         void onRecordClick(Record record, int position);
+        void onRecordDeleteClick(Record record, int position);
+        void onRecordEditClick(Record record, int position);
     }
 
     private List<Record> recordList;
@@ -35,6 +37,12 @@ public class RecordsAdapter extends RecyclerView.Adapter<RecordsAdapter.ViewHold
 
     public void setRecordList(List<Record> recordList) {
         this.recordList = recordList;
+        notifyDataSetChanged();
+    }
+
+    public void removeRecord(int position) {
+        this.recordList.remove(position);
+        this.recordListFull.remove(position);
         notifyDataSetChanged();
     }
 
@@ -77,6 +85,10 @@ public class RecordsAdapter extends RecyclerView.Adapter<RecordsAdapter.ViewHold
             setTitle(record.getFarmName());
             setSubTitle(record.getBlockName() + " • " + record.getLocation());
             setTimestamp(record.getTimestamp());
+            setDeleteVisibility(record.isPending());
+            setEditVisibility(record.isPending());
+            setDeleteClickListener(record);
+            setEditClickListener(record);
             setClickListener(record);
         }
 
@@ -90,6 +102,38 @@ public class RecordsAdapter extends RecyclerView.Adapter<RecordsAdapter.ViewHold
 
         private void setTimestamp(String timestamp) {
             binding.recordLayoutTimestampTextView.setText(timestamp);
+        }
+
+        private void setDeleteVisibility(boolean isVisible) {
+            if (isVisible)
+                binding.recordLayoutDeleteImageView.setVisibility(View.VISIBLE);
+            else
+                binding.recordLayoutDeleteImageView.setVisibility(View.GONE);
+        }
+
+        private void setEditVisibility(boolean isVisible) {
+            if (isVisible)
+                binding.recordLayoutEditImageView.setVisibility(View.VISIBLE);
+            else
+                binding.recordLayoutEditImageView.setVisibility(View.GONE);
+        }
+
+        private void setDeleteClickListener(Record record) {
+            binding.recordLayoutDeleteImageView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    recordListener.onRecordDeleteClick(record, getAbsoluteAdapterPosition());
+                }
+            });
+        }
+
+        private void setEditClickListener(Record record) {
+            binding.recordLayoutEditImageView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    recordListener.onRecordEditClick(record, getAbsoluteAdapterPosition());
+                }
+            });
         }
 
         private void setClickListener(Record record) {

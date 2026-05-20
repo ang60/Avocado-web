@@ -54,10 +54,10 @@ public class AddNewFarmBottomSheetDialog extends BottomSheetDialogFragment {
         String farmName = binding.dialogAddNewFarmFarmNameEditText.getText().toString();
         String location = binding.dialogAddNewFarmLocationEditText.getText().toString();
         String numberOfBlocks = binding.dialogAddNewFarmNumberOfBlocksEditText.getText().toString();
-        String numberOfTrees = binding.dialogAddNewFarmTotalTreesEditText.getText().toString();
+        String farmSize = binding.dialogAddNewFarmFarmSizeEditText.getText().toString();
 
-        if (!farmName.isEmpty() || !location.isEmpty() || !numberOfBlocks.isEmpty() || !numberOfTrees.isEmpty()) {
-            listener.onAddNewFarm(farmName, location, numberOfBlocks, numberOfTrees);
+        if (!farmName.isEmpty() || !location.isEmpty() || !numberOfBlocks.isEmpty() || !farmSize.isEmpty()) {
+            listener.onAddNewFarm(farmName, location, numberOfBlocks, farmSize);
             clearDetails();
             dismiss();
         }
@@ -67,10 +67,10 @@ public class AddNewFarmBottomSheetDialog extends BottomSheetDialogFragment {
         binding.dialogAddNewFarmFarmNameEditText.setText("");
         binding.dialogAddNewFarmLocationEditText.setText("");
         binding.dialogAddNewFarmNumberOfBlocksEditText.setText("");
-        binding.dialogAddNewFarmTotalTreesEditText.setText("");
+        binding.dialogAddNewFarmFarmSizeEditText.setText("");
     }
 
     public interface AddNewFarmListener {
-        void onAddNewFarm(String farmName, String location, String numberOfBlocks, String numberOfTrees);
+        void onAddNewFarm(String farmName, String location, String numberOfBlocks, String farmSize);
     }
 }

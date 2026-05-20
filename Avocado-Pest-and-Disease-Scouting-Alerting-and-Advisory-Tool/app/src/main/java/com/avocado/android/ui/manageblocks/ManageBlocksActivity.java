@@ -18,14 +18,19 @@ import com.avocado.android.databinding.ActivityManageBlocksBinding;
 import com.avocado.android.ui.managefarms.FarmsAdapter;
 import com.avocado.android.ui.start.StartActivity;
 import com.avocado.android.ui.views.ProgressDialog;
+import com.avocado.android.utils.Config;
 import com.avocado.android.utils.Constants;
+import com.avocado.android.utils.FileManager;
 import com.avocado.android.utils.TokenManager;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
@@ -40,6 +45,7 @@ public class ManageBlocksActivity extends AppCompatActivity implements BlocksAda
     private ProgressDialog progressDialog;
     private AddNewBlockBottomSheetDialog addNewBlockBottomSheetDialog;
     private EditBlockBottomSheetDialog editBlockBottomSheetDialog;
+    private Gson gson;
 
     private int selectedFarmPosition = -1;
     private ArrayList<Farm> farmsArrayList = new ArrayList<>();
@@ -49,6 +55,7 @@ public class ManageBlocksActivity extends AppCompatActivity implements BlocksAda
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        gson = new GsonBuilder().setPrettyPrinting().create();
         binding = ActivityManageBlocksBinding.inflate(getLayoutInflater());
         progressDialog = ProgressDialog.create(this, "Loading...");
         addNewBlockBottomSheetDialog = new AddNewBlockBottomSheetDialog();
@@ -164,11 +171,11 @@ public class ManageBlocksActivity extends AppCompatActivity implements BlocksAda
     }
 
     private void setTotalTrees() {
-        int totalTrees = 0;
+        double totalFarmSize = 0;
         for (Farm farm : farmsArrayList) {
-            totalTrees += farm.getTotalTrees();
+            totalFarmSize += farm.getFarmSize();
         }
-        binding.activityManageBlocksTotalTreesTextView.setText(String.valueOf(totalTrees));
+        binding.activityManageBlocksTotalFarmSizeTextView.setText(String.valueOf(totalFarmSize));
     }
 
     private void setupRecyclerView() {
@@ -222,7 +229,7 @@ public class ManageBlocksActivity extends AppCompatActivity implements BlocksAda
                                     farmObject.setFarmName(farm.getString("farm_name"));
                                     farmObject.setLocation(farm.getString("location"));
                                     farmObject.setNumberOfBlocks(farm.getInt("number_of_blocks"));
-                                    farmObject.setTotalTrees(farm.getInt("total_trees"));
+                                    farmObject.setFarmSize(farm.getDouble("farm_size"));
                                     farmsArrayList.add(farmObject);
                                 }
                             }
@@ -298,6 +305,8 @@ public class ManageBlocksActivity extends AppCompatActivity implements BlocksAda
     private void getBlocks(String farmId) {
         TokenManager tokenManager = new TokenManager(getApplicationContext());
         String accessToken = tokenManager.getAccessToken();
+        String directory = Config.getBaseDirectory() + "/blocks";
+        String fileName = "blocks.json";
 
         AndroidNetworking.get(Constants.BASE_URL + Constants.GET_BLOCKS_URL)
                 .addHeaders("Authorization", "Bearer " + accessToken)
@@ -312,7 +321,7 @@ public class ManageBlocksActivity extends AppCompatActivity implements BlocksAda
 
                         try {
                             JSONArray blocks = response.getJSONArray("results");
-                            ArrayList<Block> blockArrayList = new ArrayList<>();
+                            List<Block> blockArrayList = new ArrayList<>();
 
                             if (blocks.length() == 0) {
                                 Toast.makeText(getApplicationContext(), "No blocks found", Toast.LENGTH_SHORT).show();
@@ -334,6 +343,9 @@ public class ManageBlocksActivity extends AppCompatActivity implements BlocksAda
 
                             blockAdapter.setBlockList(blockArrayList);
                             blockAdapter.setBlockListFull(blockArrayList);
+
+                            FileManager.saveJson(getApplicationContext(), directory, fileName, gson.toJson(blockArrayList));
+                            progressDialog.dismiss();
 
                         } catch (JSONException e) {
                             throw new RuntimeException(e);

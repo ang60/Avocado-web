@@ -3,8 +3,10 @@ package com.avocado.android.ui.alerts;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -18,6 +20,7 @@ import com.avocado.android.data.model.Advisory;
 import com.avocado.android.data.model.Alert;
 import com.avocado.android.databinding.ActivityAlertsBinding;
 import com.avocado.android.ui.main.advisory.AdvisoryAdapter;
+import com.avocado.android.ui.record.RecordActivity;
 import com.avocado.android.ui.start.StartActivity;
 import com.avocado.android.ui.views.ProgressDialog;
 import com.avocado.android.ui.views.RadioButton;
@@ -56,6 +59,8 @@ public class AlertsActivity extends AppCompatActivity implements AlertsAdapter.A
 
         progressDialog.show();
         getAlerts();
+
+        binding.activityAlertsCategoriesAllRadioButton.performClick();
     }
 
     @Override
@@ -65,7 +70,39 @@ public class AlertsActivity extends AppCompatActivity implements AlertsAdapter.A
 
     @Override
     public void onAlertsClearClick(Alert alert, int position) {
+        showAlertDialog(alert);
+    }
 
+    private void showAlertDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(AlertsActivity.this);
+        builder.setTitle("Mark all as read");
+        builder.setMessage("Are you sure you want to mark all messages as read?");
+        builder.setPositiveButton("Yes", (dialog, which) -> {
+            progressDialog.show();
+            markAllAlertsAsRead();
+        });
+        builder.setNegativeButton("No", (dialog, which) -> {
+            dialog.dismiss();
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void showAlertDialog(Alert alert) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(AlertsActivity.this);
+        builder.setTitle("Mark as read");
+        builder.setMessage("Are you sure you want to mark this message as read?");
+        builder.setPositiveButton("Yes", (dialog, which) -> {
+            progressDialog.show();
+            markAlertAsRead(alert.getId());
+        });
+        builder.setNegativeButton("No", (dialog, which) -> {
+            dialog.dismiss();
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     private void setupRecyclerView() {
@@ -77,7 +114,28 @@ public class AlertsActivity extends AppCompatActivity implements AlertsAdapter.A
     }
 
     private void setupListeners() {
+        binding.activityAlertsMarkAllReadButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showAlertDialog();
+            }
+        });
 
+        binding.activityAlertsCategoriesRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, RadioButton checkedButton, int checkedId) {
+                if (checkedId == R.id.activity_alerts_categories_all_radio_button) {
+                    alertsAdapter.getFilter().filter("");
+                }
+                else if (checkedId == R.id.activity_alerts_categories_unread_radio_button) {
+                    alertsAdapter.getFilter().filter("Unread");
+                }
+                else {
+                    String category = checkedButton.getText().toString();
+                    alertsAdapter.getFilter().filter(category);
+                }
+            }
+        });
     }
 
     private void checkTokenExpired() {
@@ -125,11 +183,14 @@ public class AlertsActivity extends AppCompatActivity implements AlertsAdapter.A
                                     alertObject.setRead(alert.getBoolean("is_read"));
                                     alertObject.setTimestamp(alert.getString("timestamp"));
                                     alertObject.setTimeAgo(alert.getString("time_ago"));
+                                    alertObject.setCategory(alert.getString("category"));
 
                                     alertArrayList.add(alertObject);
                                 }
+
                                 alertsAdapter.setAlertsList(alertArrayList);
                                 alertsAdapter.setAlertsListFull(alertArrayList);
+                                alertsAdapter.getFilter().filter("");
                             }
                         } catch (JSONException e) {
                             throw new RuntimeException(e);
@@ -143,6 +204,65 @@ public class AlertsActivity extends AppCompatActivity implements AlertsAdapter.A
                         Log.d("getAlerts", anError.toString());
                         Log.d("getAlerts", anError.getErrorBody());
                         Log.d("getAlerts", anError.getErrorCode() + "");
+                    }
+                });
+    }
+
+    public void markAlertAsRead(String id) {
+        TokenManager tokenManager = new TokenManager(getApplicationContext());
+        String accessToken = tokenManager.getAccessToken();
+
+        AndroidNetworking.post(Constants.BASE_URL + Constants.UPDATE_ALERTS_MARK_AS_READ_URL)
+                .addHeaders("Authorization", "Bearer " + accessToken)
+                .addHeaders("Content-Type", "application/json")
+                .addPathParameter("id", id)
+                .setPriority(Priority.HIGH)
+                .build()
+                .getAsJSONObject(new JSONObjectRequestListener() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Toast.makeText(AlertsActivity.this, "Alert marked as read", Toast.LENGTH_SHORT).show();
+                        Log.d("markAlertAsRead", response.toString());
+
+                        getAlerts(); // refresh the list
+                    }
+
+                    @Override
+                    public void onError(ANError anError) {
+                        progressDialog.dismiss();
+                        Toast.makeText(getApplicationContext(), "Failed to mark alert as read", Toast.LENGTH_SHORT).show();
+                        Log.d("markAlertAsRead", anError.toString());
+                        Log.d("markAlertAsRead", anError.getErrorBody());
+                        Log.d("markAlertAsRead", anError.getErrorCode() + "");
+                    }
+                });
+    }
+
+    public void markAllAlertsAsRead() {
+        TokenManager tokenManager = new TokenManager(getApplicationContext());
+        String accessToken = tokenManager.getAccessToken();
+
+        AndroidNetworking.post(Constants.BASE_URL + Constants.UPDATE_ALERTS_MARK_ALL_AS_READ_URL)
+                .addHeaders("Authorization", "Bearer " + accessToken)
+                .addHeaders("Content-Type", "application/json")
+                .setPriority(Priority.HIGH)
+                .build()
+                .getAsJSONObject(new JSONObjectRequestListener() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Toast.makeText(AlertsActivity.this, "Alerts marked as read", Toast.LENGTH_SHORT).show();
+                        Log.d("markAllAlertsAsRead", response.toString());
+
+                        getAlerts(); // refresh the list
+                    }
+
+                    @Override
+                    public void onError(ANError anError) {
+                        progressDialog.dismiss();
+                        Toast.makeText(getApplicationContext(), "Failed to mark alerts as read", Toast.LENGTH_SHORT).show();
+                        Log.d("markAllAlertsAsRead", anError.toString());
+                        Log.d("markAllAlertsAsRead", anError.getErrorBody());
+                        Log.d("markAllAlertsAsRead", anError.getErrorCode() + "");
                     }
                 });
     }

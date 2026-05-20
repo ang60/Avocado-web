@@ -95,6 +95,8 @@ public class AlertsAdapter extends RecyclerView.Adapter<AlertsAdapter.ViewHolder
             setTitle(title);
             setSubTitle(message);
             setDate(timeAgo);
+            setClearVisibility(alert.isRead());
+            setClearClickListener(alert);
             setClickListener(alert);
         }
 
@@ -127,6 +129,13 @@ public class AlertsAdapter extends RecyclerView.Adapter<AlertsAdapter.ViewHolder
 
         private void setDate(String date) {
             binding.alertsLayoutDateTextView.setText(date);
+        }
+
+        private void setClearVisibility(boolean isRead) {
+            if (isRead)
+                binding.alertsLayoutClearImageView.setVisibility(View.INVISIBLE);
+            else
+                binding.alertsLayoutClearImageView.setVisibility(View.VISIBLE);
         }
 
         private void setClickListener(Alert alert) {
@@ -195,6 +204,13 @@ public class AlertsAdapter extends RecyclerView.Adapter<AlertsAdapter.ViewHolder
 
             if (constraint == null || constraint.length() == 0) {
                 filteredList.addAll(alertsListFull);
+            }
+            else if (constraint.toString().equalsIgnoreCase("Unread")) {
+                for (Alert alert : alertsListFull) {
+                    if (!alert.isRead()) {
+                        filteredList.add(alert);
+                    }
+                }
             }
             else {
                 String filterPattern = constraint.toString().toLowerCase().trim();

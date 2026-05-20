@@ -8,6 +8,9 @@
     <attr name="sub_title" format="string" />
     <attr name="highlight_background" format="reference" />
     <attr name="description" format="string" />
+    <attr name="column_width" format="dimension" />
+    <attr name="horizontal_spacing" format="dimension" />
+    <attr name="vertical_spacing" format="dimension" />
 
     <!-- Styleables -->
     <declare-styleable name="RadioButtonOne">
@@ -87,6 +90,12 @@
         <attr name="text" />
     </declare-styleable>
 
+    <declare-styleable name="RadioButtonSixteen">
+        <attr name="image" />
+        <attr name="title" />
+        <attr name="sub_title" />
+    </declare-styleable>
+
     <declare-styleable name="CheckBoxOne">
         <attr name="image" />
         <attr name="text" />
@@ -116,9 +125,15 @@
     </declare-styleable>
 
     <declare-styleable name="AutoFitGridLayout">
-        <attr name="column_width" format="dimension"/>
-        <attr name="horizontal_spacing" format="dimension"/>
-        <attr name="vertical_spacing" format="dimension"/>
+        <attr name="column_width"/>
+        <attr name="horizontal_spacing"/>
+        <attr name="vertical_spacing"/>
+    </declare-styleable>
+
+    <declare-styleable name="AutoFitGridRadioGroup">
+        <attr name="column_width" />
+        <attr name="horizontal_spacing" />
+        <attr name="vertical_spacing" />
     </declare-styleable>
 
 </resources>

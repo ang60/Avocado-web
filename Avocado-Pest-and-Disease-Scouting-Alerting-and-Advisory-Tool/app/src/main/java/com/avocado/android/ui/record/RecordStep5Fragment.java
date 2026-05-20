@@ -37,6 +37,7 @@ import com.avocado.android.ui.views.RadioButton;
 import com.avocado.android.ui.views.RadioButtonSix;
 import com.avocado.android.ui.views.RadioGroup;
 import com.avocado.android.ui.views.WriteDownFileView;
+import com.avocado.android.utils.FileManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -71,6 +72,8 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
     private IdontKnowBottomSheetDialog idontKnowBottomSheetDialog;
     private IdontKnowWriteDownBottomSheetDialog idontKnowWriteDownBottomSheetDialog;
 
+    private File dontKnowDieseasePhoto = null;
+
     public static RecordStep5Fragment newInstance() {
         return new RecordStep5Fragment();
     }
@@ -85,7 +88,10 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        recordsViewModel = new ViewModelProvider(this).get(RecordsViewModel.class);
+        // Activity-scoped Android ViewModel so all fragments inside the same activity share one ViewModel instance
+        // requireActivity() returns the activity that created the fragment
+        recordsViewModel = new ViewModelProvider(requireActivity()).get(RecordsViewModel.class);
+
         binding = FragmentRecordStep5Binding.inflate(inflater, container, false);
         idontKnowBottomSheetDialog = new IdontKnowBottomSheetDialog();
         idontKnowWriteDownBottomSheetDialog = new IdontKnowWriteDownBottomSheetDialog();
@@ -158,7 +164,10 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
         });
 
         binding.fragmentRecordStep5BackButton.setOnClickListener(v ->
-                Navigation.findNavController(v).popBackStack()
+                {
+                    setData();
+                    Navigation.findNavController(v).popBackStack();
+                }
         );
 
         binding.fragmentRecordStep5ContinueButton.setOnClickListener(v ->
@@ -199,16 +208,16 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
     }
 
     private void restoreState() {
-        if (Data.anyDiseasesObserved == null || Data.diseases == null
-                || Data.diseasePlantPart == null || Data.diseaseCropStage == null
-                || Data.diseaseDetectionMethod == null) return;
+        if (recordsViewModel.data.anyDiseasesObserved == null || recordsViewModel.data.diseases == null
+                || recordsViewModel.data.diseasePlantPart == null || recordsViewModel.data.diseaseCropStage == null
+                || recordsViewModel.data.diseaseDetectionMethod == null) return;
 
-        if (Data.anyDiseasesObserved.equalsIgnoreCase("Yes"))
+        if (recordsViewModel.data.anyDiseasesObserved.equalsIgnoreCase("Yes"))
             binding.fragmentRecordStep5YesRadioButton.performClick();
-        else if (Data.anyPestsObserved.equalsIgnoreCase("No"))
+        else if (recordsViewModel.data.anyDiseasesObserved.equalsIgnoreCase("No"))
             binding.fragmentRecordStep5NoRadioButton.performClick();
 
-        for (String disease : Data.diseases) {
+        for (String disease : recordsViewModel.data.diseases) {
             FlowLinearLayout flowLinearLayout = binding.fragmentRecordStep5DiseasesObservedFlowLayout;
             for (int i = 0; i < flowLinearLayout.getChildCount(); i++) {
                 CheckBoxOne checkBox = (CheckBoxOne) flowLinearLayout.getChildAt(i);
@@ -219,7 +228,7 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
             }
         }
 
-        for (String challenge : Data.otherProductionChallenges) {
+        for (String challenge : recordsViewModel.data.otherProductionChallenges) {
             FlowLinearLayout flowLinearLayout = binding.fragmentRecordStep5OtherProductionChallengesFlowLayout;
             for (int i = 0; i < flowLinearLayout.getChildCount(); i++) {
                 CheckBoxOne checkBox = (CheckBoxOne) flowLinearLayout.getChildAt(i);
@@ -236,13 +245,13 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
             challenges.add(checkBox.getText());
         }
 
-        for (String challenge : Data.otherProductionChallenges) {
+        for (String challenge : recordsViewModel.data.otherProductionChallenges) {
             if (!challenges.contains(challenge)) {
                 addOtherProductionChallenges(challenge);
             }
         }
 
-        for (String plantPart : Data.diseasePlantPart) {
+        for (String plantPart : recordsViewModel.data.diseasePlantPart) {
             AutoFitGridLayout autoFitGridLayout = binding.fragmentRecordStep5PlantPartAffectedGridLayout;
             for (int i = 0; i < autoFitGridLayout.getChildCount(); i++) {
                 CheckBoxTwo checkBox = (CheckBoxTwo) autoFitGridLayout.getChildAt(i);
@@ -255,7 +264,7 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
 
         for (int i = 0; i < binding.fragmentRecordStep5CropStageRadioGroup.getChildCount(); i++) {
             RadioButtonSix radioButton = (RadioButtonSix) binding.fragmentRecordStep5CropStageRadioGroup.getChildAt(i);
-            if (radioButton.getText().equalsIgnoreCase(Data.diseaseCropStage)) {
+            if (radioButton.getText().equalsIgnoreCase(recordsViewModel.data.diseaseCropStage)) {
                 radioButton.performClick();
                 break;
             }
@@ -263,22 +272,28 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
 
         for (int i = 0; i < binding.fragmentRecordStep5DetectionMethodRadioGroup.getChildCount(); i++) {
             RadioButtonSix radioButton = (RadioButtonSix) binding.fragmentRecordStep5DetectionMethodRadioGroup.getChildAt(i);
-            if (radioButton.getText().equalsIgnoreCase(Data.diseaseDetectionMethod)) {
+            if (radioButton.getText().equalsIgnoreCase(recordsViewModel.data.diseaseDetectionMethod)) {
                 radioButton.performClick();
                 break;
             }
         }
+
+        File dontKnowDieseasePhoto = recordsViewModel.data.dontKnowDiseasePhoto;
+        if (dontKnowDieseasePhoto == null) return;
+
+        addPhotoView(dontKnowDieseasePhoto);
     }
 
     private void setData() {
-        Data.anyDiseasesObserved = binding.fragmentRecordStep5YesNoRadioGroup.getCheckedRadioButtonText();
-        Data.diseases = getDiseasesObserved();
-        Data.otherProductionChallenges = getOtherProductionChallenges();
-        Data.diseasePlantPart = getPlantPartAffected();
-        Data.diseaseCropStage = binding.fragmentRecordStep5CropStageRadioGroup.getCheckedRadioButtonText();
-        Data.diseaseDetectionMethod = binding.fragmentRecordStep5DetectionMethodRadioGroup.getCheckedRadioButtonText();
-        Data.dontKnowDisease = false;
-        Data.dontKnowDiseaseNote = "";
+        recordsViewModel.data.anyDiseasesObserved = binding.fragmentRecordStep5YesNoRadioGroup.getCheckedRadioButtonText();
+        recordsViewModel.data.diseases = getDiseasesObserved();
+        recordsViewModel.data.otherProductionChallenges = getOtherProductionChallenges();
+        recordsViewModel.data.diseasePlantPart = getPlantPartAffected();
+        recordsViewModel.data.diseaseCropStage = binding.fragmentRecordStep5CropStageRadioGroup.getCheckedRadioButtonText();
+        recordsViewModel.data.diseaseDetectionMethod = binding.fragmentRecordStep5DetectionMethodRadioGroup.getCheckedRadioButtonText();
+        recordsViewModel.data.dontKnowDisease = false;
+        recordsViewModel.data.dontKnowDiseasePhoto = null;
+        recordsViewModel.data.dontKnowDiseaseNote = "";
     }
 
     private List<String> getOtherProductionChallenges() {
@@ -397,22 +412,30 @@ public class RecordStep5Fragment extends Fragment implements OnAudioListener, On
         }
 
         try {
-            PhotoFileView photoFileView = new PhotoFileView(requireContext());
-            photoFileView.setDescription("Photo taken of the insect");
-            photoFileView.setImageUri(resultUri);
-            photoFileView.setOnCancelClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    binding.fragmentRecordStep5IDontKnowLinearLayout.removeView(photoFileView);
-                }
-            });
+            String extension = FileManager.getFileExtensionSafe(requireContext(), resultUri);
+            String fileName = "dontKnowDieseasePhoto." + extension;
+            dontKnowDieseasePhoto = FileManager.getFileFromUri(requireContext(), resultUri, fileName);
 
-            binding.fragmentRecordStep5IDontKnowLinearLayout.removeAllViews();
-            binding.fragmentRecordStep5IDontKnowLinearLayout.addView(photoFileView);
+            addPhotoView(dontKnowDieseasePhoto);
 
         } catch (Exception e) {
             Log.d("IdontKnowBottomSheetDialog", "Error saving photo");
         }
+    }
+
+    private void addPhotoView(File file) {
+        PhotoFileView photoFileView = new PhotoFileView(requireContext());
+        photoFileView.setDescription("Photo taken of the insect");
+        photoFileView.setImageFile(file);
+        photoFileView.setOnCancelClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.fragmentRecordStep5IDontKnowLinearLayout.removeView(photoFileView);
+            }
+        });
+
+        binding.fragmentRecordStep5IDontKnowLinearLayout.removeAllViews();
+        binding.fragmentRecordStep5IDontKnowLinearLayout.addView(photoFileView);
     }
 
     private Uri createCameraImageUri() {

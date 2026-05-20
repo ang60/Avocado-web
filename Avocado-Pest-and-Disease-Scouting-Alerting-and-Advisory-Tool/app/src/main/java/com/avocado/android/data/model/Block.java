@@ -3,8 +3,10 @@ package com.avocado.android.data.model;
 public class Block {
 
     private String blockId;
+    private String farmName;
     private String blockName;
-    private String numberOfTrees;;
+    private String numberOfTrees;
+    private String location;
 
     public String getBlockId() {
         return blockId;
@@ -12,6 +14,14 @@ public class Block {
 
     public void setBlockId(String blockId) {
         this.blockId = blockId;
+    }
+
+    public String getFarmName() {
+        return farmName;
+    }
+
+    public void setFarmName(String farmName) {
+        this.farmName = farmName;
     }
 
     public String getBlockName() {
@@ -28,5 +38,13 @@ public class Block {
 
     public void setNumberOfTrees(String numberOfTrees) {
         this.numberOfTrees = numberOfTrees;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 }

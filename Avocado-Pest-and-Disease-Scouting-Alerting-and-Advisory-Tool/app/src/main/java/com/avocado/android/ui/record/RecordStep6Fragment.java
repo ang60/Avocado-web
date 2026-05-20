@@ -49,7 +49,10 @@ public class RecordStep6Fragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        recordsViewModel = new ViewModelProvider(this).get(RecordsViewModel.class);
+        // Activity-scoped Android ViewModel so all fragments inside the same activity share one ViewModel instance
+        // requireActivity() returns the activity that created the fragment
+        recordsViewModel = new ViewModelProvider(requireActivity()).get(RecordsViewModel.class);
+
         binding = FragmentRecordStep6Binding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -101,7 +104,10 @@ public class RecordStep6Fragment extends Fragment {
         });
 
         binding.fragmentRecordStep6BackButton.setOnClickListener(v ->
-                Navigation.findNavController(v).popBackStack()
+                {
+                    setData();
+                    Navigation.findNavController(v).popBackStack();
+                }
         );
 
         binding.fragmentRecordStep6ContinueButton.setOnClickListener(v ->
@@ -114,14 +120,14 @@ public class RecordStep6Fragment extends Fragment {
     }
 
     private void restoreState() {
-        if (Data.actionStatus == null) return;
+        if (recordsViewModel.data.actionStatus == null) return;
 
-        if (Data.actionStatus.equalsIgnoreCase("Actions Completed"))
+        if (recordsViewModel.data.actionStatus.equalsIgnoreCase("Actions Completed"))
             binding.fragmentRecordStep6ActionsCompletedRadioButton.performClick();
-        else if (Data.actionStatus.equalsIgnoreCase("Pending Actions"))
+        else if (recordsViewModel.data.actionStatus.equalsIgnoreCase("Pending Actions"))
             binding.fragmentRecordStep6PendingActionsRadioButton.performClick();
 
-        for (String actionTaken : Data.actionsTaken) {
+        for (String actionTaken : recordsViewModel.data.actionsTaken) {
             FlowLinearLayout flowLinearLayout = binding.fragmentRecordStep6ActionTakenFlowLayout;
             for (int i = 0; i < flowLinearLayout.getChildCount(); i++) {
                 CheckBoxOne checkBox = (CheckBoxOne) flowLinearLayout.getChildAt(i);
@@ -136,31 +142,32 @@ public class RecordStep6Fragment extends Fragment {
             }
         }
 
-        binding.fragmentRecordStep6ActionTakenChemicalControlProductNameEditText.setText(Data.chemicalControlProductName);
-        binding.fragmentRecordStep6ActionTakenChemicalControlActiveIngredientEditText.setText(Data.chemicalControlActiveIngredient);
-        binding.fragmentRecordStep6ActionTakenChemicalControlTreesTreatedEditText.setText(Data.chemicalControlTreesTreated);
+        binding.fragmentRecordStep6ActionTakenChemicalControlProductNameEditText.setText(recordsViewModel.data.chemicalControlProductName);
+        binding.fragmentRecordStep6ActionTakenChemicalControlActiveIngredientEditText.setText(recordsViewModel.data.chemicalControlActiveIngredient);
+        binding.fragmentRecordStep6ActionTakenChemicalControlTreesTreatedEditText.setText(recordsViewModel.data.chemicalControlTreesTreated);
 
         AutoFitGridLayout autoFitGridLayout = binding.fragmentRecordStep6OutcomeGridLayout;
         for (int i = 0; i < autoFitGridLayout.getChildCount(); i++) {
             RadioButtonFour radioButton = (RadioButtonFour) autoFitGridLayout.getChildAt(i);
-            if (radioButton.getText().equalsIgnoreCase(Data.outcome)) {
+            if (radioButton.getText().equalsIgnoreCase(recordsViewModel.data.outcome)) {
                 radioButton.performClick();
                 break;
             }
         }
 
-        binding.fragmentRecordStep6RemarksEditText.setText(Data.remarks);
+        binding.fragmentRecordStep6RemarksEditText.setText(recordsViewModel.data.remarks);
     }
 
     private void setData() {
-        Data.endDate = DateTimeManager.convertEpochToDate2(System.currentTimeMillis());
-        Data.actionStatus = binding.fragmentRecordStep6ActionStatusRadioGroup.getCheckedRadioButtonText();
-        Data.actionsTaken = getActionTaken();
-        Data.chemicalControlProductName = binding.fragmentRecordStep6ActionTakenChemicalControlProductNameEditText.getText().toString();
-        Data.chemicalControlActiveIngredient = binding.fragmentRecordStep6ActionTakenChemicalControlActiveIngredientEditText.getText().toString();
-        Data.chemicalControlTreesTreated = binding.fragmentRecordStep6ActionTakenChemicalControlTreesTreatedEditText.getText().toString();
-        Data.outcome = getOutcome();
-        Data.remarks = binding.fragmentRecordStep6RemarksEditText.getText().toString();
+        recordsViewModel.data.endDate = DateTimeManager.convertEpochToDate2(System.currentTimeMillis());
+        recordsViewModel.data.endTimestamp = String.valueOf(System.currentTimeMillis());
+        recordsViewModel.data.actionStatus = binding.fragmentRecordStep6ActionStatusRadioGroup.getCheckedRadioButtonText();
+        recordsViewModel.data.actionsTaken = getActionTaken();
+        recordsViewModel.data.chemicalControlProductName = binding.fragmentRecordStep6ActionTakenChemicalControlProductNameEditText.getText().toString();
+        recordsViewModel.data.chemicalControlActiveIngredient = binding.fragmentRecordStep6ActionTakenChemicalControlActiveIngredientEditText.getText().toString();
+        recordsViewModel.data.chemicalControlTreesTreated = binding.fragmentRecordStep6ActionTakenChemicalControlTreesTreatedEditText.getText().toString();
+        recordsViewModel.data.outcome = getOutcome();
+        recordsViewModel.data.remarks = binding.fragmentRecordStep6RemarksEditText.getText().toString();
     }
 
     private List<String> getActionTaken() {
@@ -177,6 +184,9 @@ public class RecordStep6Fragment extends Fragment {
     }
 
     private String getOutcome() {
+        if (binding.fragmentRecordStep6OutcomeRadioGroup.getCheckedRadioButtonText().isEmpty())
+            return "Still present";
+
         return binding.fragmentRecordStep6OutcomeRadioGroup.getCheckedRadioButtonText();
     }
 

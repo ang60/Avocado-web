@@ -34,6 +34,7 @@ import com.avocado.android.ui.views.RadioButton;
 import com.avocado.android.ui.views.RadioGroup;
 import com.avocado.android.ui.views.RecursiveRadioGroup;
 import com.avocado.android.ui.views.WriteDownFileView;
+import com.avocado.android.utils.FileManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -69,6 +70,8 @@ public class RecordStep3Fragment extends Fragment implements OnAudioListener, On
     private IdontKnowWriteDownBottomSheetDialog idontKnowWriteDownBottomSheetDialog;
     private AddOtherPestBottomSheetDialog addOtherPestBottomSheetDialog;
 
+    public File dontKnowPestPhoto = null;
+
     public static RecordStep3Fragment newInstance() {
         return new RecordStep3Fragment();
     }
@@ -83,7 +86,10 @@ public class RecordStep3Fragment extends Fragment implements OnAudioListener, On
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        recordsViewModel = new ViewModelProvider(this).get(RecordsViewModel.class);
+        // Activity-scoped Android ViewModel so all fragments inside the same activity share one ViewModel instance
+        // requireActivity() returns the activity that created the fragment
+        recordsViewModel = new ViewModelProvider(requireActivity()).get(RecordsViewModel.class);
+
         binding = FragmentRecordStep3Binding.inflate(inflater, container, false);
         idontKnowBottomSheetDialog = new IdontKnowBottomSheetDialog();
         idontKnowWriteDownBottomSheetDialog = new IdontKnowWriteDownBottomSheetDialog();
@@ -162,7 +168,10 @@ public class RecordStep3Fragment extends Fragment implements OnAudioListener, On
         });
 
         binding.fragmentRecordStep3BackButton.setOnClickListener(v ->
-                Navigation.findNavController(v).popBackStack()
+                {
+                    setData();
+                    Navigation.findNavController(v).popBackStack();
+                }
         );
 
         binding.fragmentRecordStep3ContinueButton.setOnClickListener(v ->
@@ -177,14 +186,14 @@ public class RecordStep3Fragment extends Fragment implements OnAudioListener, On
     }
 
     private void restoreState() {
-        if (Data.anyPestsObserved == null || Data.pestsObserved == null) return;
+        if (recordsViewModel.data.anyPestsObserved == null || recordsViewModel.data.pestsObserved == null) return;
 
-        if (Data.anyPestsObserved.equalsIgnoreCase("Yes"))
+        if (recordsViewModel.data.anyPestsObserved.equalsIgnoreCase("Yes"))
             binding.fragmentRecordStep3WereAnyPestsObservedYesRadioButton.performClick();
-        else if (Data.anyPestsObserved.equalsIgnoreCase("No"))
+        else if (recordsViewModel.data.anyPestsObserved.equalsIgnoreCase("No"))
             binding.fragmentRecordStep3WereAnyPestsObservedNoRadioButton.performClick();
 
-        for (PestsObserved pestObserved : Data.pestsObserved) {
+        for (PestsObserved pestObserved : recordsViewModel.data.pestsObserved) {
             AutoFitGridLayout autoFitGridLayout = binding.fragmentRecordStep3PestsObservedGridLayout;
             for (int i = 0; i < autoFitGridLayout.getChildCount(); i++) {
                 CheckBoxThree checkBox = (CheckBoxThree) autoFitGridLayout.getChildAt(i);
@@ -195,14 +204,19 @@ public class RecordStep3Fragment extends Fragment implements OnAudioListener, On
                 }
             }
         }
+
+        File dontKnowPestPhoto = recordsViewModel.data.dontKnowPestPhoto;
+        if (dontKnowPestPhoto == null) return;
+
+        addPhotoView(dontKnowPestPhoto);
     }
 
     private void setData() {
-        Data.anyPestsObserved = binding.fragmentRecordStep3WereAnyPestsYesNoRadioGroup.getCheckedRadioButtonText();
-        Data.pestsObserved = getPestsObserved();
-        Data.dontKnowPest = false;
-        Data.dontKnowPestPhoto = null;
-        Data.dontKnowPestNote = "";
+        recordsViewModel.data.anyPestsObserved = binding.fragmentRecordStep3WereAnyPestsYesNoRadioGroup.getCheckedRadioButtonText();
+        recordsViewModel.data.pestsObserved = getPestsObserved();
+        recordsViewModel.data.dontKnowPest = false;
+        recordsViewModel.data.dontKnowPestPhoto = dontKnowPestPhoto;
+        recordsViewModel.data.dontKnowPestNote = "";
     }
 
     private List<PestsObserved> getPestsObserved() {
@@ -308,22 +322,30 @@ public class RecordStep3Fragment extends Fragment implements OnAudioListener, On
         }
 
         try {
-            PhotoFileView photoFileView = new PhotoFileView(requireContext());
-            photoFileView.setDescription("Photo taken of the pest");
-            photoFileView.setImageUri(resultUri);
-            photoFileView.setOnCancelClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    binding.fragmentRecordStep3PestsObservedIDontKnowLinearLayout.removeView(photoFileView);
-                }
-            });
+            String extension = FileManager.getFileExtensionSafe(requireContext(), resultUri);
+            String fileName = "dontKnowPestPhoto." + extension;
+            dontKnowPestPhoto = FileManager.getFileFromUri(requireContext(), resultUri, fileName);
 
-            binding.fragmentRecordStep3PestsObservedIDontKnowLinearLayout.removeAllViews();
-            binding.fragmentRecordStep3PestsObservedIDontKnowLinearLayout.addView(photoFileView);
+            addPhotoView(dontKnowPestPhoto);
 
         } catch (Exception e) {
             Log.d("IdontKnowBottomSheetDialog", "Error saving photo");
         }
+    }
+
+    private void addPhotoView(File file) {
+        PhotoFileView photoFileView = new PhotoFileView(requireContext());
+        photoFileView.setDescription("Photo taken of the pest");
+        photoFileView.setImageFile(file);
+        photoFileView.setOnCancelClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                binding.fragmentRecordStep3PestsObservedIDontKnowLinearLayout.removeView(photoFileView);
+            }
+        });
+
+        binding.fragmentRecordStep3PestsObservedIDontKnowLinearLayout.removeAllViews();
+        binding.fragmentRecordStep3PestsObservedIDontKnowLinearLayout.addView(photoFileView);
     }
 
     private Uri createCameraImageUri() {

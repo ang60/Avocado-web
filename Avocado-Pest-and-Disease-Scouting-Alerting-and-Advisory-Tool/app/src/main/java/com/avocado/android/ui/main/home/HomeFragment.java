@@ -33,6 +33,7 @@ import com.avocado.android.ui.record.RecordActivity;
 import com.avocado.android.ui.start.StartActivity;
 import com.avocado.android.utils.Constants;
 import com.avocado.android.utils.TokenManager;
+import com.bumptech.glide.Glide;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -75,6 +76,7 @@ public class HomeFragment extends Fragment implements AlertsAdapter.AlertsListen
         setupRecyclerView();
         setupListeners();
         setupIntentLauncher();
+        setProfilePicture();
 
         binding.fragmentMainHomePendingAdvisoryProgressBar.setVisibility(View.VISIBLE);
         binding.fragmentMainHomePendingAdvisoryLinearLayout.setVisibility(View.GONE);
@@ -97,6 +99,20 @@ public class HomeFragment extends Fragment implements AlertsAdapter.AlertsListen
         startActivity(intent);
     }
 
+    private void setProfilePicture() {
+        TokenManager tokenManager = new TokenManager(requireContext());
+        String profilePicture = tokenManager.getProfilePicture();
+
+        if (profilePicture != null && !profilePicture.isEmpty())
+            binding.fragmentMainHomeAccountImageButton.setPadding(0, 0, 0, 0);
+
+        Glide.with(requireContext())
+                .load(profilePicture)
+                .placeholder(R.drawable.ic_farmer)
+                .circleCrop()
+                .into(binding.fragmentMainHomeAccountImageButton);
+    }
+
     private String getName() {
         TokenManager tokenManager = new TokenManager(requireContext());
         return tokenManager.getFirstName() + " " + tokenManager.getLastName();
@@ -108,6 +124,13 @@ public class HomeFragment extends Fragment implements AlertsAdapter.AlertsListen
     }
 
     private void setupListeners() {
+        binding.fragmentMainHomeAccountImageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Navigation.findNavController(view).navigate(R.id.action_main_navigation_home_to_settings_fragment);
+            }
+        });
+
         binding.fragmentMainHomeContinueRecordingButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

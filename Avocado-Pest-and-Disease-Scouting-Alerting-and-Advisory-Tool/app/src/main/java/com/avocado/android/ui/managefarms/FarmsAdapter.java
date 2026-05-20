@@ -79,7 +79,7 @@ public class FarmsAdapter extends RecyclerView.Adapter<FarmsAdapter.ViewHolder> 
         void bind(int position) {
             Farm farm = getItem(position);
             setName(farm.getFarmName());
-            setDetails(farm.getLocation() + " • " + farm.getNumberOfBlocks() + " Blocks • " + farm.getTotalTrees() + " Trees");
+            setDetails(farm.getLocation() + " • " + farm.getNumberOfBlocks() + " Blocks • " + farm.getFarmSize() + " Acres");
             setClickListener(farm);
             setEditClickListener(farm);
             setDeleteClickListener(farm);

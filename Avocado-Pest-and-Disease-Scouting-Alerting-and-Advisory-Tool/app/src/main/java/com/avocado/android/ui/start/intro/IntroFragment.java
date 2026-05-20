@@ -35,7 +35,7 @@ public class IntroFragment extends Fragment {
 
         setUpListeners(view);
 
-        if (isLoggedIn()) {
+        if (isLoggedIn() && !isTokenExpired()) {
             Intent intent = new Intent(requireActivity(), MainActivity.class);
             startActivity(intent);
             requireActivity().finish();
@@ -67,5 +67,17 @@ public class IntroFragment extends Fragment {
     private boolean isLoggedIn() {
         TokenManager tokenManager = new TokenManager(requireContext());
         return !tokenManager.getAccessToken().isEmpty();
+    }
+
+    private boolean isTokenExpired() {
+        TokenManager tokenManager = new TokenManager(requireContext());
+        if (tokenManager.isTokenExpired()) {
+            tokenManager.clearTokens();
+            tokenManager.clearUserData();
+
+            return true;
+        }
+
+        return false;
     }
 }

@@ -29,7 +29,6 @@
     <string name="your_name">Your Name</string>
     <string name="your_location">Your Location</string>
     <string name="continue_">Continue</string>
-    <string name="by_continuing_you_agree_to_our_terms_of_service">By continuing, you agree to our Terms of Service</string>
     <string name="i_have_an_account">I HAVE AN ACCOUNT</string>
     <string name="log_in">Log In</string>
     <string name="create_account">Create Account</string>
@@ -59,4 +58,10 @@
     <string name="avocado_variety">AVOCADO VARIETY</string>
     <string name="back">Back</string>
     <string name="select_your_block_and_variety_to_start_recording">Select your block and variety to start recording</string>
+    <string name="terms_of_service">
+    I consent to data collection (GPS, photos, voice, scouting records) for pest monitoring, advisory services, and compliance reporting as explained in the
+    <a href="https://avoguard.co.ke/privacy-policy">
+        <font color="#2D6A4F"><b><u>Privacy Policy</u></b></font>
+    </a>
+    </string>
 </resources>
