@@ -202,6 +202,56 @@ const scoutingFeed: ScoutingFeedItem[] = [
 
 type FilterType = 'all' | 'needs-review' | 'my-assigned' | 'ussd';
 
+const SEVERITY_BAR_COLORS: Record<SeverityLevel, string> = {
+  high: '#C0392B',
+  medium: '#D97706',
+  low: '#74C69D',
+};
+const FALLBACK_SEVERITY_COLOR = '#9CA3AF';
+
+const REVIEW_STATUS_STYLES: Record<
+  ReviewStatus,
+  { label: string; bg: string; text: string }
+> = {
+  new: { label: 'New', bg: '#FEE2E2', text: '#C0392B' },
+  'under-review': { label: 'Under Review', bg: '#FEF3C7', text: '#D97706' },
+  reviewed: { label: 'Reviewed', bg: '#DCFCE7', text: '#15803D' },
+};
+const FALLBACK_REVIEW_STATUS = { label: '—', bg: '#F3F4F6', text: '#717182' };
+
+function formatSeverityLabel(severity?: SeverityLevel | null): string {
+  if (!severity) return '—';
+  return severity.charAt(0).toUpperCase() + severity.slice(1);
+}
+
+function feedFindingSummary(item: Pick<ScoutingFeedItem, 'status' | 'finding'>): string {
+  const finding = item.finding?.trim() || '—';
+  return item.status === 'clean' ? finding : `${finding} Detected`;
+}
+
+function reviewStatusStyle(reviewed?: ReviewStatus | null) {
+  if (reviewed && reviewed in REVIEW_STATUS_STYLES) {
+    return REVIEW_STATUS_STYLES[reviewed];
+  }
+  return FALLBACK_REVIEW_STATUS;
+}
+
+function severityBarColor(severity?: SeverityLevel | null): string {
+  if (severity && severity in SEVERITY_BAR_COLORS) {
+    return SEVERITY_BAR_COLORS[severity];
+  }
+  return FALLBACK_SEVERITY_COLOR;
+}
+
+function matchesSearch(item: ScoutingFeedItem, query: string): boolean {
+  const q = query.toLowerCase();
+  return (
+    (item.farmerName?.toLowerCase().includes(q) ?? false) ||
+    (item.blockId?.toLowerCase().includes(q) ?? false) ||
+    (item.farmName?.toLowerCase().includes(q) ?? false)
+  );
+}
+
 export function ScoutingReports() {
   const navigate = useNavigate();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -250,17 +300,12 @@ export function ScoutingReports() {
   const filteredFeed = scoutingFeed.filter((item) => {
     // Filter by status/source/assignment
     if (activeFilter === 'needs-review' && item.reviewed !== 'new') return false;
-    if (activeFilter === 'my-assigned' && item.assignedTo !== currentUser) return false;
+    if (activeFilter === 'my-assigned' && item.assignedTo?.trim() !== currentUser) return false;
     if (activeFilter === 'ussd' && item.source !== 'ussd') return false;
 
     // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        item.farmerName.toLowerCase().includes(query) ||
-        item.blockId.toLowerCase().includes(query) ||
-        item.farmName.toLowerCase().includes(query)
-      );
+    if (searchQuery.trim()) {
+      return matchesSearch(item, searchQuery.trim().toLowerCase());
     }
 
     return true;
@@ -268,7 +313,7 @@ export function ScoutingReports() {
 
   const allCount = scoutingFeed.length;
   const needsReviewCount = scoutingFeed.filter(item => item.reviewed === 'new').length;
-  const myAssignedCount = scoutingFeed.filter(item => item.assignedTo === currentUser).length;
+  const myAssignedCount = scoutingFeed.filter(item => item.assignedTo?.trim() === currentUser).length;
   const ussdCount = scoutingFeed.filter(item => item.source === 'ussd').length;
 
   return (
@@ -516,20 +561,8 @@ export function ScoutingReports() {
 
         {/* Feed Items */}
         {filteredFeed.map((item) => {
-          const severityColors = {
-            high: '#C0392B',
-            medium: '#D97706',
-            low: '#74C69D',
-          };
-
-          const reviewStatusConfig = {
-            'new': { label: 'New', bg: '#FEE2E2', text: '#C0392B' },
-            'under-review': { label: 'Under Review', bg: '#FEF3C7', text: '#D97706' },
-            'reviewed': { label: 'Reviewed', bg: '#DCFCE7', text: '#15803D' },
-          };
-
-          const statusConfig = reviewStatusConfig[item.reviewed];
-          const isHovered = hoveredItem === item.id;
+          const statusConfig = reviewStatusStyle(item?.reviewed);
+          const isHovered = hoveredItem === item?.id;
 
           return (
             <div 
@@ -546,7 +579,7 @@ export function ScoutingReports() {
               {/* Severity Indicator Bar */}
               <div 
                 className="w-1 h-full self-stretch absolute left-0"
-                style={{ backgroundColor: severityColors[item.severity] }}
+                style={{ backgroundColor: severityBarColor(item?.severity) }}
               />
 
               {/* Checkbox */}
@@ -615,7 +648,7 @@ export function ScoutingReports() {
                       fontWeight: '600',
                     }}
                   >
-                    {item.farmName} - {item.blockId}
+                    {item.farmName ?? '—'} - {item.blockId ?? '—'}
                   </p>
                 </div>
                 <p 
@@ -625,7 +658,7 @@ export function ScoutingReports() {
                     color: '#717182',
                   }}
                 >
-                  {item.farmerName} • {item.county}
+                  {item.farmerName ?? '—'} • {item.county ?? '—'}
                 </p>
               </div>
 
@@ -639,7 +672,7 @@ export function ScoutingReports() {
                     fontWeight: '600',
                   }}
                 >
-                  {item.status === 'clean' ? item.finding : `${item.finding} Detected`}
+                  {feedFindingSummary(item)}
                 </p>
               </div>
 
@@ -805,7 +838,7 @@ export function ScoutingReports() {
                   Review Submission
                 </h2>
                 <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
-                  {reviewModalItem.farmName} - {reviewModalItem.blockId}
+                  {reviewModalItem.farmName ?? '—'} - {reviewModalItem.blockId ?? '—'}
                 </p>
               </div>
               <button
@@ -835,7 +868,7 @@ export function ScoutingReports() {
                       fontWeight: '600',
                     }}
                   >
-                    {reviewModalItem.farmerName}
+                    {reviewModalItem.farmerName ?? '—'}
                   </p>
                 </div>
                 <div>
@@ -852,7 +885,7 @@ export function ScoutingReports() {
                       fontWeight: '600',
                     }}
                   >
-                    {reviewModalItem.county}
+                    {reviewModalItem.county ?? '—'}
                   </p>
                 </div>
                 <div>
@@ -869,7 +902,7 @@ export function ScoutingReports() {
                       fontWeight: '600',
                     }}
                   >
-                    {reviewModalItem.source === 'app' ? 'Mobile App' : `USSD ${reviewModalItem.ussdCode}`}
+                    {reviewModalItem.source === 'app' ? 'Mobile App' : `USSD ${reviewModalItem.ussdCode ?? '—'}`}
                   </p>
                 </div>
                 <div>
@@ -886,7 +919,7 @@ export function ScoutingReports() {
                       fontWeight: '600',
                     }}
                   >
-                    {reviewModalItem.timestamp}
+                    {reviewModalItem.timestamp ?? '—'}
                   </p>
                 </div>
               </div>
@@ -914,7 +947,7 @@ export function ScoutingReports() {
                       fontWeight: '600',
                     }}
                   >
-                    {reviewModalItem.status === 'clean' ? reviewModalItem.finding : `${reviewModalItem.finding} Detected`}
+                    {feedFindingSummary(reviewModalItem)}
                   </p>
                 </div>
               </div>
@@ -1087,7 +1120,7 @@ export function ScoutingReports() {
                       Farmer:
                     </p>
                     <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                      {createCaseModalItem.farmerName}
+                      {createCaseModalItem.farmerName ?? '—'}
                     </p>
                   </div>
                   <div>
@@ -1095,7 +1128,7 @@ export function ScoutingReports() {
                       Location:
                     </p>
                     <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                      {createCaseModalItem.farmName} - {createCaseModalItem.blockId}
+                      {createCaseModalItem.farmName ?? '—'} - {createCaseModalItem.blockId ?? '—'}
                     </p>
                   </div>
                   <div>
@@ -1103,7 +1136,7 @@ export function ScoutingReports() {
                       Finding:
                     </p>
                     <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#C0392B', fontWeight: '600' }}>
-                      {createCaseModalItem.finding}
+                      {createCaseModalItem.finding ?? '—'}
                     </p>
                   </div>
                   <div>
@@ -1111,7 +1144,7 @@ export function ScoutingReports() {
                       Severity:
                     </p>
                     <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                      {createCaseModalItem.severity.charAt(0).toUpperCase() + createCaseModalItem.severity.slice(1)}
+                      {formatSeverityLabel(createCaseModalItem.severity)}
                     </p>
                   </div>
                 </div>
@@ -1128,7 +1161,7 @@ export function ScoutingReports() {
                   </label>
                   <input
                     type="text"
-                    defaultValue={`${createCaseModalItem.finding} - ${createCaseModalItem.farmName}`}
+                    defaultValue={`${createCaseModalItem.finding ?? ''} - ${createCaseModalItem.farmName ?? ''}`}
                     className="w-full px-4 py-2 rounded-lg border outline-none focus:ring-2 transition-all"
                     style={{
                       fontFamily: 'IBM Plex Sans, sans-serif',
@@ -1227,7 +1260,7 @@ export function ScoutingReports() {
               </button>
               <button
                 onClick={() => {
-                  const caseTitle = `${createCaseModalItem.finding} - ${createCaseModalItem.farmName}`;
+                  const caseTitle = `${createCaseModalItem.finding ?? ''} - ${createCaseModalItem.farmName ?? ''}`;
                   console.log('Creating case:', caseTitle);
                   alert(`Case created: ${caseTitle}\n\nRedirecting to Case Management...`);
                   setCreateCaseModalItem(null);

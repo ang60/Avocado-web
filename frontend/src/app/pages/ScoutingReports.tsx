@@ -53,6 +53,50 @@ function scoutingHoldingNote(item: ScoutingReport): string | null {
   return h;
 }
 
+const SEVERITY_BAR_COLORS: Record<SeverityLevel, string> = {
+  high: '#C0392B',
+  medium: '#D97706',
+  low: '#74C69D',
+};
+const FALLBACK_SEVERITY_COLOR = '#9CA3AF';
+
+type ReviewStatusKey = 'new' | 'under-review' | 'reviewed';
+
+const REVIEW_STATUS_STYLES: Record<
+  ReviewStatusKey,
+  { label: string; bg: string; text: string }
+> = {
+  new: { label: 'New', bg: '#FEE2E2', text: '#C0392B' },
+  'under-review': { label: 'Under Review', bg: '#FEF3C7', text: '#D97706' },
+  reviewed: { label: 'Reviewed', bg: '#DCFCE7', text: '#15803D' },
+};
+const FALLBACK_REVIEW_STATUS = { label: '—', bg: '#F3F4F6', text: '#717182' };
+
+function formatSeverityLabel(severity?: SeverityLevel | string | null): string {
+  const s = severity?.trim();
+  if (!s) return '—';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function scoutingFindingSummary(item: Pick<ScoutingReport, 'status' | 'finding'>): string {
+  const finding = item.finding?.trim() || '—';
+  return item.status === 'clean' ? finding : `${finding} Detected`;
+}
+
+function reviewStatusStyle(reviewed?: ReviewStatusKey | string | null) {
+  if (reviewed && reviewed in REVIEW_STATUS_STYLES) {
+    return REVIEW_STATUS_STYLES[reviewed as ReviewStatusKey];
+  }
+  return FALLBACK_REVIEW_STATUS;
+}
+
+function severityBarColor(severity?: SeverityLevel | string | null): string {
+  if (severity && severity in SEVERITY_BAR_COLORS) {
+    return SEVERITY_BAR_COLORS[severity as SeverityLevel];
+  }
+  return FALLBACK_SEVERITY_COLOR;
+}
+
 export function ScoutingReports() {
   if (getAuthUser()?.role_details?.role_name === 'Farmer') {
     return <FarmerScoutingReports />;
@@ -103,7 +147,7 @@ export function ScoutingReports() {
       .then((d) => {
         if (cancelled) return;
         setMergedFieldFeed({
-          recentScoutingRecords: d.recentScoutingRecords,
+          recentScoutingRecords: d.recentScoutingRecords ?? [],
           recentTrapActivity: d.recentTrapActivity ?? [],
           todayDateKey: d.todayDateKey,
         });
@@ -124,7 +168,7 @@ export function ScoutingReports() {
       return;
     }
     setCreateCaseTitle(
-      `${createCaseModalItem.finding} — ${scoutingPrimaryName(createCaseModalItem)}`.trim()
+      `${createCaseModalItem.finding?.trim() || 'Scouting'} — ${scoutingPrimaryName(createCaseModalItem)}`.trim()
     );
     const sev = createCaseModalItem.severity;
     setCreateCaseSeverity(sev === 'high' || sev === 'low' || sev === 'medium' ? sev : 'medium');
@@ -172,8 +216,8 @@ export function ScoutingReports() {
   const currentUser = useMemo(() => {
     const u = authUser;
     if (!u) return '';
-    const name = `${u.first_name} ${u.last_name}`.trim();
-    return name || u.phone_number || '';
+    const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim();
+    return name || u.phone_number?.trim() || '';
   }, [authUser]);
 
   const loadReports = useCallback(async () => {
@@ -607,20 +651,8 @@ export function ScoutingReports() {
 
         {/* Feed Items */}
         {filteredFeed.map((item) => {
-          const severityColors = {
-            high: '#C0392B',
-            medium: '#D97706',
-            low: '#74C69D',
-          };
-
-          const reviewStatusConfig = {
-            'new': { label: 'New', bg: '#FEE2E2', text: '#C0392B' },
-            'under-review': { label: 'Under Review', bg: '#FEF3C7', text: '#D97706' },
-            'reviewed': { label: 'Reviewed', bg: '#DCFCE7', text: '#15803D' },
-          };
-
-          const statusConfig = reviewStatusConfig[item.reviewed];
-          const isHovered = hoveredItem === item.id;
+          const statusConfig = reviewStatusStyle(item?.reviewed);
+          const isHovered = hoveredItem === item?.id;
 
           const sourceBadge =
             item.source === 'app' ? (
@@ -665,12 +697,11 @@ export function ScoutingReports() {
               </div>
             );
 
-          const findingText =
-            item.status === 'clean' ? item.finding : `${item.finding} Detected`;
+          const findingText = scoutingFindingSummary(item);
 
           const thumb =
-            splitGalleryUrls(item).images[0] ||
-            (typeof item.mediaPreview === 'string' && item.mediaPreview.trim() ? item.mediaPreview.trim() : null);
+            splitGalleryUrls(item).images?.[0] ??
+            (item.mediaPreview?.trim() || null);
 
           const mediaBlock = thumb ? (
               <div className="relative shrink-0">
@@ -705,7 +736,7 @@ export function ScoutingReports() {
                     fontWeight: '600',
                   }}
                 >
-                  Code {item.ussdCode}
+                  Code {item.ussdCode ?? '—'}
                 </span>
               </div>
             ) : null;
@@ -771,7 +802,7 @@ export function ScoutingReports() {
             >
               <div
                 className="absolute bottom-0 left-0 top-0 w-1"
-                style={{ backgroundColor: severityColors[item.severity] }}
+                style={{ backgroundColor: severityBarColor(item?.severity) }}
               />
 
               {/* Mobile: stacked card (no horizontal clip) */}
@@ -1275,7 +1306,7 @@ export function ScoutingReports() {
                       Farmer:
                     </p>
                     <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                      {createCaseModalItem.farmerName}
+                      {createCaseModalItem.farmerName ?? '—'}
                     </p>
                   </div>
                   <div>
@@ -1296,7 +1327,7 @@ export function ScoutingReports() {
                       Finding:
                     </p>
                     <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#C0392B', fontWeight: '600' }}>
-                      {createCaseModalItem.finding}
+                      {createCaseModalItem.finding ?? '—'}
                     </p>
                   </div>
                   <div>
@@ -1304,7 +1335,7 @@ export function ScoutingReports() {
                       Severity:
                     </p>
                     <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
-                      {createCaseModalItem.severity.charAt(0).toUpperCase() + createCaseModalItem.severity.slice(1)}
+                      {formatSeverityLabel(createCaseModalItem.severity)}
                     </p>
                   </div>
                 </div>

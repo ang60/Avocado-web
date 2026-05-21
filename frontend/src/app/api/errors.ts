@@ -13,7 +13,10 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
     return `${fallback} (HTTP ${err.status}).`;
   }
   const msg = err instanceof Error ? err.message : String(err);
-  if (err instanceof TypeError || /fetch|network|failed to fetch|connection refused/i.test(msg)) {
+  if (
+    err instanceof TypeError ||
+    /fetch|network|failed to fetch|connection refused|ECONNREFUSED|ERR_NETWORK/i.test(msg)
+  ) {
     return `Cannot reach the API at ${API_BASE_URL}. Check your network, sign-in, and VITE_API_BASE_URL (production: https://avo-guard.vercel.app).`;
   }
   return fallback;

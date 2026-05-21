@@ -1,7 +1,9 @@
 import type { AuthUser } from '../auth';
 import { setAuthSession } from '../auth';
-import { apiRequest } from './client';
+import { apiGet, apiPost } from './client';
 import { API_PATHS } from './endpoints';
+
+const publicCall = { auth: false as const };
 
 /** Submit an access request (registration). Does not send any SMS; OTP is only for verifying an approved account at sign-in. */
 export type AccessRequestResponse = {
@@ -28,11 +30,7 @@ export async function submitAccessRequest(params: {
   password: string;
   password_confirm: string;
 }): Promise<AccessRequestResponse> {
-  return apiRequest<AccessRequestResponse>(API_PATHS.users.register, {
-    method: 'POST',
-    auth: false,
-    body: JSON.stringify(params),
-  });
+  return apiPost<AccessRequestResponse>(API_PATHS.users.register, params, publicCall);
 }
 
 /** Roles fetched for selection on registration page. */
@@ -47,50 +45,35 @@ export type RoleOption = {
 
 /** Roles for the public registration page (unauthenticated; server must allow `for_registration=1`). */
 export async function fetchRoles(): Promise<RoleOption[]> {
-  const res = await apiRequest<{ results: RoleOption[] }>(
+  const res = await apiGet<{ results: RoleOption[] }>(
     `${API_PATHS.roles}?page_size=100&for_registration=1`,
-    {
-      method: 'GET',
-      auth: false,
-    }
+    publicCall
   );
   return res.results;
 }
 
 /** Verify a farmer link using an OTP. */
 export async function verifyLink(farmer_id: string, otp_code: string): Promise<{ status: string }> {
-  return apiRequest<{ status: string }>('/api/users/verify_link/', {
-    method: 'POST',
-    auth: false,
-    body: JSON.stringify({ farmer_id, otp_code }),
-  });
+  return apiPost<{ status: string }>(API_PATHS.users.verifyLink, { farmer_id, otp_code }, publicCall);
 }
 
 /** Request a password reset. */
 export async function requestPasswordReset(params: { identifier: string }): Promise<{ detail: string; code?: string }> {
-  return apiRequest<{ detail: string; code?: string }>('/api/users/request_password_reset/', {
-    method: 'POST',
-    auth: false,
-    body: JSON.stringify(params),
-  });
+  return apiPost(API_PATHS.users.requestPasswordReset, params, publicCall);
 }
 
 /** Confirm a password reset using the code sent to the phone. */
-export async function confirmPasswordReset(params: { identifier: string; code: string; new_password: string }): Promise<{ detail: string }> {
-  return apiRequest<{ detail: string }>('/api/users/confirm_password_reset/', {
-    method: 'POST',
-    auth: false,
-    body: JSON.stringify(params),
-  });
+export async function confirmPasswordReset(params: {
+  identifier: string;
+  code: string;
+  new_password: string;
+}): Promise<{ detail: string }> {
+  return apiPost(API_PATHS.users.confirmPasswordReset, params, publicCall);
 }
 
 /** SMS one-time code for an already-approved account — account verification at sign-in, not part of registration. */
 export async function requestOtp(phoneNumber: string): Promise<void> {
-  await apiRequest(API_PATHS.users.requestOtp, {
-    method: 'POST',
-    auth: false,
-    body: JSON.stringify({ phone_number: phoneNumber }),
-  });
+  await apiPost(API_PATHS.users.requestOtp, { phone_number: phoneNumber }, publicCall);
 }
 
 export type VerifyOtpResponse = {
@@ -102,23 +85,22 @@ export type VerifyOtpResponse = {
 
 /** Complete sign-in after the user enters the verification code sent to their phone. */
 export async function verifyOtp(phoneNumber: string, code: string): Promise<VerifyOtpResponse> {
-  const res = await apiRequest<VerifyOtpResponse>(API_PATHS.users.verifyOtp, {
-    method: 'POST',
-    auth: false,
-    body: JSON.stringify({ phone_number: phoneNumber, code }),
-  });
+  const res = await apiPost<VerifyOtpResponse>(
+    API_PATHS.users.verifyOtp,
+    { phone_number: phoneNumber, code },
+    publicCall
+  );
   setAuthSession({ access: res.access, refresh: res.refresh, user: res.user });
   return res;
 }
 
 /** Sign in with phone plus password (account must be approved). */
 export async function loginWithPassword(phoneNumber: string, password: string): Promise<VerifyOtpResponse> {
-  const res = await apiRequest<VerifyOtpResponse>('/api/users/login_password/', {
-    method: 'POST',
-    auth: false,
-    body: JSON.stringify({ identifier: phoneNumber.trim(), password }),
-  });
+  const res = await apiPost<VerifyOtpResponse>(
+    API_PATHS.users.login,
+    { phone_number: phoneNumber.trim(), password },
+    publicCall
+  );
   setAuthSession({ access: res.access, refresh: res.refresh, user: res.user });
   return res;
 }
-
