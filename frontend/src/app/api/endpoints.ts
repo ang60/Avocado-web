@@ -1,7 +1,8 @@
 /**
  * Django API base URL and paths (same host as Android `Constants.BASE_URL`).
- * Override base with `VITE_API_BASE_URL` in `.env.local` for local `runserver`.
+ * Override with `VITE_API_BASE_URL` in `.env.local` / `.env.production`.
  */
+/** Hosted API (Swagger: https://avo-guard.vercel.app/api/schema/swagger-ui/) */
 export const DEFAULT_API_BASE_URL = 'https://avo-guard.vercel.app';
 
 export const API_PATHS = {
@@ -27,6 +28,11 @@ export const API_PATHS = {
   advisory: '/api/advisory-services/advisories/',
   alerts: '/api/alerts/alerts/',
   dashboard: '/api/dashboard/',
+  /** Swagger: dashboard `api` app — FarmerProfile registry (agronomist view). */
   farmers: '/api/farmers/',
+  /** Swagger: `hcda_registry` — FarmerRegistration list (used by HCDA + Farmers page). */
+  hcdaFarmers: '/api/hcda-registry/farmers/',
+  hcdaFarmersStatistics: '/api/hcda-registry/farmers/statistics/',
+  hcdaCountyOverview: '/api/hcda-registry/county-overview/',
   caseManagement: '/api/case-management/cases/',
 } as const;

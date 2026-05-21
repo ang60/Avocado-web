@@ -22,7 +22,12 @@ import {
 
 import type { SeverityLevel, RecentScoutingRecord, RecentTrapActivityRow } from '../api/types';
 import { getApiErrorMessage } from '../api/errors';
-import { fetchScoutingReports, type ScoutingReport } from '../api/scoutingApi';
+import {
+  fetchScoutingReports,
+  isReviewStatusNew,
+  normalizeReviewStatus,
+  type ScoutingReport,
+} from '../api/scoutingApi';
 import { createCase } from '../api/caseApi';
 import { confirmScoutingIdentification, fetchDashboard } from '../api/realApi';
 import { getAuthUser } from '../auth';
@@ -83,9 +88,10 @@ function scoutingFindingSummary(item: Pick<ScoutingReport, 'status' | 'finding'>
   return item.status === 'clean' ? finding : `${finding} Detected`;
 }
 
-function reviewStatusStyle(reviewed?: ReviewStatusKey | string | null) {
-  if (reviewed && reviewed in REVIEW_STATUS_STYLES) {
-    return REVIEW_STATUS_STYLES[reviewed as ReviewStatusKey];
+function reviewStatusStyle(reviewed?: unknown) {
+  const key = normalizeReviewStatus(reviewed);
+  if (key in REVIEW_STATUS_STYLES) {
+    return REVIEW_STATUS_STYLES[key];
   }
   return FALLBACK_REVIEW_STATUS;
 }
@@ -105,6 +111,8 @@ export function ScoutingReports() {
   const navigate = useNavigate();
   const [scoutingFeed, setScoutingFeed] = useState<ScoutingReport[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
+
+  console.log("scoutingFeed:",scoutingFeed);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
@@ -249,7 +257,7 @@ export function ScoutingReports() {
 
   const filteredFeed = useMemo(() => {
     return scoutingFeed.filter((item) => {
-      if (activeFilter === 'needs-review' && item.reviewed !== 'new') return false;
+      if (activeFilter === 'needs-review' && !isReviewStatusNew(item.reviewed)) return false;
       if (activeFilter === 'my-assigned') {
         const a = (item.assignedTo || '').trim();
         const me = currentUser.trim();
@@ -262,7 +270,7 @@ export function ScoutingReports() {
 
   const allCount = scoutingFeed.length;
   const needsReviewCount = useMemo(
-    () => scoutingFeed.filter((item) => item.reviewed === 'new').length,
+    () => scoutingFeed.filter((item) => isReviewStatusNew(item.reviewed)).length,
     [scoutingFeed]
   );
   const myAssignedCount = useMemo(
@@ -740,9 +748,8 @@ export function ScoutingReports() {
                 </span>
               </div>
             ) : null;
-
           const statusOrActionsDesktop =
-            isHovered && item.reviewed === 'new' ? (
+            isHovered && isReviewStatusNew(item.reviewed) ? (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCreateCaseModalItem(item)}
@@ -866,7 +873,7 @@ export function ScoutingReports() {
                 </p>
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
                   {mediaBlock}
-                  {item.reviewed !== 'new' ? (
+                  {!isReviewStatusNew(item.reviewed) ? (
                     <span
                       className="ml-auto flex w-fit items-center gap-1 rounded-full px-3 py-1 text-xs"
                       style={{
@@ -881,7 +888,7 @@ export function ScoutingReports() {
                     </span>
                   ) : null}
                 </div>
-                {item.reviewed === 'new' ? (
+                {isReviewStatusNew(item.reviewed) ? (
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button
                       onClick={() => setCreateCaseModalItem(item)}

@@ -75,7 +75,7 @@ function ScoutingResultBadge({ result }: { result: FarmerListRow['lastScoutingRe
     'no-pests': { bg: '#DCFCE7', text: '#74C69D', border: '#74C69D' },
   };
 
-  const { bg, text, border } = config[result.status];
+  const { bg, text, border } = config[result?.status ?? 'no-pests'] ?? config['no-pests'];
 
   return (
     <div>
@@ -90,7 +90,7 @@ function ScoutingResultBadge({ result }: { result: FarmerListRow['lastScoutingRe
           border: `1px solid ${border}`,
         }}
       >
-        {result.finding}
+        {result?.finding ?? '—'}
       </span>
     </div>
   );
@@ -141,7 +141,14 @@ export function Farmers() {
         }
       })
       .catch((e: unknown) => {
-        if (!cancelled) setFarmersError(getApiErrorMessage(e, 'Could not load farmers.'));
+        if (!cancelled) {
+          setFarmersError(
+            getApiErrorMessage(
+              e,
+              'Could not load farmers. Swagger paths: GET /api/hcda-registry/farmers/ then GET /api/farmers/.'
+            )
+          );
+        }
       })
       .finally(() => {
         if (!cancelled) setFarmersLoading(false);
@@ -191,10 +198,10 @@ export function Farmers() {
 
   const filteredFarmers = farmersList.filter((farmer) => {
     if (complianceFilter === 'overdue-scouts') {
-      return farmer.overdueScouts;
+      return Boolean(farmer?.overdueScouts);
     }
     if (complianceFilter === 'high-severity') {
-      return farmer.lastScoutingResult.status === 'high-risk';
+      return farmer?.lastScoutingResult?.status === 'high-risk';
     }
     return true;
   });
@@ -236,7 +243,8 @@ export function Farmers() {
 
   // County distribution for mini-map
   const countyDistribution = farmersList.reduce((acc, farmer) => {
-    acc[farmer.county] = (acc[farmer.county] || 0) + 1;
+    const county = farmer?.county?.trim() || 'Unknown';
+    acc[county] = (acc[county] ?? 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 

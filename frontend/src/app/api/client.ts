@@ -2,9 +2,17 @@ import axios, { AxiosError, type AxiosRequestConfig, type Method } from 'axios';
 import { clearAuthSession, getAccessToken } from '../auth';
 import { DEFAULT_API_BASE_URL } from './endpoints';
 
-export const API_BASE_URL = (
-  import.meta.env?.VITE_API_BASE_URL || DEFAULT_API_BASE_URL
-).replace(/\/$/, '');
+/** In dev, use empty base + Vite proxy (`/api` → Django) to avoid CORS net::ERR_FAILED. */
+function resolveApiBaseUrl(): string {
+  const explicit = import.meta.env?.VITE_API_BASE_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+  if (import.meta.env.DEV && import.meta.env.VITE_API_USE_PROXY === 'true') {
+    return '';
+  }
+  return DEFAULT_API_BASE_URL.replace(/\/$/, '');
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 /** Shared axios instance (base URL + JSON defaults). */
 export const http = axios.create({

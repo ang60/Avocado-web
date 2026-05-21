@@ -4,6 +4,27 @@ import { API_PATHS } from './endpoints';
 export type ReviewStatus = 'new' | 'under-review' | 'reviewed';
 export type TriageStatus = 'pending' | 'confirmed' | 'needs_follow_up';
 
+/** Maps API `reviewed` (slug string or legacy boolean) to a dashboard status. */
+export function normalizeReviewStatus(value: unknown): ReviewStatus {
+  if (value === true) return 'reviewed';
+  if (value === false || value == null) return 'new';
+  if (typeof value === 'string') {
+    const s = value.trim().toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-');
+    if (s === 'new' || s === 'pending') return 'new';
+    if (s === 'under-review' || s === 'underreview') return 'under-review';
+    if (s === 'reviewed' || s === 'yes' || s === 'done') return 'reviewed';
+  }
+  return 'new';
+}
+
+export function isReviewStatusNew(value: unknown): boolean {
+  return normalizeReviewStatus(value) === 'new';
+}
+
+function normalizeScoutingReportRow<T extends { reviewed?: unknown }>(row: T): T & { reviewed: ReviewStatus } {
+  return { ...row, reviewed: normalizeReviewStatus(row.reviewed) };
+}
+
 export type ScoutingReport = {
   id: string;
   farmName: string;
@@ -76,10 +97,14 @@ export async function fetchScoutingReports(params: {
   if (params.page_size) query.append('page_size', params.page_size.toString());
   if (params.search) query.append('search', params.search);
 
-  return apiRequest<ScoutingReportListResponse>(`${API_PATHS.pestScouting.scoutingReports}?${query.toString()}`, {
-    method: 'GET',
-    auth: true,
-  });
+  const data = await apiRequest<ScoutingReportListResponse>(
+    `${API_PATHS.pestScouting.scoutingReports}?${query.toString()}`,
+    { method: 'GET', auth: true }
+  );
+  return {
+    ...data,
+    results: data.results.map((row) => normalizeScoutingReportRow(row)),
+  };
 }
 
 /** WeeklyRecord UUID for pest_scouting detail API (strips dashboard `app-weekly-` prefix). */
@@ -91,8 +116,9 @@ export function normalizeScoutingReportApiId(id: string): string {
 
 export async function fetchScoutingReportDetail(id: string): Promise<ScoutingReport> {
   const apiId = normalizeScoutingReportApiId(id);
-  return apiRequest<ScoutingReport>(`${API_PATHS.pestScouting.scoutingReports}${apiId}/`, {
+  const row = await apiRequest<ScoutingReport>(`${API_PATHS.pestScouting.scoutingReports}${apiId}/`, {
     method: 'GET',
     auth: true,
   });
+  return normalizeScoutingReportRow(row);
 }
