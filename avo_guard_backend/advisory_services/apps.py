@@ -6,5 +6,4 @@ class AdvisoryServicesConfig(AppConfig):
     name = 'advisory_services'
 
     def ready(self):
-        import advisory_services.signals  # noqa: F401
-
+        import advisory_services.signals

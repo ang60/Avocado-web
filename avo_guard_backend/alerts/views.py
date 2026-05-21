@@ -1,11 +1,9 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema
-
 from .models import Alert
 from .serializers import AlertSerializer
-
+from drf_spectacular.utils import extend_schema
 
 @extend_schema(tags=['Alerts'])
 class AlertViewSet(viewsets.ModelViewSet):
@@ -30,4 +28,3 @@ class AlertViewSet(viewsets.ModelViewSet):
     def mark_all_as_read(self, request):
         self.get_queryset().update(is_read=True)
         return Response({'status': 'all alerts marked as read'})
-

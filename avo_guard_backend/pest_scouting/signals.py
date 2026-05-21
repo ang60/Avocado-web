@@ -30,7 +30,7 @@ def _sync_registry_from_mobile(user_id) -> None:
 
 @receiver(post_save, sender=Farm)
 def farm_sync_farmer_registry(sender, instance: Farm, **kwargs):
-    _sync_registry_from_mobile(instance.farmer_id)
+    _sync_registry_from_mobile(instance.farmer_name_id)
 
 
 @receiver(post_save, sender=FarmBlock)

@@ -8,4 +8,3 @@ router.register(r'cases', CaseViewSet)
 urlpatterns = [
     path('', include(router.urls)),
 ]
-

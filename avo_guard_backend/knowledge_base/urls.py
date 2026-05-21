@@ -9,4 +9,3 @@ router.register(r'entries', KnowledgeEntryViewSet)
 urlpatterns = [
     path('', include(router.urls)),
 ]
-

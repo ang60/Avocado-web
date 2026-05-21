@@ -25,10 +25,26 @@ export function OptimizedImage({
   onError,
   ...rest
 }: OptimizedImageProps) {
-  const [hidden, setHidden] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  if (hidden) {
-    return null;
+  if (failed) {
+    return (
+      <div
+        className={className}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 48,
+          backgroundColor: '#F7F4EF',
+          color: '#94A3B8',
+          fontSize: 11,
+          ...style,
+        }}
+      >
+        Image unavailable
+      </div>
+    );
   }
 
   return (
@@ -43,7 +59,7 @@ export function OptimizedImage({
       className={className}
       style={{ maxWidth: '100%', height: 'auto', ...style }}
       onError={(e) => {
-        setHidden(true);
+        setFailed(true);
         onError?.(e);
       }}
       {...rest}

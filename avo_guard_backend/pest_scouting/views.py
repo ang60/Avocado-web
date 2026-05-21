@@ -1,203 +1,337 @@
-from decimal import Decimal
+import json
 
 from django.db import transaction
-from django.utils import timezone
-from rest_framework import viewsets, permissions, filters, status
-from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied, ValidationError
-from .models import Farm, FarmBlock, ProblemReport, TrapLog, WeeklyRecord, ScoutingReview, ScoutingSession
-from .serializers import (
-    FarmBlockSerializer,
-    FarmSerializer,
-    ProblemReportSerializer,
-    ScoutingSessionSerializer,
-    TrapLogSerializer,
-    WeeklyRecordSerializer,
-    ScoutingReportSerializer,
-    ScoutingReviewSerializer,
-)
-from drf_spectacular.utils import extend_schema
 from django.db.models import Avg, Count, Q
+from rest_framework import viewsets, permissions, pagination, filters, status, serializers, parsers
+from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
+from django.utils import timezone
+from datetime import timedelta
+from .models import Farm, FarmBlock, WeeklyRecord, Trap, ProblemReport, ScoutingReview, TrapLog
+from .serializers import (
+    FarmSerializer, FarmBlockSerializer, WeeklyRecordSerializer,
+    ScoutingReportSerializer, TrapSerializer, ProblemReportSerializer, ScoutingReviewSerializer,
+)
+from api.drf_permissions import CanManageScoutingReview
+from .weekly_helpers import actions_taken_list, disease_list, outcome_list, pests_observed_list
+from drf_spectacular.utils import extend_schema, inline_serializer
 
 from avo_guard.pagination import LargeResultsSetPagination
-from api.drf_permissions import CanManageScoutingReview
 
+@extend_schema(tags=['Pest Scouting'])
+class FarmViewSet(viewsets.ModelViewSet):
+    queryset = Farm.objects.all()
+    serializer_class = FarmSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['farm_name', 'location']
 
-class PestScoutingPage(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = 'page_size'
-    max_page_size = 100
+    @extend_schema(
+        summary="List Farms",
+        description="Get a list of all farms for the authenticated farmer.",
+        responses={200: FarmSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Create Farm",
+        description="Create a new farm for the authenticated farmer.",
+        request=FarmSerializer,
+        responses={201: FarmSerializer}
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
-def _payload_value(payload, key, default=''):
-    value = payload.get(key, default)
-    return default if value is None else value
+    @extend_schema(
+        summary="Retrieve Farm",
+        description="Get details of a specific farm.",
+        responses={200: FarmSerializer}
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Update Farm",
+        description="Update an existing farm.",
+        request=FarmSerializer,
+        responses={200: FarmSerializer}
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
 
-def _payload_list(payload, key):
-    value = payload.get(key, [])
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return [str(v).strip() for v in value if str(v).strip()]
-    if isinstance(value, tuple):
-        return [str(v).strip() for v in value if str(v).strip()]
-    text = str(value).strip()
-    return [text] if text else []
+    @extend_schema(
+        summary="Partial Update Farm",
+        description="Partially update an existing farm.",
+        request=FarmSerializer,
+        responses={200: FarmSerializer}
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
 
+    @extend_schema(
+        summary="Delete Farm",
+        description="Delete a farm.",
+        responses={204: None}
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
 
-def _clean_choice(value, valid_choices):
-    text = str(value or '').strip()
-    if not text:
-        return None
-    valid = {choice for choice, _label in valid_choices}
-    if text in valid:
-        return text
-    lowered = {choice.lower(): choice for choice, _label in valid_choices}
-    return lowered.get(text.lower())
+    def get_queryset(self):
+        # Return only farms belonging to the authenticated farmer
+        return self.queryset.filter(farmer_name=self.request.user)
 
-
-def _parse_decimal(value, default='0'):
-    text = str(value if value not in (None, '') else default).strip()
-    return Decimal(text or default)
-
-
-def _parse_int(value, default=0):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _normalize_mobile_payload(payload, farmer, block):
-    pests = [_clean_choice(v, WeeklyRecord.PEST_CHOICES) for v in _payload_list(payload, '3_select_pests_observed')]
-    pests = [v for v in pests if v]
-    beneficials = [_clean_choice(v, WeeklyRecord.BENEFICIAL_INSECT_CHOICES) for v in _payload_list(payload, '3_beneficial_insects_observed')]
-    beneficials = [v for v in beneficials if v]
-    pest_parts = [_clean_choice(v, WeeklyRecord.PLANT_PART_CHOICES) for v in _payload_list(payload, '3_plant_part_affected')]
-    pest_parts = [v for v in pest_parts if v]
-    diseases = [_clean_choice(v, WeeklyRecord.DISEASE_CHOICES) for v in _payload_list(payload, '4_select_diseases')]
-    diseases = [v for v in diseases if v]
-    disease_parts = [_clean_choice(v, WeeklyRecord.PLANT_PART_CHOICES) for v in _payload_list(payload, '4_plant_part')]
-    disease_parts = [v for v in disease_parts if v]
-    actions = [_clean_choice(v, WeeklyRecord.ACTION_TAKEN_CHOICES) for v in _payload_list(payload, '6_action_taken')]
-    actions = [v for v in actions if v]
-    outcomes = [_clean_choice(v, WeeklyRecord.OUTCOME_CHOICES) for v in _payload_list(payload, '6_outcome')]
-    outcomes = [v for v in outcomes if v]
-
-    return {
-        'farmer': farmer,
-        'block': block,
-        'variety': str(_payload_value(payload, '1_avocado_variety', 'Avocado')).strip() or 'Avocado',
-        'type_of_trap': str(_payload_value(payload, '2_what_type_of_trap', 'Unknown trap')).strip() or 'Unknown trap',
-        'number_of_trap': _parse_int(_payload_value(payload, '2_number_of_traps', 0), 0),
-        'traps_replaced': _parse_int(_payload_value(payload, '2_traps_replaced', 0), 0),
-        'any_pests_observed': 'Yes' if str(_payload_value(payload, '3_were_any_pests_observed', 'No')).strip().lower() == 'yes' else 'No',
-        'pests_observed': pests[0] if pests else None,
-        'pests_observed_list': pests,
-        'beneficial_insects_observed': beneficials[0] if beneficials else None,
-        'beneficial_insects_observed_list': beneficials,
-        'number_of_trees_affected': _parse_int(_payload_value(payload, '3_number_of_trees_affected', 0), 0),
-        'pest_plant_part_affected': pest_parts[0] if pest_parts else None,
-        'pest_plant_parts_affected_list': pest_parts,
-        'pest_crop_stage': _clean_choice(_payload_value(payload, '3_crop_stage', ''), WeeklyRecord.CROP_STAGE_CHOICES),
-        'pest_detection_method': _clean_choice(_payload_value(payload, '3_detection_method', ''), WeeklyRecord.DETECTION_METHOD_CHOICES),
-        'pests_per_trap': _parse_decimal(_payload_value(payload, '3_pests_per_trap', '0')),
-        'any_diseases_observed': 'Yes' if str(_payload_value(payload, '4_were_any_diseases_observed', 'No')).strip().lower() == 'yes' else 'No',
-        'disease': diseases[0] if diseases else None,
-        'disease_list': diseases,
-        'disease_plant_part': disease_parts[0] if disease_parts else None,
-        'disease_plant_parts_list': disease_parts,
-        'disease_crop_stage': _clean_choice(_payload_value(payload, '4_crop_stage', ''), WeeklyRecord.CROP_STAGE_CHOICES),
-        'disease_detection_method': _clean_choice(_payload_value(payload, '4_detection_method', ''), WeeklyRecord.DETECTION_METHOD_CHOICES),
-        'number_of_photos_taken': _parse_int(_payload_value(payload, '5_number_of_photos_taken', 0), 0),
-        'additional_notes': str(_payload_value(payload, '5_additional_notes', '')).strip() or None,
-        'actions_taken': actions[0] if actions else '❌ No action taken',
-        'actions_taken_list': actions or ['❌ No action taken'],
-        'outcome': outcomes[0] if outcomes else '🔄 Follow-up needed',
-        'outcome_list': outcomes or ['🔄 Follow-up needed'],
-        'remarks': str(_payload_value(payload, '6_remarks', '')).strip() or None,
-        'start_date': str(_payload_value(payload, '0_start_timestamp', '')).strip()[:10] or timezone.localdate().isoformat(),
-        'end_date': str(_payload_value(payload, '0_end_timestamp', '')).strip()[:10] or timezone.localdate().isoformat(),
-        'location': str(_payload_value(payload, '0_location', '')).strip() or farmer.county or block.block_name,
-        'gps_latitude': _payload_value(payload, '0_start_gps_latitude', None) or None,
-        'gps_longitude': _payload_value(payload, '0_start_gps_longitude', None) or None,
-        'raw_payload': payload,
-    }
-
+    def perform_create(self, serializer):
+        serializer.save(farmer_name=self.request.user)
 
 @extend_schema(tags=['Pest Scouting'])
 class FarmBlockViewSet(viewsets.ModelViewSet):
-    queryset = FarmBlock.objects.all().order_by('-timestamp')
+    queryset = FarmBlock.objects.all()
     serializer_class = FarmBlockSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['block_name']
+
+    @extend_schema(
+        summary="List Farm Blocks",
+        description="Get a list of all farm blocks for the authenticated farmer.",
+        responses={200: FarmBlockSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create Farm Block",
+        description="Create a new farm block for the authenticated farmer.",
+        request=FarmBlockSerializer,
+        responses={201: FarmBlockSerializer}
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Retrieve Farm Block",
+        description="Get details of a specific farm block.",
+        responses={200: FarmBlockSerializer}
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update Farm Block",
+        description="Update an existing farm block.",
+        request=FarmBlockSerializer,
+        responses={200: FarmBlockSerializer}
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partial Update Farm Block",
+        description="Partially update an existing farm block.",
+        request=FarmBlockSerializer,
+        responses={200: FarmBlockSerializer}
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete Farm Block",
+        description="Delete a farm block.",
+        responses={204: None}
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
 
     def get_queryset(self):
         # Return only blocks belonging to the authenticated farmer
         return self.queryset.filter(farmer=self.request.user)
 
     def perform_create(self, serializer):
-        farm_id = self.request.data.get('farm_name_id')
-        farm = None
-        if farm_id:
-            farm = Farm.objects.filter(id=farm_id, farmer=self.request.user).first()
-            if not farm:
-                raise ValidationError({'farm_name_id': 'Unknown farm id for this user.'})
-        serializer.save(farmer=self.request.user, farm=farm)
+        serializer.save(farmer=self.request.user)
 
+    @action(detail=False, methods=['get'], url_path='scouting-stats')
+    @extend_schema(
+        summary="Get Scouting Statistics",
+        description="Returns the number of blocks updated (data collected within the last week) vs total blocks for the user.",
+        responses={200: inline_serializer(
+            name='ScoutingStatsResponse',
+            fields={
+                'message': serializers.CharField(),
+                'percentage': serializers.CharField(),
+                'updated_blocks': serializers.IntegerField(),
+                'total_blocks': serializers.IntegerField(),
+            }
+        )}
+    )
+    def scouting_stats(self, request):
+        user = request.user
+        total_blocks = FarmBlock.objects.filter(farmer=user).count()
+        
+        if total_blocks == 0:
+            return Response({
+                "message": "0 blocks out of 0 updated",
+                "percentage": "0% out of total",
+                "updated_blocks": 0,
+                "total_blocks": 0
+            })
+
+        one_week_ago = timezone.now() - timedelta(days=7)
+        
+        # Count unique blocks that have a weekly record in the last 7 days
+        updated_blocks_count = WeeklyRecord.objects.filter(
+            farmer=user,
+            timestamp__gte=one_week_ago
+        ).values('block').distinct().count()
+
+        percentage = (updated_blocks_count / total_blocks) * 100
+        
+        return Response({
+            "message": f"{updated_blocks_count} block{'s' if updated_blocks_count != 1 else ''} out of {total_blocks} updated",
+            "percentage": f"{percentage:.0f}% out of total",
+            "updated_blocks": updated_blocks_count,
+            "total_blocks": total_blocks
+        })
+@extend_schema(tags=['Pest Scouting'])
+class TrapViewSet(viewsets.ModelViewSet):
+    queryset = Trap.objects.all()
+    serializer_class = TrapSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
+
+@extend_schema(
+    tags=['Pest Scouting'],
+    summary="Manage Problem Reports",
+    description="Allows creating and viewing problem reports. Reports can be submitted via the mobile app (with images) or via the USSD callback service (emergency reports)."
+)
+class ProblemReportViewSet(viewsets.ModelViewSet):
+    queryset = ProblemReport.objects.all()
+    serializer_class = ProblemReportSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
 @extend_schema(tags=['Pest Scouting'])
 class WeeklyRecordViewSet(viewsets.ModelViewSet):
     queryset = WeeklyRecord.objects.all()
     serializer_class = WeeklyRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
     filter_backends = [filters.SearchFilter]
     search_fields = ['variety', 'location', 'pests_observed', 'disease']
 
+    @extend_schema(
+        summary="List Weekly Records",
+        description="Get a list of all weekly records for the authenticated farmer.",
+        responses={200: WeeklyRecordSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Create Weekly Record",
+        description="Create a new weekly record for the authenticated farmer.",
+        request=WeeklyRecordSerializer,
+        responses={201: WeeklyRecordSerializer}
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Retrieve Weekly Record",
+        description="Get details of a specific weekly record.",
+        responses={200: WeeklyRecordSerializer}
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Update Weekly Record",
+        description="Update an existing weekly record.",
+        request=WeeklyRecordSerializer,
+        responses={200: WeeklyRecordSerializer}
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Partial Update Weekly Record",
+        description="Partially update an existing weekly record.",
+        request=WeeklyRecordSerializer,
+        responses={200: WeeklyRecordSerializer}
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Delete Weekly Record",
+        description="Delete a weekly record.",
+        responses={204: None}
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
     def get_queryset(self):
-        # Return only records belonging to the authenticated farmer
         return self.queryset.filter(farmer=self.request.user)
+
+    def _snapshot_multipart_raw_payload(self, instance: WeeklyRecord) -> None:
+        """Keep JSON scouting fields + resolved media URLs on the row for dashboards."""
+        data = self.request.data
+        raw = dict(instance.raw_payload or {}) if isinstance(instance.raw_payload, dict) else {}
+        json_keys = (
+            'trap_use',
+            'pests_observed',
+            'beneficial_insects_observed',
+            'other_production_challenges',
+            'disease',
+            'disease_plant_part',
+            'actions_taken',
+        )
+        for key in json_keys:
+            val = data.get(key)
+            if val is None or val == '':
+                continue
+            if isinstance(val, str) and val.strip().startswith(('[', '{')):
+                try:
+                    raw[key] = json.loads(val)
+                except json.JSONDecodeError:
+                    raw[key] = val
+            else:
+                raw[key] = val
+        for key in (
+            'variety',
+            'location',
+            'any_pests_observed',
+            'any_diseases_observed',
+            'outcome',
+            'remarks',
+            'additional_notes',
+            'start_date',
+            'end_date',
+            'gps_latitude',
+            'gps_longitude',
+        ):
+            val = data.get(key)
+            if val not in (None, ''):
+                raw[key] = val
+        from .media_urls import weekly_record_image_urls
+        from .record_payload import weekly_record_display_payload
+
+        urls = weekly_record_image_urls(instance, self.request)
+        merged = weekly_record_display_payload(instance)
+        if urls:
+            merged['uploaded_media_urls'] = urls
+        if merged != (instance.raw_payload or {}):
+            instance.raw_payload = merged
+            instance.save(update_fields=['raw_payload'])
 
     def perform_create(self, serializer):
         block = serializer.validated_data['block']
         if block.farmer_id != self.request.user.id:
             raise ValidationError({'block': 'You can only submit scouting records for your own farm blocks.'})
-
-        scouting_session = serializer.validated_data.get('scouting_session')
-        if scouting_session:
-            if scouting_session.farmer_id != self.request.user.id:
-                raise ValidationError({'scouting_session': 'This scouting session does not belong to you.'})
-            if scouting_session.status == 'completed':
-                raise ValidationError({'scouting_session': 'This scouting session has already been completed.'})
-            if scouting_session.status == 'draft':
-                scouting_session.status = 'in_progress'
-                scouting_session.save(update_fields=['status', 'updated_at'])
-
-        serializer.save(farmer=self.request.user)
-
-    @action(detail=False, methods=['post'])
-    def import_mobile_payload(self, request):
-        payload = request.data.get('payload')
-        if not isinstance(payload, dict):
-            raise ValidationError({'payload': 'Expected a JSON object payload.'})
-
-        block_name = str(_payload_value(payload, '1_block', '')).strip()
-        if not block_name:
-            raise ValidationError({'payload': 'The mobile payload must include `1_block`.'})
-
-        block = FarmBlock.objects.filter(farmer=request.user, block_name__iexact=block_name).first()
-        if not block:
-            raise ValidationError({'block': f'No farm block named "{block_name}" was found for the current farmer.'})
-
-        with transaction.atomic():
-            normalized = _normalize_mobile_payload(payload, request.user, block)
-            record = WeeklyRecord.objects.create(**normalized)
-
-        return Response(WeeklyRecordSerializer(record, context={'request': request}).data, status=status.HTTP_201_CREATED)
+        instance = serializer.save(farmer=self.request.user)
+        if getattr(self.request, 'content_type', '') and 'multipart' in self.request.content_type:
+            self._snapshot_multipart_raw_payload(instance)
 
     @action(detail=False, methods=['post'], url_path='import_android')
     def import_android(self, request):
@@ -222,40 +356,6 @@ class WeeklyRecordViewSet(viewsets.ModelViewSet):
             return self.import_android(request)
         return super().create(request, *args, **kwargs)
 
-
-@extend_schema(tags=['Pest Scouting'])
-class ScoutingSessionViewSet(viewsets.ModelViewSet):
-    queryset = ScoutingSession.objects.all().select_related('farmer')
-    serializer_class = ScoutingSessionSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return self.queryset.filter(farmer=self.request.user)
-
-    def perform_create(self, serializer):
-        block_ids = serializer.validated_data.pop('block_ids', [])
-        owned_blocks = set(
-            FarmBlock.objects.filter(farmer=self.request.user, id__in=block_ids).values_list('id', flat=True)
-        )
-        if len(owned_blocks) != len(set(block_ids)):
-            raise ValidationError({'block_ids': 'One or more selected blocks do not belong to you.'})
-
-        status_value = serializer.validated_data.get('status') or 'draft'
-        if status_value == 'completed':
-            serializer.save(farmer=self.request.user, completed_at=timezone.now())
-            return
-        serializer.save(farmer=self.request.user)
-
-    @action(detail=True, methods=['post'])
-    def complete(self, request, pk=None):
-        session = self.get_object()
-        if session.status != 'completed':
-            session.status = 'completed'
-            session.completed_at = timezone.now()
-            session.save(update_fields=['status', 'completed_at', 'updated_at'])
-        return Response(ScoutingSessionSerializer(session).data, status=status.HTTP_200_OK)
-
-
 @extend_schema(tags=['Pest Scouting'])
 class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = WeeklyRecord.objects.all().select_related('farmer', 'block', 'farmer__entity', 'triage_review')
@@ -263,20 +363,48 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = LargeResultsSetPagination
     filter_backends = [filters.SearchFilter]
-    search_fields = ['variety', 'location', 'pests_observed', 'disease', 'farmer__phone_number', 'block__block_name']
+    search_fields = [
+        'variety', 'location', 'pests_observed', 'disease', 
+        'farmer__phone_number', 'farmer__first_name', 'farmer__last_name',
+        'block__block_name', 'block__farm_name__farm_name'
+    ]
+
+    @extend_schema(
+        summary="List Scouting Reports",
+        description="Get a list of scouting reports with detailed information. Agronomists can see all reports.",
+        responses={200: ScoutingReportSerializer(many=True)}
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Retrieve Scouting Report",
+        description="Get details of a specific scouting report.",
+        responses={200: ScoutingReportSerializer}
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    def get_object(self):
+        lookup = self.kwargs.get(self.lookup_url_kwarg or self.lookup_field)
+        if isinstance(lookup, str):
+            key = lookup.strip()
+            if key.startswith('app-weekly-'):
+                self.kwargs[self.lookup_url_kwarg or self.lookup_field] = key[len('app-weekly-') :]
+        return super().get_object()
 
     def get_queryset(self):
-        # Allow users to see their own reports.
+        # Allow users to see their own reports. 
         # If they are agronomists or staff, they can see all.
         user = self.request.user
         if not user.is_authenticated:
             return WeeklyRecord.objects.none()
-
+            
         # Check if user has agronomist role or is staff
         is_agronomist = False
         if user.role and user.role.role_name == 'Agronomist':
             is_agronomist = True
-
+        
         if user.is_staff or is_agronomist:
             return self.queryset
         return self.queryset.filter(farmer=user)
@@ -314,24 +442,21 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
             .annotate(
                 detections=Count('id', filter=Q(any_pests_observed='Yes') | Q(any_diseases_observed='Yes')),
                 reports=Count('id'),
-                avg_pests_per_trap=Avg('pests_per_trap'),
             )
             .order_by('-detections')[:20]
         )
-
         protocol_rollup = (
             qs.values('actions_taken', 'outcome')
             .annotate(count=Count('id'))
             .order_by('-count')[:50]
         )
-
         payload = {
             'county_pressure': [
                 {
                     'county': row['farmer__county'] or 'Unknown',
                     'detections': row['detections'],
                     'reports': row['reports'],
-                    'avg_pests_per_trap': float(row['avg_pests_per_trap'] or 0),
+                    'avg_pests_per_trap': 0,
                 }
                 for row in county_rollup
             ],
@@ -344,7 +469,6 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
                 for row in protocol_rollup
             ],
         }
-
         return Response(payload)
 
     @action(detail=False, methods=['get'])
@@ -365,10 +489,10 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
                 'latest_finding': finding,
                 'status': 'detected' if (record.any_pests_observed == 'Yes' or record.any_diseases_observed == 'Yes') else 'clean',
                 'severity': 'high' if (record.any_pests_observed == 'Yes' or record.any_diseases_observed == 'Yes') else 'low',
-                'pests': record.pests_observed_list or ([record.pests_observed] if record.pests_observed else []),
-                'diseases': record.disease_list or ([record.disease] if record.disease else []),
-                'actions_taken': record.actions_taken_list or ([record.actions_taken] if record.actions_taken else []),
-                'outcomes': record.outcome_list or ([record.outcome] if record.outcome else []),
+                'pests': pests_observed_list(record),
+                'diseases': disease_list(record),
+                'actions_taken': actions_taken_list(record),
+                'outcomes': outcome_list(record),
                 'history_count': 1,
                 '_latest_ts': record.timestamp,
             }
@@ -384,33 +508,15 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'])
     def request_reinspection(self, request, pk=None):
-        """
-        Create a case-management ticket from a scouting record to request
-        agronomist re-inspection.
-        """
         record = self.get_object()
-        title = (request.data.get('case_title') or '').strip()
-        if not title:
-            title = f"Re-inspection request: {record.block.block_name}"
-
+        title = (request.data.get('case_title') or '').strip() or f"Re-inspection request: {record.block.block_name}"
         severity = (request.data.get('severity') or 'medium').strip().lower()
         if severity not in {'high', 'medium', 'low', 'unknown'}:
             severity = 'medium'
-
-        notes = (request.data.get('notes') or '').strip()
-        if not notes:
-            notes = f"Farmer requested re-inspection for block {record.block.block_name}."
-
+        notes = (request.data.get('notes') or '').strip() or f"Farmer requested re-inspection for block {record.block.block_name}."
         from case_management.models import Case
 
-        assigned_agronomist = None
-        try:
-            # If the farmer account is linked to an agronomist, assign the reinspection case to them.
-            farmer_user = getattr(record, 'farmer', None)
-            assigned_agronomist = getattr(farmer_user, 'managed_by', None)
-        except Exception:
-            assigned_agronomist = None
-
+        assigned_agronomist = getattr(getattr(record, 'farmer', None), 'managed_by', None)
         case = Case.objects.create(
             case_title=title,
             severity=severity,
@@ -418,7 +524,6 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
             notes=notes,
             assigned_agronomist=assigned_agronomist,
         )
-
         return Response(
             {
                 'status': 'reinspection_requested',
@@ -450,6 +555,7 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
         case = None
         try:
             from case_management.models import Case
+
             case = Case.objects.filter(pest_scouting_record=record).order_by('-created_at').first()
             if case:
                 case.status = 'verified'
@@ -461,10 +567,8 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
                 case.save(update_fields=['status', 'diagnosis', 'recommended_actions', 'updated_at'])
         except Exception:
             pass
-
         if review.pushed_to_farmer:
             _push_triage_outcome_to_farmer(record, review)
-
         return Response(
             {
                 'status': 'confirmed',
@@ -477,7 +581,6 @@ class ScoutingReportViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 def _push_triage_outcome_to_farmer(record: WeeklyRecord, review: ScoutingReview) -> None:
-    """Alert + advisory when agronomist confirms and opts to notify the farmer app."""
     from advisory_services.models import Advisory
     from alerts.utils import create_alert
 
@@ -489,63 +592,10 @@ def _push_triage_outcome_to_farmer(record: WeeklyRecord, review: ScoutingReview)
         body = f"{body}\n\nRecommended actions:\n{protocol}"
     if review.review_notes:
         body = f"{body}\n\nNotes: {review.review_notes.strip()}"
-
-    create_alert(
-        record.farmer,
-        'Scouting review ready',
-        body[:2000],
-        send_sms=True,
-    )
+    create_alert(record.farmer, 'Scouting review ready', body[:2000], send_sms=True)
     Advisory.objects.create(
         weekly_record=record,
         farmer=record.farmer,
         advisory_message=body[:4000],
         category='agronomist_review',
     )
-
-
-@extend_schema(tags=['Pest Scouting'])
-class FarmViewSet(viewsets.ModelViewSet):
-    queryset = Farm.objects.all()
-    serializer_class = FarmSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = PestScoutingPage
-
-    def get_queryset(self):
-        return Farm.objects.filter(farmer=self.request.user).order_by('-created_at')
-
-    def perform_create(self, serializer):
-        serializer.save(farmer=self.request.user)
-
-
-@extend_schema(tags=['Pest Scouting'])
-class TrapLogViewSet(viewsets.ModelViewSet):
-    queryset = TrapLog.objects.all()
-    serializer_class = TrapLogSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = PestScoutingPage
-    http_method_names = ['get', 'post', 'head', 'options']
-
-    def get_queryset(self):
-        return TrapLog.objects.filter(farmer=self.request.user).select_related('farm').order_by('-timestamp')
-
-    def perform_create(self, serializer):
-        farm = serializer.validated_data.get('farm')
-        if farm and farm.farmer_id != self.request.user.id:
-            raise ValidationError({'farm': 'Farm does not belong to you.'})
-        serializer.save(farmer=self.request.user)
-
-
-@extend_schema(tags=['Pest Scouting'])
-class ProblemReportViewSet(viewsets.ModelViewSet):
-    queryset = ProblemReport.objects.all()
-    serializer_class = ProblemReportSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = PestScoutingPage
-    http_method_names = ['get', 'post', 'head', 'options']
-
-    def get_queryset(self):
-        return ProblemReport.objects.filter(farmer=self.request.user).order_by('-timestamp')
-
-    def perform_create(self, serializer):
-        serializer.save(farmer=self.request.user)

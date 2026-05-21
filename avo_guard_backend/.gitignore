@@ -1,0 +1,11 @@
+*.pyc
+*.sqlite3
+media_local
+media_cdn
+static_cdn
+mediafiles
+venv
+.junie
+.idea
+!*.mo
+!*.po

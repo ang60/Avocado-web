@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pest_scouting.models import WeeklyRecord
+from pest_scouting.weekly_helpers import disease_list, pests_observed_list
 
 
 def mirror_weekly_to_scouting_report(weekly: WeeklyRecord) -> None:
@@ -24,13 +25,11 @@ def mirror_weekly_to_scouting_report(weekly: WeeklyRecord) -> None:
 
     parts: list[str] = []
     if weekly.any_pests_observed == 'Yes':
-        parts.extend([x for x in (weekly.pests_observed_list or []) if x])
-        if weekly.pests_observed and weekly.pests_observed not in parts:
-            parts.append(weekly.pests_observed)
+        parts.extend(pests_observed_list(weekly))
     if weekly.any_diseases_observed == 'Yes':
-        parts.extend([x for x in (weekly.disease_list or []) if x and x not in parts])
-        if weekly.disease and weekly.disease not in parts:
-            parts.append(weekly.disease)
+        for x in disease_list(weekly):
+            if x and x not in parts:
+                parts.append(x)
     finding = ', '.join(dict.fromkeys(parts)) if parts else 'No Pests Found'
     finding = finding[:512]
 
@@ -44,20 +43,10 @@ def mirror_weekly_to_scouting_report(weekly: WeeklyRecord) -> None:
     u = weekly.farmer
     scout = f'{u.first_name} {u.last_name}'.strip() or (u.phone_number or '')[:255]
 
-    media = ''
-    raw = weekly.raw_payload or {}
-    if isinstance(raw, dict):
-        for key in (
-            'dont_know_variety_photo',
-            'dont_know_pest_photo',
-            'dont_know_trap_photo',
-            'other_trap_photo',
-            'dont_know_beneficial_insects_observed_photo',
-        ):
-            v = raw.get(key)
-            if isinstance(v, str) and v.startswith('http'):
-                media = v[:200]
-                break
+    from pest_scouting.media_urls import weekly_record_image_urls
+
+    images = weekly_record_image_urls(weekly)
+    media = images[0][:200] if images else ''
 
     ScoutingReport.objects.create(
         farmer=fp,

@@ -10,6 +10,8 @@ This workspace contains **three applications** that share one Django API:
 
 The dashboard and mobile app are HTTP clients only. Point both at the same API base URL.
 
+The legacy Django tree was merged into `avo_guard_backend/` and moved to `backend.archived/` (do not run it on port 8000).
+
 ## Run locally (monorepo)
 
 1. **API** — from `avo_guard_backend/`:

@@ -1,13 +1,10 @@
-from django.urls import include, path
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-
-from .views import FarmerRegistrationViewSet, HcdaCountyOverviewAPIView
+from .views import FarmerRegistrationViewSet
 
 router = DefaultRouter()
 router.register(r'farmers', FarmerRegistrationViewSet, basename='farmer-registration')
 
 urlpatterns = [
-    path('county-overview/', HcdaCountyOverviewAPIView.as_view(), name='hcda-county-overview'),
     path('', include(router.urls)),
 ]
-

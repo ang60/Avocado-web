@@ -1,25 +1,20 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    FarmBlockViewSet,
-    FarmViewSet,
-    ProblemReportViewSet,
-    ScoutingReportViewSet,
-    ScoutingSessionViewSet,
-    TrapLogViewSet,
-    WeeklyRecordViewSet,
+    FarmViewSet, FarmBlockViewSet, WeeklyRecordViewSet, 
+    ScoutingReportViewSet, TrapViewSet, ProblemReportViewSet
 )
+from .ussd_views import ussd_callback
 
 router = DefaultRouter()
-router.register(r'farms', FarmViewSet, basename='pest-farms')
-router.register(r'trap-logs', TrapLogViewSet, basename='trap-logs')
-router.register(r'problem-reports', ProblemReportViewSet, basename='problem-reports')
+router.register(r'farms', FarmViewSet)
 router.register(r'farm-blocks', FarmBlockViewSet)
-router.register(r'scouting-sessions', ScoutingSessionViewSet, basename='scouting-sessions')
 router.register(r'weekly-records', WeeklyRecordViewSet)
 router.register(r'scouting-reports', ScoutingReportViewSet, basename='scouting-reports')
+router.register(r'traps', TrapViewSet)
+router.register(r'problem-reports', ProblemReportViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('ussd/', ussd_callback, name='ussd-callback'),
 ]
-

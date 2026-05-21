@@ -1,15 +1,14 @@
 import uuid
 from django.db import models
 
-
 class FarmerRegistration(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     farmerName = models.CharField(max_length=255)
-    hcdaRegNumber = models.CharField(max_length=100, unique=True)
-    ward = models.CharField(max_length=100)
-    county = models.CharField(max_length=100)
+    hcdaRegNumber = models.CharField(max_length=500, unique=True)
+    ward = models.CharField(max_length=500)
+    county = models.CharField(max_length=500)
     acreage = models.FloatField()
-    globalGAPStatus = models.CharField(max_length=50)
+    globalGAPStatus = models.CharField(max_length=50)  # compliant, expired, non-compliant
     globalGAPExpiry = models.DateField()
     primaryExporter = models.CharField(max_length=255)
     lat = models.FloatField()
@@ -23,4 +22,4 @@ class FarmerRegistration(models.Model):
     class Meta:
         verbose_name = "Farmer Registration"
         verbose_name_plural = "Farmer Registrations"
-
+        ordering = ['-created_at']

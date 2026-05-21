@@ -6,5 +6,4 @@ class PestScoutingConfig(AppConfig):
     name = 'pest_scouting'
 
     def ready(self):
-        import pest_scouting.signals  # noqa: F401
-
+        from . import signals  # noqa: F401

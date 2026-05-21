@@ -140,7 +140,7 @@ def _scoped_farmer_auth_user_ids(user):
 
 
 def _scoped_weekly_records_qs(user):
-    qs = WeeklyRecord.objects.all().select_related('farmer', 'block', 'block__farm')
+    qs = WeeklyRecord.objects.all().select_related('farmer', 'block', 'block__farm_name', 'triage_review')
     uid_list = _scoped_farmer_auth_user_ids(user)
     if uid_list is not None:
         if not uid_list:
@@ -193,12 +193,42 @@ def _disease_strings_from_mobile_raw(raw: dict) -> list[str]:
     return []
 
 
+def _beneficial_summary_from_weekly(wr: WeeklyRecord) -> str:
+    from pest_scouting.weekly_helpers import beneficial_insects_list
+
+    items = beneficial_insects_list(wr)
+    if items:
+        return ', '.join(dict.fromkeys(items))[:280]
+    raw = _weekly_raw_dict(wr)
+    ben = raw.get('beneficial_insects_observed')
+    if isinstance(ben, list):
+        return ', '.join(dict.fromkeys(str(x).strip() for x in ben if str(x).strip()))[:280]
+    return ''
+
+
 def _beneficial_summary_from_raw(raw: dict) -> str:
     ben = raw.get('beneficial_insects_observed')
     if isinstance(ben, list):
         items = [str(x).strip() for x in ben if str(x).strip()]
         return ', '.join(dict.fromkeys(items))[:280]
     return ''
+
+
+def _disease_meta_summary_from_weekly(wr: WeeklyRecord) -> str:
+    parts: list[str] = []
+    raw = _weekly_raw_dict(wr)
+    dpp = wr.disease_plant_part if isinstance(wr.disease_plant_part, list) else raw.get('disease_plant_part')
+    if isinstance(dpp, list):
+        joined = ', '.join(str(x).strip() for x in dpp if str(x).strip())
+        if joined:
+            parts.append(joined)
+    stage = wr.disease_crop_stage or raw.get('disease_crop_stage')
+    if stage and str(stage).strip():
+        parts.append(str(stage).strip())
+    method = wr.disease_detection_method or raw.get('disease_detection_method')
+    if method and str(method).strip():
+        parts.append(str(method).strip())
+    return ' · '.join(parts)[:320]
 
 
 def _disease_meta_summary_from_raw(raw: dict) -> str:
@@ -224,12 +254,59 @@ def _gps_summary_from_raw(raw: dict) -> str:
     return ''
 
 
+def _actions_summary_from_weekly(wr: WeeklyRecord) -> str:
+    from pest_scouting.weekly_helpers import actions_taken_list
+
+    return ', '.join(dict.fromkeys(actions_taken_list(wr)))[:320]
+
+
+def _outcome_summary_from_weekly(wr: WeeklyRecord) -> str:
+    raw = _weekly_raw_dict(wr)
+    return str(raw.get('outcome') or wr.outcome or '').strip()[:200]
+
+
+def _production_challenges_summary_from_weekly(wr: WeeklyRecord) -> str:
+    raw = _weekly_raw_dict(wr)
+    ch = raw.get('other_production_challenges')
+    if isinstance(ch, list):
+        items = [str(x).strip() for x in ch if str(x).strip()]
+        return ', '.join(dict.fromkeys(items))[:320]
+    if isinstance(ch, str) and ch.strip():
+        return ch.strip()[:320]
+    if isinstance(wr.other_production_challenges, list):
+        items = [str(x).strip() for x in wr.other_production_challenges if str(x).strip()]
+        return ', '.join(dict.fromkeys(items))[:320]
+    return ''
+
+
+def _triage_fields_from_weekly(wr: WeeklyRecord) -> dict:
+    review = getattr(wr, 'triage_review', None)
+    if not review:
+        return {
+            'triageReviewed': 'new',
+            'triageStatus': 'pending',
+            'triageLabel': '',
+            'managementProtocol': '',
+            'pushedToFarmer': False,
+        }
+    reviewed_ui = 'reviewed'
+    if review.review_status in ('pending', 'needs_follow_up'):
+        reviewed_ui = 'under-review'
+    elif review.review_status != 'confirmed':
+        reviewed_ui = 'under-review'
+    return {
+        'triageReviewed': reviewed_ui,
+        'triageStatus': review.review_status,
+        'triageLabel': (review.identified_label or '')[:255],
+        'managementProtocol': (review.management_protocol or '').strip()[:2000],
+        'pushedToFarmer': bool(review.pushed_to_farmer),
+    }
+
+
 def _trap_summary_from_weekly(wr: WeeklyRecord) -> str:
     bits: list[str] = []
-    if wr.type_of_trap:
-        bits.append(f'{wr.type_of_trap} (×{wr.number_of_trap})')
     raw = _weekly_raw_dict(wr)
-    tu = raw.get('trap_use') if isinstance(raw.get('trap_use'), list) else []
+    tu = raw.get('trap_use') if isinstance(raw.get('trap_use'), list) else (wr.trap_use if isinstance(wr.trap_use, list) else [])
     for row in tu[:8]:
         if isinstance(row, dict):
             tn = str(row.get('type_of_trap') or '').strip()
@@ -254,7 +331,9 @@ def _pest_summary_from_weekly(wr: WeeklyRecord) -> str:
         return ', '.join(dict.fromkeys(mobile))[:400]
     parts: list[str] = []
     if wr.any_pests_observed == 'Yes':
-        parts.extend([x for x in (wr.pests_observed_list or []) if x])
+        from pest_scouting.weekly_helpers import pests_observed_list
+
+        parts.extend(pests_observed_list(wr))
         if wr.pests_observed:
             parts.append(wr.pests_observed)
     return ', '.join(dict.fromkeys([p for p in parts if p]))[:400]
@@ -267,9 +346,9 @@ def _disease_summary_from_weekly(wr: WeeklyRecord) -> str:
         return ', '.join(dict.fromkeys(mobile))[:400]
     parts: list[str] = []
     if wr.any_diseases_observed == 'Yes':
-        parts.extend([x for x in (wr.disease_list or []) if x])
-        if wr.disease:
-            parts.append(wr.disease)
+        from pest_scouting.weekly_helpers import disease_list as _disease_list
+
+        parts.extend(_disease_list(wr))
     return ', '.join(dict.fromkeys([p for p in parts if p]))[:400]
 
 
@@ -315,7 +394,15 @@ def _dashboard_recent_from_weekly(wr: WeeklyRecord, fp_by_uid: dict) -> dict:
     variety = str(raw.get('variety') or wr.variety or '').strip()
     mobile_block = str(raw.get('block') or '').strip()
     farm_name_submitted = str(raw.get('farm_name') or '').strip()[:512]
-    submission_loc = str(raw.get('location') or '').strip()[:512]
+    if not farm_name_submitted and wr.block_id:
+        try:
+            farm_obj = getattr(wr.block, 'farm_name', None)
+            if farm_obj is not None:
+                farm_name_submitted = str(getattr(farm_obj, 'farm_name', '') or '').strip()[:512]
+        except Exception:
+            pass
+    submission_loc = str(raw.get('location') or wr.location or '').strip()[:512]
+    triage = _triage_fields_from_weekly(wr)
     return {
         'id': f'app-weekly-{wr.id}',
         'recordCode': f'APP-{short}',
@@ -338,9 +425,15 @@ def _dashboard_recent_from_weekly(wr: WeeklyRecord, fp_by_uid: dict) -> dict:
         'mobileBlockLine': mobile_block,
         'farmNameAsSubmitted': farm_name_submitted,
         'submissionLocation': submission_loc,
-        'beneficialSummary': _beneficial_summary_from_raw(raw),
-        'diseaseMetaSummary': _disease_meta_summary_from_raw(raw),
-        'gpsSummary': _gps_summary_from_raw(raw),
+        'beneficialSummary': _beneficial_summary_from_weekly(wr),
+        'diseaseMetaSummary': _disease_meta_summary_from_weekly(wr),
+        'gpsSummary': _gps_summary_from_raw(raw) or (
+            f'{wr.gps_latitude}, {wr.gps_longitude}' if wr.gps_latitude is not None and wr.gps_longitude is not None else ''
+        ),
+        'actionsTakenSummary': _actions_summary_from_weekly(wr),
+        'outcomeSummary': _outcome_summary_from_weekly(wr),
+        'productionChallengesSummary': _production_challenges_summary_from_weekly(wr),
+        **triage,
     }
 
 
@@ -373,6 +466,14 @@ def _dashboard_recent_from_registry(r: ScoutingReport) -> dict:
         'beneficialSummary': '',
         'diseaseMetaSummary': '',
         'gpsSummary': '',
+        'actionsTakenSummary': '',
+        'outcomeSummary': '',
+        'productionChallengesSummary': '',
+        'triageReviewed': 'reviewed' if r.reviewed == ScoutingReport.ReviewStatus.REVIEWED else 'new',
+        'triageStatus': 'confirmed' if r.reviewed == ScoutingReport.ReviewStatus.REVIEWED else 'pending',
+        'triageLabel': (r.finding or '')[:255],
+        'managementProtocol': '',
+        'pushedToFarmer': False,
     }
 
 

@@ -1,0 +1,9 @@
+Hello {{ user.first_name|default:"User" }},
+
+Your account has been approved by an administrator and is now active.
+
+You can now log in to the AvoGuard Dashboard using your phone number and the password you set during account setup.
+
+Welcome aboard!
+
+The AvoGuard Team

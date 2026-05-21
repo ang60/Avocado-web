@@ -22,7 +22,7 @@ class EntityAdmin(admin.ModelAdmin):
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     ordering = ('phone_number',)
-    list_display = ('phone_number', 'email', 'role', 'county', 'entity', 'is_staff', 'is_active')
+    list_display = ('phone_number', 'first_name', 'last_name', 'email', 'role', 'county', 'entity', 'is_staff', 'is_active')
     list_filter = ('role', 'is_staff', 'is_superuser', 'is_active', 'county', 'entity')
     search_fields = ('phone_number', 'email', 'first_name', 'last_name')
     

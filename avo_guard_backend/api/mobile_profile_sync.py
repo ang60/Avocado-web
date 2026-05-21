@@ -31,7 +31,7 @@ def sync_farmer_profile_from_mobile(user_id) -> FarmerProfile | None:
     if not fp:
         return None
 
-    farm = Farm.objects.filter(farmer_id=user_id).order_by('-updated_at').first()
+    farm = Farm.objects.filter(farmer_name_id=user_id).order_by('-timestamp').first()
     update_fields: list[str] = []
 
     if farm:

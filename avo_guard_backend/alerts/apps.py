@@ -6,5 +6,4 @@ class AlertsConfig(AppConfig):
     name = 'alerts'
 
     def ready(self):
-        import alerts.signals  # noqa: F401
-
+        import alerts.signals

@@ -8,4 +8,3 @@ router.register(r'alerts', AlertViewSet)
 urlpatterns = [
     path('', include(router.urls)),
 ]
-

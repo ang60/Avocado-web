@@ -2,20 +2,15 @@ from pathlib import Path
 import os
 import dj_database_url
 from datetime import timedelta
+import json
+import firebase_admin
+from firebase_admin import credentials
 
 from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Load env from predictable paths (not only the shell cwd).
-# - Standalone API repo: use `avo_guard_backend/.env` (or repo root if settings live one level up).
-# - Monorepo: optional `../.env` when a sibling `frontend/` exists (shared secrets at repo root).
-_maybe_monorepo_root = BASE_DIR.parent
-if (_maybe_monorepo_root / "frontend").is_dir():
-    load_dotenv(_maybe_monorepo_root / ".env")
-load_dotenv(BASE_DIR / ".env", override=True)
-load_dotenv()  # optional: cwd-based overrides for local dev
 
 
 # Quick-start development settings - unsuitable for production
@@ -28,12 +23,6 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = os.getenv("DEBUG", "0").lower() in ["true", "t", "1"]
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
-
-# OTP testing/integration controls.
-# - OTP_SKIP_SMS=1: don't call SMS provider; OTP is still stored for verify.
-# - OTP_ECHO_CODE=1: return the OTP code in JSON responses (dev/testing only).
-OTP_SKIP_SMS = os.environ.get('OTP_SKIP_SMS', '0') == '1'
-OTP_ECHO_CODE = os.environ.get('OTP_ECHO_CODE', '0') == '1'
 
 # Application definition
 INSTALLED_APPS = [
@@ -49,13 +38,13 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'accounts',
     'api.apps.ApiConfig',
-    'pest_scouting.apps.PestScoutingConfig',
+    'pest_scouting',
     'case_management',
     'knowledge_base',
     'kephis_quarantine',
     'hcda_registry',
-    'advisory_services.apps.AdvisoryServicesConfig',
-    'alerts.apps.AlertsConfig',
+    'advisory_services',
+    'alerts',
 ]
 
 MIDDLEWARE = [
@@ -90,43 +79,10 @@ WSGI_APPLICATION = 'avo_guard.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-def _clean_database_url(value):
-    """
-    Accept common .env mishaps like surrounding quotes or a literal "b'...'" prefix.
-    Returns a clean string (or empty string if unset).
-    """
-    if value is None:
-        return ""
-    if isinstance(value, (bytes, bytearray)):
-        value = value.decode("utf-8", errors="ignore")
-    value = str(value).strip()
-    value = value.strip('"').strip("'").strip()
-    # Handle accidental literal representation: b'postgres://...'
-    if (value.startswith("b'") and value.endswith("'")) or (value.startswith('b"') and value.endswith('"')):
-        value = value[2:-1].strip()
-    return value
-
-if DEBUG:
-    database_url = _clean_database_url(os.environ.get("DATABASE_URL_LOCAL"))
-    if not database_url:
-        database_url = _clean_database_url(os.environ.get("DATABASE_URL"))
+if not DEBUG:
+    database_url = os.environ.get('DATABASE_URL')
 else:
-    database_url = _clean_database_url(os.environ.get("DATABASE_URL"))
-    if not database_url:
-        database_url = _clean_database_url(os.environ.get("DATABASE_URL_LOCAL"))
-
-if not database_url:
-    root_env = _REPO_ROOT / ".env"
-    backend_env = BASE_DIR / ".env"
-    root_note = "exists" if root_env.is_file() else "missing"
-    backend_note = "exists" if backend_env.is_file() else "missing"
-    raise RuntimeError(
-        "Database URL is not configured. Set DATABASE_URL (production) or "
-        "DATABASE_URL_LOCAL (development) in the environment, or in a .env file.\n"
-        f"  Checked: {root_env} ({root_note})\n"
-        f"  Checked: {backend_env} ({backend_note})\n"
-        f"  DEBUG={DEBUG!r} (when DEBUG is false, DATABASE_URL is tried first, then DATABASE_URL_LOCAL)."
-    )
+    database_url = os.environ.get('DATABASE_URL_LOCAL')
 
 DATABASES = {
     "default": dj_database_url.parse(
@@ -161,24 +117,37 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'Africa/Nairobi'
 USE_I18N = True
-
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
-
 STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR, "assets", "staticfiles")
+
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, "assets"),
+)
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, "assets", "mediafiles")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 # DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Firebase Cloud Messaging initialization
+FIREBASE_CREDENTIALS_JSON = os.environ.get('FIREBASE_CREDENTIALS_JSON')
+if FIREBASE_CREDENTIALS_JSON:
+    try:
+        cred_dict = json.loads(FIREBASE_CREDENTIALS_JSON)
+        cred = credentials.Certificate(cred_dict)
+        firebase_admin.initialize_app(cred)
+    except Exception as e:
+        print(f"Error initializing Firebase: {e}")
 
 AUTH_USER_MODEL = 'accounts.User'
 
@@ -187,7 +156,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'avo_guard.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 10
 }
 
@@ -202,25 +171,44 @@ ADVANTA_API_KEY = os.environ.get('ADVANTA_API_KEY')
 ADVANTA_PARTNER_ID = os.environ.get('ADVANTA_PARTNER_ID')
 ADVANTA_SHORT_CODE = os.environ.get('ADVANTA_SHORT_CODE')
 
+# OTP Configuration
+# Options: 'SMS', 'EMAIL', 'BOTH'
+OTP_DELIVERY_METHOD = os.environ.get('OTP_DELIVERY_METHOD', 'SMS')
+
+# Email Settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'AvoGuard <noreply@avoguard.cognitron.co.ke>')
+
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'AvoGuard API',
     'DESCRIPTION': 'API for AvoGuard',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'ENUM_NAME_OVERRIDES': {
+        'AnyDiseasesObservedEnum': 'pest_scouting.models.WeeklyRecord.YES_NO_CHOICES',
+        'DiseasePlantPartEnum': 'pest_scouting.models.WeeklyRecord.PLANT_PART_CHOICES',
+        'DiseaseCropStageEnum': 'pest_scouting.models.WeeklyRecord.CROP_STAGE_CHOICES',
+        'DiseaseDetectionMethodEnum': 'pest_scouting.models.WeeklyRecord.DETECTION_METHOD_CHOICES',
+    },
 }
 
-_raw_csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173')
-# Sanitize env value: allow comma-separated list, strip quotes/spaces, and ensure scheme.
-_cs = []
-for _o in _raw_csrf_origins.split(','):
-    _o = _o.strip().strip('"').strip("'")
-    if not _o:
-        continue
-    if '://' not in _o:
-        _o = f'http://{_o}'
-    _cs.append(_o)
-CSRF_TRUSTED_ORIGINS = _cs
+# CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',')
 
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    'https://avoguard.cognitron.co.ke',
+    'http://localhost:3000',  # Common for local React/Vue development
+    'https://avo-guard.vercel.app',
+    'https://avo-guard-frontend.vercel.app/',
+]
+
+CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 ADMIN_SITE_HEADER = 'AvoGuard Backend'
 ADMIN_SITE_TITLE = 'AvoGuard Backend'
 ADMIN_INDEX_TITLE = 'Dashboard'
@@ -230,48 +218,62 @@ django.contrib.admin.AdminSite.site_header = ADMIN_SITE_HEADER
 django.contrib.admin.AdminSite.site_title = ADMIN_SITE_TITLE
 django.contrib.admin.AdminSite.index_title = ADMIN_INDEX_TITLE
 
-if not DEBUG:
-    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
-    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL')
-    AWS_S3_ACCESS_KEY_ID = os.environ.get('AWS_S3_ACCESS_KEY_ID')
-    AWS_S3_SECRET_ACCESS_KEY = os.environ.get('AWS_S3_SECRET_ACCESS_KEY')
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_QUERYSTRING_AUTH = True
-    AWS_DEFAULT_ACL = 'public-read'
-    # AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN')
-    AWS_SESSION_TOKEN=None
-    AWS_S3_SIGNATURE_VERSION = 's3v4'
+# Media: use Railway/S3 when credentials exist (same DB as production uploads).
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL')
+AWS_S3_ACCESS_KEY_ID = os.environ.get('AWS_S3_ACCESS_KEY_ID')
+AWS_S3_SECRET_ACCESS_KEY = os.environ.get('AWS_S3_SECRET_ACCESS_KEY')
+AWS_S3_FILE_OVERWRITE = False
+AWS_QUERYSTRING_AUTH = True
+AWS_DEFAULT_ACL = 'public-read'
+AWS_SESSION_TOKEN = None
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+
+USE_S3_STORAGE = bool(AWS_STORAGE_BUCKET_NAME and AWS_S3_ACCESS_KEY_ID and AWS_S3_SECRET_ACCESS_KEY)
+
+if USE_S3_STORAGE:
     STORAGES = {
-        "default": {
-            "BACKEND": "avo_guard.storages.MediaStorage",
+        'default': {
+            'BACKEND': 'avo_guard.storages.MediaStorage',
         },
-        "staticfiles": {
-            "BACKEND": "avo_guard.storages.StaticStorage",
-            # "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        'staticfiles': {
+            'BACKEND': 'avo_guard.storages.StaticStorage',
         },
     }
 else:
     STORAGES = {
-        "default": {
-            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
         },
-        "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-            # "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
         },
     }
 
-# django-cors-headers (browser calls from Vite, etc.)
-# https://github.com/adamchainz/django-cors-headers
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://avo-guard.vercel.app',
+    'https://avoguard.cognitron.co.ke',
+    'https://avo-guard-frontend.vercel.app',
+]
+
 CORS_ALLOW_CREDENTIALS = True
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    # Production: set CORS_ALLOWED_ORIGINS to every browser origin that calls this API (comma-separated),
-    # e.g. https://avoguard.cognitron.co.ke — otherwise registration/login from the SPA will fail in the browser.
-    _cors_raw = os.environ.get(
-        'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173',
-    )
-    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_raw.split(',') if o.strip()]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'access-control-allow-origin',
+    'access-control-allow-headers',
+    'content-type',
+    'authorization',
+    'x-auth-token',
+]

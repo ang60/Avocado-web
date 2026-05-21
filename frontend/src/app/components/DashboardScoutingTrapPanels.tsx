@@ -19,6 +19,13 @@ function scoutingStatusLabel(record: RecentScoutingRecord) {
   return 'Clean';
 }
 
+function triageBadge(record: RecentScoutingRecord) {
+  const key = record.triageReviewed || 'new';
+  if (key === 'reviewed') return { label: 'Reviewed', bg: '#DCFCE7', color: '#166534' };
+  if (key === 'under-review') return { label: 'Under review', bg: '#FEF3C7', color: '#B45309' };
+  return { label: 'New', bg: '#FEE2E2', color: '#B91C1C' };
+}
+
 function ellipsize(s: string | undefined, max: number): string {
   const t = (s ?? '').trim();
   if (!t) return '—';
@@ -61,7 +68,7 @@ export function DashboardScoutingTrapPanels({
         </div>
 
         <TableScroll className="-mx-1 px-1 sm:mx-0 sm:px-0">
-          <table className="w-full min-w-[1420px]">
+          <table className="w-full min-w-[1880px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 {[
@@ -78,6 +85,12 @@ export function DashboardScoutingTrapPanels({
                   'App farm & place',
                   'Beneficials',
                   'Disease context / GPS',
+                  'Actions',
+                  'Outcome',
+                  'Challenges',
+                  'Triage',
+                  'Protocol',
+                  'Pushed',
                   'Summary',
                   'Issues',
                   'Status',
@@ -220,6 +233,51 @@ export function DashboardScoutingTrapPanels({
                         {ellipsize(record.gpsSummary, 36)}
                       </div>
                     ) : null}
+                  </td>
+                  <td
+                    className="max-w-[120px] px-3 py-2 text-xs sm:px-6 sm:py-4"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                    title={record.actionsTakenSummary}
+                  >
+                    {ellipsize(record.actionsTakenSummary, 48)}
+                  </td>
+                  <td
+                    className="max-w-[100px] px-3 py-2 text-xs sm:px-6 sm:py-4"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                    title={record.outcomeSummary}
+                  >
+                    {ellipsize(record.outcomeSummary, 40)}
+                  </td>
+                  <td
+                    className="max-w-[120px] px-3 py-2 text-xs sm:px-6 sm:py-4"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                    title={record.productionChallengesSummary}
+                  >
+                    {ellipsize(record.productionChallengesSummary, 48)}
+                  </td>
+                  <td className="px-3 py-2 sm:px-6 sm:py-4">
+                    {(() => {
+                      const st = triageBadge(record);
+                      return (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-xs"
+                          style={{ backgroundColor: st.bg, color: st.color, fontFamily: 'IBM Plex Sans, sans-serif' }}
+                          title={record.triageLabel || record.triageStatus}
+                        >
+                          {st.label}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td
+                    className="max-w-[140px] px-3 py-2 text-xs sm:px-6 sm:py-4"
+                    style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                    title={record.managementProtocol || ''}
+                  >
+                    {ellipsize(record.managementProtocol || '', 56)}
+                  </td>
+                  <td className="px-3 py-2 text-center sm:px-6 sm:py-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}>
+                    {record.pushedToFarmer ? 'Yes' : '—'}
                   </td>
                   <td
                     className="max-w-[200px] px-3 py-2 text-xs sm:px-6 sm:py-4 sm:text-sm"

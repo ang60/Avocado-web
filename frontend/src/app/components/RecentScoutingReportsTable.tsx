@@ -74,7 +74,7 @@ export function RecentScoutingReportsTable({
         </p>
       ) : (
         <TableScroll className="-mx-1 px-1 sm:mx-0 sm:px-0">
-          <table className="w-full min-w-[1280px]">
+          <table className="w-full min-w-[1560px]">
             <thead>
               <tr style={{ backgroundColor: '#F7F4EF', borderBottom: '1px solid #E0DDD6' }}>
                 {[
@@ -87,6 +87,11 @@ export function RecentScoutingReportsTable({
                   'App farm & place',
                   'Beneficials',
                   'Disease / GPS',
+                  'Actions',
+                  'Outcome',
+                  'Challenges',
+                  'Protocol',
+                  'Pushed',
                   'Finding',
                   'Thumb',
                   'Time',
@@ -121,6 +126,13 @@ export function RecentScoutingReportsTable({
                 const appLocLine = (snap.location || '').trim();
                 const benLine = beneficialSummaryLine(item);
                 const disGps = [diseaseMetaSummaryLine(item), gpsLineFromPayload(item)].filter(Boolean).join(' · ');
+                const actionsLine = (item.actionsTakenList || []).join(' · ');
+                const outcomeLine = (item.outcomeList || []).join(' · ');
+                const challengesRaw = item.rawPayload?.other_production_challenges;
+                const challengesLine = Array.isArray(challengesRaw)
+                  ? challengesRaw.map((x) => String(x).trim()).filter(Boolean).join(' · ')
+                  : '';
+                const protocolLine = (item.managementProtocol || '').trim();
                 return (
                   <tr
                     key={item.id}
@@ -220,6 +232,37 @@ export function RecentScoutingReportsTable({
                       title={disGps}
                     >
                       {disGps ? <span className="line-clamp-2 font-mono">{disGps}</span> : '—'}
+                    </td>
+                    <td
+                      className="max-w-[100px] px-3 py-2 text-xs sm:px-4 sm:py-3"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                      title={actionsLine}
+                    >
+                      {actionsLine ? <span className="line-clamp-2">{actionsLine}</span> : '—'}
+                    </td>
+                    <td
+                      className="max-w-[88px] px-3 py-2 text-xs sm:px-4 sm:py-3"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                      title={outcomeLine}
+                    >
+                      {outcomeLine ? <span className="line-clamp-2">{outcomeLine}</span> : '—'}
+                    </td>
+                    <td
+                      className="max-w-[100px] px-3 py-2 text-xs sm:px-4 sm:py-3"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                      title={challengesLine}
+                    >
+                      {challengesLine ? <span className="line-clamp-2">{challengesLine}</span> : '—'}
+                    </td>
+                    <td
+                      className="max-w-[120px] px-3 py-2 text-xs sm:px-4 sm:py-3"
+                      style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}
+                      title={protocolLine}
+                    >
+                      {protocolLine ? <span className="line-clamp-2">{protocolLine}</span> : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-center text-xs sm:px-4 sm:py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}>
+                      {item.pushedToFarmer ? 'Yes' : '—'}
                     </td>
                     <td className="max-w-[200px] px-3 py-2 text-sm sm:px-4 sm:py-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
                       <span className="line-clamp-3" title={item.finding}>

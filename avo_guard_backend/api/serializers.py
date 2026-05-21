@@ -46,7 +46,7 @@ def _pest_farm_latest_for_profile(obj: FarmerProfile):
         for farm in user.pest_scouting_farms.all():
             return farm
         return None
-    return Farm.objects.filter(farmer_id=obj.user_id).order_by('-updated_at').first()
+    return Farm.objects.filter(farmer_name_id=obj.user_id).order_by('-timestamp').first()
 
 
 def _serialize_pest_scouting_farm_row(farm) -> dict | None:
@@ -517,7 +517,9 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
         if not rec:
             return None
 
-        raw = rec.raw_payload if isinstance(rec.raw_payload, dict) else {}
+        from pest_scouting.record_payload import weekly_record_display_payload
+
+        raw = weekly_record_display_payload(rec)
 
         def as_list(v):
             if isinstance(v, list):
@@ -526,18 +528,7 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
                 return [v.strip()]
             return []
 
-        def pick_urls(d: dict) -> list[str]:
-            urls: list[str] = []
-            for k, v in d.items():
-                if not isinstance(v, str):
-                    continue
-                if not v.startswith('http'):
-                    continue
-                # Heuristic: only media-ish keys to avoid pulling random links
-                lk = k.lower()
-                if any(x in lk for x in ('photo', 'media', 'image', 'gallery', 'voice')):
-                    urls.append(v)
-            return urls
+        from pest_scouting.media_urls import weekly_record_image_urls
 
         blk = getattr(rec, 'block', None)
         block_name = getattr(blk, 'block_name', '') if blk else ''
@@ -584,7 +575,7 @@ class FarmerDetailSerializer(serializers.ModelSerializer):
             'additionalNotes': str(raw.get('additional_notes') or getattr(rec, 'additional_notes', '') or ''),
             'gpsLatitude': str(gps_lat) if gps_lat not in (None, '') else '',
             'gpsLongitude': str(gps_lng) if gps_lng not in (None, '') else '',
-            'mediaUrls': pick_urls(raw),
+            'mediaUrls': weekly_record_image_urls(rec, self.context.get('request')),
         }
 
     def get_lastScoutingResult(self, obj):

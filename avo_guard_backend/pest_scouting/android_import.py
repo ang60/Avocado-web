@@ -109,9 +109,9 @@ def _actions_from_list(items: list[Any]) -> list[str]:
 
 def _outcome_from_mobile(text: str | None) -> str:
     if not text:
-        return '🔄 Follow-up needed'
+        return 'Follow-up needed'
     m = _match_single_choice(text, WeeklyRecord.OUTCOME_CHOICES)
-    return m or '🔄 Follow-up needed'
+    return m or 'Follow-up needed'
 
 
 def _trap_aggregate(trap_use: list[Any]) -> tuple[str, int, Decimal]:
@@ -259,51 +259,29 @@ def build_weekly_record_kwargs(user: User, data: dict) -> dict:
         if isinstance(v, str) and v.startswith('http'):
             photo_count += 1
 
-    number_trees_affected = int(data.get('number_of_trees_affected') or block.number_of_trees or 0)
-
-    scouting_session = data.get('scouting_session')
-    session_obj = None
-    if scouting_session:
-        from .models import ScoutingSession
-
-        try:
-            sid = uuid.UUID(str(scouting_session))
-            session_obj = ScoutingSession.objects.filter(id=sid, farmer=user).first()
-        except (ValueError, TypeError):
-            session_obj = None
+    other_challenges = data.get('other_production_challenges')
+    if isinstance(other_challenges, str):
+        other_challenges = [x.strip() for x in other_challenges.split(',') if x.strip()]
+    elif not isinstance(other_challenges, list):
+        other_challenges = None
 
     return {
         'farmer': user,
         'block': block,
-        'scouting_session': session_obj,
         'variety': variety,
-        'type_of_trap': type_of_trap[:100],
-        'number_of_trap': max(number_of_trap, 0),
-        'traps_replaced': int(data.get('traps_replaced') or 0),
+        'trap_use': trap_use if isinstance(trap_use, list) else [],
         'any_pests_observed': any_pests,
-        'pests_observed': pest_list[0] if pest_list else None,
-        'pests_observed_list': pest_list,
-        'beneficial_insects_observed': beneficials[0] if beneficials else None,
-        'beneficial_insects_observed_list': beneficials,
-        'number_of_trees_affected': max(number_trees_affected, 0),
-        'pest_plant_part_affected': None,
-        'pest_plant_parts_affected_list': [],
-        'pest_crop_stage': _match_single_choice(str(data.get('pest_crop_stage') or ''), WeeklyRecord.CROP_STAGE_CHOICES),
-        'pest_detection_method': _match_single_choice(str(data.get('pest_detection_method') or ''), WeeklyRecord.DETECTION_METHOD_CHOICES),
-        'pests_per_trap': pests_per_trap,
+        'pests_observed': pest_list or None,
+        'beneficial_insects_observed': beneficials or None,
+        'other_production_challenges': other_challenges,
         'any_diseases_observed': any_diseases,
-        'disease': disease_list[0] if disease_list else None,
-        'disease_list': disease_list,
-        'disease_plant_part': disease_parts[0] if disease_parts else None,
-        'disease_plant_parts_list': disease_parts,
+        'disease': disease_list or None,
+        'disease_plant_part': disease_parts or None,
         'disease_crop_stage': _match_single_choice(str(data.get('disease_crop_stage') or ''), WeeklyRecord.CROP_STAGE_CHOICES),
         'disease_detection_method': _match_single_choice(str(data.get('disease_detection_method') or ''), WeeklyRecord.DETECTION_METHOD_CHOICES),
-        'number_of_photos_taken': max(photo_count, int(data.get('number_of_photos_taken') or 0)),
         'additional_notes': (str(data.get('additional_notes') or '').strip() or None),
-        'actions_taken': ((actions_list[0] if actions_list else '❌ No action taken'))[:100],
-        'actions_taken_list': actions_list or ['❌ No action taken'],
-        'outcome': outcome_str[:100],
-        'outcome_list': [outcome_str],
+        'actions_taken': actions_list or ['No action taken'],
+        'outcome': outcome_str[:500],
         'remarks': (str(data.get('remarks') or '').strip() or None),
         'start_date': start_date,
         'end_date': end_date,
@@ -349,11 +327,13 @@ def maybe_create_pending_review(record: WeeklyRecord, data: dict) -> None:
     if existing and existing.review_status == 'confirmed':
         return
 
+    from .weekly_helpers import disease_list as _disease_list, pests_observed_list as _pests_list
+
     label_parts: list[str] = []
     if record.any_pests_observed == 'Yes':
-        label_parts.extend([x for x in (record.pests_observed_list or []) if x])
+        label_parts.extend(_pests_list(record))
     if record.any_diseases_observed == 'Yes':
-        label_parts.extend([x for x in (record.disease_list or []) if x])
+        label_parts.extend(_disease_list(record))
     identified = ', '.join(dict.fromkeys(label_parts))[:255] or 'Pending triage'
 
     ScoutingReview.objects.update_or_create(

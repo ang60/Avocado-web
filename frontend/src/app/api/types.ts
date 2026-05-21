@@ -110,6 +110,14 @@ export interface RecentScoutingRecord {
   beneficialSummary?: string;
   diseaseMetaSummary?: string;
   gpsSummary?: string;
+  actionsTakenSummary?: string;
+  outcomeSummary?: string;
+  productionChallengesSummary?: string;
+  triageReviewed?: ReviewStatus;
+  triageStatus?: string;
+  triageLabel?: string;
+  managementProtocol?: string | null;
+  pushedToFarmer?: boolean;
 }
 
 export interface RecentTrapActivityRow {

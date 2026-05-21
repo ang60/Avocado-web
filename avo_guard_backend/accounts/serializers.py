@@ -1,19 +1,6 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from .models import User, Entity, Role, AppPermission
-
-
-def normalize_phone_number(value: str) -> str:
-    """
-    Normalize a phone number so OTP storage + lookup match even if the client
-    includes spaces/dashes (e.g. "+254 798 123 456").
-    """
-    p = (value or '').strip().replace(' ', '').replace('-', '')
-    if len(p) > 15:
-        raise serializers.ValidationError('Phone number is too long.')
-    if len(p) < 3:
-        raise serializers.ValidationError('Enter a valid phone number.')
-    return p
+from .models import User, Entity, Role, AppPermission, FCMDevice
 
 class AppPermissionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,9 +36,9 @@ class RoleSerializer(serializers.ModelSerializer):
     def get_permissions_count(self, obj):
         return obj.permissions.count()
 
-    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
+    @extend_schema_field(AppPermissionSerializer(many=True))
     def get_permissions(self, obj):
-        return list(obj.permissions.values_list('name', flat=True))
+        return AppPermissionSerializer(obj.permissions.all(), many=True).data
 
     def _resolve_permissions(self, permissions_list):
         if permissions_list is None:
@@ -101,273 +88,177 @@ class EntitySerializer(serializers.ModelSerializer):
     def get_linked_farmers(self, obj):
         return obj.users.count()
 
+class BasicUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'phone_number', 'first_name', 'last_name', 'email', 'identification_number', 'profile_picture']
+
 class UserSerializer(serializers.ModelSerializer):
-    entity_details = EntitySerializer(source='entity', read_only=True)
-    role_details = RoleSerializer(source='role', read_only=True)
-    # Assign by human-readable Role.role_name (preferred from the Admin UI dropdown).
-    role_name = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
-    app_permissions = serializers.SerializerMethodField(read_only=True)
-    is_privileged = serializers.SerializerMethodField(read_only=True)
+    role = RoleSerializer(read_only=True)
+    entity = EntitySerializer(read_only=True)
+    managed_by = BasicUserSerializer(read_only=True)
+    role_id = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.all(), source='role', write_only=True, required=False, allow_null=True
+    )
+    entity_id = serializers.PrimaryKeyRelatedField(
+        queryset=Entity.objects.all(), source='entity', write_only=True, required=False, allow_null=True
+    )
+    managed_by_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), source='managed_by', write_only=True, required=False, allow_null=True
+    )
 
     class Meta:
         model = User
         fields = [
-            'id', 'phone_number', 'email', 'first_name', 'last_name',
-            'password',
-            'role', 'role_name', 'role_details', 'county', 'entity', 'entity_details',
-            'managed_by',
-            'last_login', 'is_staff', 'is_active',
-            'app_permissions', 'is_privileged',
+            'id', 'phone_number', 'email', 'first_name', 'last_name', 
+            'role', 'role_id', 'county', 'entity', 'entity_id', 
+            'managed_by', 'managed_by_id', 'identification_number',
+            'profile_picture', 'last_login', 'is_staff', 'is_active'
         ]
-        read_only_fields = ['last_login', 'is_staff']
+        read_only_fields = ['last_login', 'is_staff', 'is_active']
         extra_kwargs = {
             'password': {'write_only': True, 'required': False},
-            'entity': {'write_only': True, 'required': False},
-            'role': {'write_only': True, 'required': False},
-            'managed_by': {'write_only': True, 'required': False, 'allow_null': True},
         }
 
-    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
-    def get_app_permissions(self, obj):
-        if obj.is_superuser or obj.is_staff:
-            return list(AppPermission.objects.values_list('name', flat=True).order_by('name'))
-        role = obj.role
-        if not role:
-            return []
-        return list(role.permissions.values_list('name', flat=True).order_by('name'))
-
-    @extend_schema_field(serializers.BooleanField())
-    def get_is_privileged(self, obj):
-        """
-        Full navigation bypass in the SPA (not the same as is_admin_like: KEPHIS/HCDA
-        keep regulator directory powers on the API but only see nav allowed by app_permissions).
-        """
-        from api.rbac import ROLE_ADMIN
-
-        if obj.is_superuser or obj.is_staff:
-            return True
-        role = obj.role
-        name = str(getattr(role, 'role_name', '') or '').strip()
-        return name in (ROLE_ADMIN, 'System Administrator')
-
-    def validate(self, attrs):
-        """
-        If the client sends `role_name`, it overrides `role` (UUID) and resolves
-        the ForeignKey by Role.role_name (case-insensitive).
-        """
-        if 'role_name' in self.initial_data:
-            attrs.pop('role_name', None)
-            raw = self.initial_data.get('role_name')
-            if raw is None or (isinstance(raw, str) and not raw.strip()):
-                attrs['role'] = None
-            else:
-                s = str(raw).strip()
-                role_obj = Role.objects.filter(role_name__iexact=s).first()
-                if not role_obj:
-                    raise serializers.ValidationError(
-                        {
-                            'role_name': (
-                                f'No role named "{s}". Create it under Roles (exact name) '
-                                'or pick an existing role from the list.'
-                            ),
-                        }
-                    )
-                attrs['role'] = role_obj
-        return attrs
+    def to_internal_value(self, data):
+        # Support sending 'role', 'entity', 'managed_by' as IDs in the request body
+        data = data.copy()
+        if 'role' in data and not isinstance(data['role'], dict):
+            data['role_id'] = data.pop('role')
+        if 'entity' in data and not isinstance(data['entity'], dict):
+            data['entity_id'] = data.pop('entity')
+        if 'managed_by' in data and not isinstance(data['managed_by'], dict):
+            data['managed_by_id'] = data.pop('managed_by')
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
+        
+        # Set default role to 'Farmer' if not provided
+        if not validated_data.get('role'):
+            farmer_role, _ = Role.objects.get_or_create(role_name='Farmer')
+            validated_data['role'] = farmer_role
+            
         user = User.objects.create_user(**validated_data)
         if password:
             user.set_password(password)
             user.save()
         return user
 
-    def update(self, instance, validated_data):
-        password = validated_data.pop('password', None)
-        user = super().update(instance, validated_data)
-        if password:
-            user.set_password(password)
-            user.save(update_fields=['password'])
-        return user
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False, min_length=8)
 
+    class Meta:
+        model = User
+        fields = ['phone_number', 'email', 'first_name', 'last_name', 'identification_number', 'role', 'entity', 'county', 'password']
+        extra_kwargs = {
+            'email': {'required': False, 'allow_blank': True},
+            'first_name': {'required': True},
+            'last_name': {'required': True},
+            'role': {'required': False},
+            'entity': {'required': False},
+            'county': {'required': True},
+        }
 
-class RequestPasswordResetSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=15)
-    email = serializers.EmailField()
-
-    def validate_phone_number(self, value: str) -> str:
-        return normalize_phone_number(value)
-
-
-class ConfirmPasswordResetSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=15)
-    code = serializers.CharField(max_length=6)
-    new_password = serializers.CharField(write_only=True, min_length=8)
-
-    def validate_phone_number(self, value: str) -> str:
-        return normalize_phone_number(value)
-
-
-class RegisterSerializer(serializers.Serializer):
-    """
-    Access request only — not phone verification and does not send an OTP.
-    Creates or updates a pending user; admin must set is_active before the user can use request_otp / verify_otp.
-      - POST /api/users/register/ with { first_name, last_name, email?, phone_number, county?, role?,
-        password, password_confirm } or legacy { name, ... }.
-    """
-
-    name = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
-    phone_number = serializers.CharField(max_length=15)
-    password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
-    password_confirm = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
-    county = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
-    role = serializers.UUIDField(required=False, allow_null=True)
-
-    def validate_phone_number(self, value: str) -> str:
-        return normalize_phone_number(value)
-
-    def validate(self, attrs):
-        phone = attrs['phone_number']
-        existing = User.objects.filter(phone_number=phone).first()
-        if existing and existing.is_active:
-            raise serializers.ValidationError(
-                {'phone_number': 'An account with this phone number already exists. Sign in instead.'}
-            )
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({'password_confirm': 'Passwords do not match.'})
-
-        fn = (attrs.get('first_name') or '').strip()
-        ln = (attrs.get('last_name') or '').strip()
-        legacy = (attrs.get('name') or '').strip()
-        if fn or ln:
-            resolved_fn, resolved_ln = fn, ln
-        elif legacy:
-            parts = [p for p in legacy.split() if p]
-            resolved_fn = parts[0] if parts else ''
-            resolved_ln = ' '.join(parts[1:]) if len(parts) > 1 else ''
-        else:
-            raise serializers.ValidationError(
-                {'non_field_errors': 'Enter your first and last name (or full name).'}
-            )
-        attrs['resolved_first_name'] = resolved_fn
-        attrs['resolved_last_name'] = resolved_ln
-
-        role_id = attrs.get('role')
-        if role_id and not Role.objects.filter(pk=role_id).exists():
-            raise serializers.ValidationError({'role': 'Invalid role selected.'})
-
-        return attrs
+    def validate_phone_number(self, value):
+        if User.objects.filter(phone_number=value).exists():
+            raise serializers.ValidationError("A user with this phone number already exists.")
+        return value
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
-        validated_data.pop('password_confirm', None)
-        first_name = validated_data.pop('resolved_first_name')
-        last_name = validated_data.pop('resolved_last_name')
-        validated_data.pop('first_name', None)
-        validated_data.pop('last_name', None)
-        validated_data.pop('name', None)
-        email = validated_data.pop('email', None) or None
-        phone_number = validated_data.pop('phone_number')
-        county_raw = validated_data.pop('county', None)
-        county = (county_raw or '').strip() or None
-        role_id = validated_data.pop('role', None)
-        role = Role.objects.filter(pk=role_id).first() if role_id else None
+        password = validated_data.pop('password', None)
+        
+        # Set default role to 'Farmer' if not provided
+        if not validated_data.get('role'):
+            farmer_role, _ = Role.objects.get_or_create(role_name='Farmer')
+            validated_data['role'] = farmer_role
 
-        user = User.objects.filter(phone_number=phone_number).first()
-        if user:
-            user.first_name = first_name or user.first_name
-            user.last_name = last_name or user.last_name
-            user.email = email if email is not None else user.email
-            if county is not None:
-                user.county = county
-            if role is not None:
-                user.role = role
+        user = User.objects.create_user(**validated_data)
+        if password:
             user.set_password(password)
             user.save()
-            return user
+        return user
 
-        return User.objects.create_user(
-            phone_number=phone_number,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            county=county,
-            role=role,
-            is_active=False,
-        )
+class UserManagementStatsSerializer(serializers.Serializer):
+    active_users_count = serializers.IntegerField()
+    roles_count = serializers.IntegerField()
+    entities_count = serializers.IntegerField()
+    permissions_count = serializers.IntegerField()
 
 class OTPSerializer(serializers.Serializer):
-    phone_number = serializers.CharField(max_length=15)
+    phone_number = serializers.CharField(max_length=15, required=False)
+    email = serializers.EmailField(required=False, allow_blank=True)
 
-    def validate_phone_number(self, value: str) -> str:
-        return normalize_phone_number(value)
+    def validate(self, data):
+        if not data.get('phone_number') and not data.get('email'):
+            raise serializers.ValidationError("Either phone_number or email is required.")
+        return data
 
 class VerifyOTPSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
     code = serializers.CharField(max_length=6)
 
-    def validate_phone_number(self, value: str) -> str:
-        return normalize_phone_number(value)
-
-
-class LoginPasswordSerializer(serializers.Serializer):
-    """Sign-in with email or phone plus password (approved accounts only)."""
-
-    identifier = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        max_length=255,
-        help_text='Email address or phone number',
-    )
-    email = serializers.CharField(required=False, allow_blank=True, max_length=255, write_only=True)
-    phone_number = serializers.CharField(required=False, allow_blank=True, max_length=20, write_only=True)
-    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
-
-    def validate(self, attrs):
-        ident = (attrs.get('identifier') or '').strip()
-        if not ident:
-            ident = (attrs.get('email') or '').strip()
-        if not ident:
-            ident = (attrs.get('phone_number') or '').strip()
-        if not ident:
-            raise serializers.ValidationError({'identifier': ['Enter your email or phone number.']})
-        attrs['identifier'] = ident
-        attrs.pop('email', None)
-        attrs.pop('phone_number', None)
-        return attrs
-
+class LoginSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    password = serializers.CharField(write_only=True)
 
 class PasswordResetRequestSerializer(serializers.Serializer):
-    identifier = serializers.CharField(max_length=255, help_text='Email address or phone number')
+    phone_number = serializers.CharField(max_length=15, required=False)
+    email = serializers.EmailField(required=False, allow_blank=True)
 
-    def validate_identifier(self, value: str) -> str:
-        s = (value or '').strip()
-        if not s:
-            raise serializers.ValidationError('Enter your email or phone number.')
-        return s
-
+    def validate(self, data):
+        if not data.get('phone_number') and not data.get('email'):
+            raise serializers.ValidationError("Either phone_number or email is required.")
+        return data
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
-    identifier = serializers.CharField(max_length=255, help_text='Email address or phone number')
+    phone_number = serializers.CharField(max_length=15)
     code = serializers.CharField(max_length=6)
-    new_password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
-
-    def validate_identifier(self, value: str) -> str:
-        s = (value or '').strip()
-        if not s:
-            raise serializers.ValidationError('Enter your email or phone number.')
-        return s
-
+    new_password = serializers.CharField(write_only=True, min_length=8)
 
 class LinkAgronomistSerializer(serializers.Serializer):
     farmer_id = serializers.UUIDField()
-
+    # agronomist is the current user
 
 class VerifyLinkSerializer(serializers.Serializer):
     farmer_id = serializers.UUIDField()
     otp_code = serializers.CharField(max_length=6)
+
+class FarmerLinkAgronomistSerializer(serializers.Serializer):
+    agronomist_id = serializers.UUIDField(required=False)
+    farmer_id = serializers.UUIDField(required=False)
+    otp_code = serializers.CharField(max_length=6)
+
+    def validate(self, data):
+        if not data.get('agronomist_id') and not data.get('farmer_id'):
+            raise serializers.ValidationError("Either agronomist_id or farmer_id is required.")
+        return data
+
+class UserProfilePictureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['profile_picture']
+
+class FCMDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FCMDevice
+        fields = ['registration_id', 'device_id', 'device_type', 'is_active']
+        extra_kwargs = {
+            'registration_id': {'required': True},
+        }
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        registration_id = validated_data.get('registration_id')
+        
+        # Update if exists, else create
+        device, created = FCMDevice.objects.update_or_create(
+            registration_id=registration_id,
+            defaults={
+                'user': user,
+                'device_id': validated_data.get('device_id'),
+                'device_type': validated_data.get('device_type', 'android'),
+                'is_active': True
+            }
+        )
+        return device

@@ -81,8 +81,16 @@ export async function fetchScoutingReports(params: {
   });
 }
 
+/** WeeklyRecord UUID for pest_scouting detail API (strips dashboard `app-weekly-` prefix). */
+export function normalizeScoutingReportApiId(id: string): string {
+  const key = id.trim();
+  if (key.startsWith('app-weekly-')) return key.slice('app-weekly-'.length);
+  return key;
+}
+
 export async function fetchScoutingReportDetail(id: string): Promise<ScoutingReport> {
-  return apiRequest<ScoutingReport>(`/api/pest-scouting/scouting-reports/${id}/`, {
+  const apiId = normalizeScoutingReportApiId(id);
+  return apiRequest<ScoutingReport>(`/api/pest-scouting/scouting-reports/${apiId}/`, {
     method: 'GET',
     auth: true,
   });

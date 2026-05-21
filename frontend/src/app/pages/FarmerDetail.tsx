@@ -348,6 +348,15 @@ export function FarmerDetail() {
                     Diseases: {latest.anyDiseasesObserved || '—'}
                     {latest.blockName ? ` • ${latest.blockName}` : ''}
                   </p>
+                  {(latest.actionsTaken?.length ?? 0) > 0 || latest.outcome || (latest.otherProductionChallenges?.length ?? 0) > 0 ? (
+                    <p className="text-xs mt-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64' }}>
+                      {latest.actionsTaken?.length ? `Actions: ${latest.actionsTaken.join(', ')}` : null}
+                      {latest.outcome ? `${latest.actionsTaken?.length ? ' • ' : ''}Outcome: ${latest.outcome}` : null}
+                      {latest.otherProductionChallenges?.length
+                        ? ` • Challenges: ${latest.otherProductionChallenges.join(', ')}`
+                        : null}
+                    </p>
+                  ) : null}
                   {(latest.gpsLatitude && latest.gpsLongitude) || (latest.mediaUrls?.length ?? 0) > 0 ? (
                     <div className="flex flex-wrap gap-3 mt-2">
                       {latest.gpsLatitude && latest.gpsLongitude ? (
@@ -386,7 +395,7 @@ export function FarmerDetail() {
                     borderRadius: '8px',
                     fontWeight: '600',
                   }}
-                  onClick={() => navigate(`/scouting-reports/app-weekly-${latest.id}`)}
+                  onClick={() => navigate(`/scouting-reports/${latest.id}`)}
                 >
                   <ClipboardList className="w-4 h-4" />
                   Open
@@ -438,6 +447,74 @@ export function FarmerDetail() {
               ))}
             </div>
           </div>
+
+          {((farmerData.trapLogsFromApp?.length ?? 0) > 0 || (farmerData.problemReportsFromApp?.length ?? 0) > 0) && (
+            <div
+              className="p-6 rounded-lg border mb-6"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <h2
+                className="mb-4"
+                style={{
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  color: '#1B4332',
+                  fontWeight: '600',
+                  fontSize: '18px',
+                }}
+              >
+                Mobile trap & problem reports
+              </h2>
+              {(farmerData.trapLogsFromApp?.length ?? 0) > 0 ? (
+                <div className="mb-4">
+                  <p className="text-xs uppercase tracking-wider mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    Trap check-ins
+                  </p>
+                  <div className="space-y-2">
+                    {farmerData.trapLogsFromApp!.map((t, i) => (
+                      <div
+                        key={`trap-${i}`}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-4 py-3"
+                        style={{ borderColor: '#E0DDD6' }}
+                      >
+                        <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
+                          {t.trapName} (×{t.numberOfTraps})
+                        </span>
+                        <span className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                          {t.timestamp ? new Date(t.timestamp).toLocaleString() : '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {(farmerData.problemReportsFromApp?.length ?? 0) > 0 ? (
+                <div>
+                  <p className="text-xs uppercase tracking-wider mb-2" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    Problem reports
+                  </p>
+                  <div className="space-y-2">
+                    {farmerData.problemReportsFromApp!.map((pr, i) => (
+                      <div
+                        key={`pr-${i}`}
+                        className="rounded-lg border px-4 py-3"
+                        style={{ borderColor: '#E0DDD6' }}
+                      >
+                        <p className="text-sm mb-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: '600' }}>
+                          {pr.problemType} · {pr.urgency}
+                        </p>
+                        <p className="text-xs line-clamp-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#374151' }}>
+                          {pr.description}
+                        </p>
+                        <p className="text-xs mt-1" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                          {pr.timestamp ? new Date(pr.timestamp).toLocaleString() : '—'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
 
           {/* Active Cases */}
           <div 

@@ -140,8 +140,9 @@ export function farmSnapshotFromReport(report: ScoutingRowPayload): {
   timestamp?: string;
 } {
   const raw = getRawPayload(report);
+  const holding = (report.farmName || '').trim();
   return {
-    farmName: typeof raw['farm_name'] === 'string' ? raw['farm_name'] : undefined,
+    farmName: typeof raw['farm_name'] === 'string' ? raw['farm_name'] : holding || undefined,
     location: typeof raw['location'] === 'string' ? raw['location'] : report.reportLocation || undefined,
     numberOfBlocks: raw['number_of_blocks'] != null ? String(raw['number_of_blocks']) : undefined,
     farmSize: raw['farm_size'] != null ? String(raw['farm_size']) : undefined,
@@ -179,16 +180,30 @@ export function blockSnapshotFromReport(report: ScoutingRowPayload): {
 export function resolveScoutingMediaUrl(u: string): string {
   const t = u.trim();
   if (!t) return t;
-  if (t.startsWith('http://') || t.startsWith('https://')) return t;
+  if (t.startsWith('http://') || t.startsWith('https://')) {
+    try {
+      const host = new URL(t).hostname.toLowerCase();
+      if ((host === 'localhost' || host === '127.0.0.1') && t.includes('/media/')) {
+        const path = new URL(t).pathname;
+        return `${API_BASE_URL}${path}`;
+      }
+    } catch {
+      /* keep original */
+    }
+    return t;
+  }
   if (t.startsWith('//')) return `${typeof window !== 'undefined' ? window.location.protocol : 'https:'}${t}`;
   if (t.startsWith('/')) return `${API_BASE_URL}${t}`;
-  return t;
+  if (t.startsWith('media/')) return `${API_BASE_URL}/${t}`;
+  return `${API_BASE_URL}/${t.replace(/^\//, '')}`;
 }
 
 function looksLikeMediaUrl(s: string): boolean {
   const t = s.trim();
   if (!t) return false;
-  if (t.startsWith('http://') || t.startsWith('https://') || t.startsWith('/media/')) return true;
+  if (t.startsWith('http://') || t.startsWith('https://') || t.startsWith('/media/') || t.startsWith('media/')) {
+    return true;
+  }
   const low = t.split('?')[0].toLowerCase();
   return ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.m4a', '.mp3', '.aac', '.wav', '.ogg'].some((ext) => low.endsWith(ext));
 }
@@ -199,6 +214,10 @@ function collectUrlsFromRawPayload(raw: Record<string, unknown>): string[] {
   const visit = (v: unknown) => {
     if (typeof v === 'string' && looksLikeMediaUrl(v)) found.push(resolveScoutingMediaUrl(v));
   };
+  const uploaded = raw['uploaded_media_urls'];
+  if (Array.isArray(uploaded)) {
+    for (const u of uploaded) visit(u);
+  }
   for (const [key, v] of Object.entries(raw)) {
     if (typeof key === 'string' && key.toLowerCase().includes('photo')) visit(v);
   }

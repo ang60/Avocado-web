@@ -8,4 +8,3 @@ router.register(r'advisories', AdvisoryViewSet)
 urlpatterns = [
     path('', include(router.urls)),
 ]
-

@@ -1,11 +1,8 @@
-from django.db.models import Q
 from rest_framework import viewsets, permissions, filters as drf_filters
 from django_filters import rest_framework as filters
-from drf_spectacular.utils import extend_schema
-
 from .models import Advisory
 from .serializers import AdvisorySerializer
-
+from drf_spectacular.utils import extend_schema
 
 class AdvisoryFilter(filters.FilterSet):
     action_taken = filters.CharFilter(method='filter_action_taken')
@@ -16,9 +13,8 @@ class AdvisoryFilter(filters.FilterSet):
 
     def filter_action_taken(self, queryset, name, value):
         if value.lower() == 'complete':
-            return queryset.filter(Q(outcome='✅ Controlled') | Q(outcome__icontains='controlled'))
+            return queryset.filter(outcome='✅ Controlled')
         return queryset
-
 
 @extend_schema(tags=['Advisory Services'])
 class AdvisoryViewSet(viewsets.ModelViewSet):
@@ -37,4 +33,3 @@ class AdvisoryViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(farmer=self.request.user)
-
