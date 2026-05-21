@@ -1,2 +1,0 @@
-This folder is archived. Use avo_guard_backend/ as the only Django API.
-Merged: api app, mobile sync, dashboard endpoints.

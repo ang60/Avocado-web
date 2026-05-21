@@ -29,19 +29,19 @@ The legacy Django tree was merged into `avo_guard_backend/` and moved to `backen
    ```bash
    cd frontend
    npm install
-   VITE_API_BASE_URL=http://127.0.0.1:8000 npm run dev
+   npm run dev
    ```
 
-   The client uses `VITE_API_BASE_URL` (see `frontend/src/app/api/client.ts`). Defaults to `http://localhost:8000` if unset.
+   The client uses `VITE_API_BASE_URL` (see `frontend/src/app/api/client.ts`). **Production API:** `https://avo-guard.vercel.app` (set in `frontend/.env.production`). Do not point the SPA at `https://avoguard.cognitron.co.ke` unless `/api` is proxied to Django — otherwise login POST returns *Method POST not allowed*. For local Django, copy `frontend/.env.local.example` to `frontend/.env.local` (remove that file before `npm run build`).
 
-3. **Android app** — set `BASE_URL` in `Avocado-Pest-and-Disease-Scouting-Alerting-and-Advisory-Tool/app/src/main/java/com/avocado/android/utils/Constants.java` to the same host (e.g. `http://10.0.2.2:8000` on emulator, or `http://<LAN-IP>:8000` on a device), rebuild, and install.
+3. **Android app** — production `BASE_URL` is `https://avo-guard.vercel.app` in `Constants.java`. For local testing, point it at the same host as `VITE_API_BASE_URL` (e.g. `http://10.0.2.2:8000` on emulator).
 
 4. **Environment** — Django loads, in order: optional monorepo-root `.env` when `../frontend` exists, then `avo_guard_backend/.env` (overrides), then the process cwd. Put API secrets in `avo_guard_backend/.env` when the API runs alone.
 
 ## Deploy separately
 
 - **API**: WSGI/ASGI app `avo_guard.wsgi:application`, `collectstatic`, database URL, `SECRET_KEY`, `DEBUG=0`, `ALLOWED_HOSTS`, and **`CORS_ALLOWED_ORIGINS`** listing every browser origin that will call the API (comma-separated). With `DEBUG` off, CORS is locked down; missing origins cause blocked browser requests.
-- **Frontend**: Build static assets (`npm run build`) and serve from any static host or CDN. Set **`VITE_API_BASE_URL`** at build time to the public API base URL (no trailing slash).
+- **Frontend**: Build static assets (`npm run build`) and serve from any static host or CDN. Set **`VITE_API_BASE_URL=https://avo-guard.vercel.app`** at build time (Vercel env var or `frontend/env.production.example`). No trailing slash.
 - **Mobile**: Set `Constants.BASE_URL` to that same public API URL (not the SPA host unless the API is served there).
 
 No build-time coupling between clients: they only need the API URL and valid auth.

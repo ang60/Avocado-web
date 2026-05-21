@@ -77,7 +77,7 @@ export function Dashboard() {
         <div className="p-8 rounded-lg border text-center" style={{ borderColor: '#E0DDD6' }}>
           <p style={{ color: '#b45309', fontFamily: 'IBM Plex Sans, sans-serif' }}>{loadError}</p>
           <p className="text-sm mt-2" style={{ color: '#717182' }}>
-            Ensure the backend is running, you are signed in, and VITE_API_BASE_URL points to your API.
+            Ensure you are signed in and the API is reachable (default: https://avo-guard.vercel.app).
           </p>
         </div>
       </>

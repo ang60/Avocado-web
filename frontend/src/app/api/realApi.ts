@@ -13,6 +13,7 @@ import type {
 } from './types';
 import { complianceRowsFromFarmerList } from '../utils/complianceFarmersFromRegistry';
 import { API_BASE_URL, apiRequest, parseDrfList, type PaginatedResults } from './client';
+import { API_PATHS } from './endpoints';
 
 /**
  * Real backend API calls (Django/DRF).
@@ -20,7 +21,7 @@ import { API_BASE_URL, apiRequest, parseDrfList, type PaginatedResults } from '.
  */
 
 export async function fetchDashboard(): Promise<DashboardPayload> {
-  return apiRequest<DashboardPayload>('/api/dashboard/');
+  return apiRequest<DashboardPayload>(API_PATHS.dashboard);
 }
 
 export async function listProductionVolumes(params: {
@@ -347,7 +348,7 @@ export async function fetchFarmerCaseAdvisories(): Promise<FarmerCaseForDashboar
 
 export async function fetchScoutingFeed(): Promise<ScoutingFeedItem[]> {
   const data = await apiRequest<PaginatedResults<ScoutingFeedItem> | ScoutingFeedItem[]>(
-    '/api/pest-scouting/scouting-reports/?page_size=500',
+    `${API_PATHS.pestScouting.scoutingReports}?page_size=500`,
   );
   return parseDrfList<ScoutingFeedItem>(data);
 }

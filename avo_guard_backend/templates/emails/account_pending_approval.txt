@@ -1,9 +1,0 @@
-Hello {{ user.first_name|default:"User" }},
-
-Great news! Your account setup is complete.
-
-Your account is now pending approval by an administrator. Once your account has been reviewed and approved, you will receive another email confirming that you can log in.
-
-Thank you for your patience.
-
-The Mifugo Wallet Team

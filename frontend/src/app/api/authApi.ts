@@ -1,6 +1,7 @@
 import type { AuthUser } from '../auth';
 import { setAuthSession } from '../auth';
 import { apiRequest } from './client';
+import { API_PATHS } from './endpoints';
 
 /** Submit an access request (registration). Does not send any SMS; OTP is only for verifying an approved account at sign-in. */
 export type AccessRequestResponse = {
@@ -27,7 +28,7 @@ export async function submitAccessRequest(params: {
   password: string;
   password_confirm: string;
 }): Promise<AccessRequestResponse> {
-  return apiRequest<AccessRequestResponse>('/api/users/register/', {
+  return apiRequest<AccessRequestResponse>(API_PATHS.users.register, {
     method: 'POST',
     auth: false,
     body: JSON.stringify(params),
@@ -47,7 +48,7 @@ export type RoleOption = {
 /** Roles for the public registration page (unauthenticated; server must allow `for_registration=1`). */
 export async function fetchRoles(): Promise<RoleOption[]> {
   const res = await apiRequest<{ results: RoleOption[] }>(
-    '/api/roles/?page_size=100&for_registration=1',
+    `${API_PATHS.roles}?page_size=100&for_registration=1`,
     {
       method: 'GET',
       auth: false,
@@ -85,7 +86,7 @@ export async function confirmPasswordReset(params: { identifier: string; code: s
 
 /** SMS one-time code for an already-approved account — account verification at sign-in, not part of registration. */
 export async function requestOtp(phoneNumber: string): Promise<void> {
-  await apiRequest('/api/users/request_otp/', {
+  await apiRequest(API_PATHS.users.requestOtp, {
     method: 'POST',
     auth: false,
     body: JSON.stringify({ phone_number: phoneNumber }),
@@ -101,7 +102,7 @@ export type VerifyOtpResponse = {
 
 /** Complete sign-in after the user enters the verification code sent to their phone. */
 export async function verifyOtp(phoneNumber: string, code: string): Promise<VerifyOtpResponse> {
-  const res = await apiRequest<VerifyOtpResponse>('/api/users/verify_otp/', {
+  const res = await apiRequest<VerifyOtpResponse>(API_PATHS.users.verifyOtp, {
     method: 'POST',
     auth: false,
     body: JSON.stringify({ phone_number: phoneNumber, code }),
