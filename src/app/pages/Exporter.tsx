@@ -1,5 +1,5 @@
 
-import { Package, TrendingUp, AlertTriangle, Plus, Truck, CheckCircle, Clock, Eye, Calendar, X, MapPin, Phone, User } from 'lucide-react';
+import { Package, TrendingUp, AlertTriangle, Plus, Truck, CheckCircle, Eye, Calendar, X, MapPin, Phone } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { TableScroll } from '../components/TableScroll';
 
@@ -14,6 +14,9 @@ interface ConsignmentBlock {
   phiExpiryDate: string;
   kephisStatus: 'cleared' | 'pending' | 'blocked';
   lastSprayDate: string;
+  scoutingStatus: 'scouted' | 'pending';
+  pestManagementStatus: 'on-track' | 'needs-follow-up' | 'critical';
+  managementActions: string[];
   batchId?: string;
   batchStage?: 'scouting' | 'kephis' | 'packed' | 'shipped';
   phoneNumber?: string;
@@ -43,6 +46,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
     phiExpiryDate: '2026-03-20',
     kephisStatus: 'cleared',
     lastSprayDate: '2026-03-10',
+    scoutingStatus: 'scouted',
+    pestManagementStatus: 'on-track',
+    managementActions: ['Scouting', 'Targeted spray', 'Sanitation'],
     batchId: 'BATCH-001',
     batchStage: 'kephis',
     phoneNumber: '+254 722 456 789',
@@ -59,6 +65,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
     phiExpiryDate: '2026-03-22',
     kephisStatus: 'cleared',
     lastSprayDate: '2026-03-08',
+    scoutingStatus: 'scouted',
+    pestManagementStatus: 'on-track',
+    managementActions: ['Scouting', 'Baiting/traps', 'Sanitation'],
     batchId: 'BATCH-001',
     batchStage: 'kephis',
     phoneNumber: '+254 733 567 890',
@@ -75,6 +84,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
     phiExpiryDate: '2026-03-25',
     kephisStatus: 'pending',
     lastSprayDate: '2026-03-12',
+    scoutingStatus: 'scouted',
+    pestManagementStatus: 'needs-follow-up',
+    managementActions: ['Scouting', 'Spray scheduled'],
     batchId: 'BATCH-002',
     batchStage: 'scouting',
     phoneNumber: '+254 711 234 567',
@@ -91,6 +103,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
     phiExpiryDate: '2026-03-19',
     kephisStatus: 'cleared',
     lastSprayDate: '2026-03-05',
+    scoutingStatus: 'scouted',
+    pestManagementStatus: 'on-track',
+    managementActions: ['Scouting', 'Orchard sanitation'],
     batchId: 'BATCH-001',
     batchStage: 'kephis',
     phoneNumber: '+254 720 345 678',
@@ -107,6 +122,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
     phiExpiryDate: '2026-03-28',
     kephisStatus: 'blocked',
     lastSprayDate: '2026-03-14',
+    scoutingStatus: 'pending',
+    pestManagementStatus: 'critical',
+    managementActions: ['Follow-up required', 'High pressure - containment'],
     phoneNumber: '+254 734 678 901',
     location: 'Kiambu, Limuru',
   },
@@ -121,6 +139,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
     phiExpiryDate: '2026-03-21',
     kephisStatus: 'cleared',
     lastSprayDate: '2026-03-09',
+    scoutingStatus: 'scouted',
+    pestManagementStatus: 'on-track',
+    managementActions: ['Scouting', 'Targeted spray'],
     batchId: 'BATCH-003',
     batchStage: 'packed',
     phoneNumber: '+254 712 789 012',
@@ -137,6 +158,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
     phiExpiryDate: '2026-03-30',
     kephisStatus: 'blocked',
     lastSprayDate: '2026-03-15',
+    scoutingStatus: 'scouted',
+    pestManagementStatus: 'needs-follow-up',
+    managementActions: ['Scouting', 'Baiting/traps', 'Follow-up visit'],
     phoneNumber: '+254 721 890 123',
     location: 'Embu, Mbeere North',
   },
@@ -151,6 +175,9 @@ const mockConsignmentData: ConsignmentBlock[] = [
     phiExpiryDate: '2026-03-23',
     kephisStatus: 'cleared',
     lastSprayDate: '2026-03-11',
+    scoutingStatus: 'scouted',
+    pestManagementStatus: 'on-track',
+    managementActions: ['Scouting', 'Sanitation'],
     batchId: 'BATCH-002',
     batchStage: 'scouting',
     phoneNumber: '+254 735 901 234',
@@ -202,6 +229,10 @@ export function Exporter() {
   const clearedCount = blocks.filter(b => b.kephisStatus === 'cleared').length;
   const pendingCount = blocks.filter(b => b.kephisStatus === 'pending').length;
   const blockedCount = blocks.filter(b => b.kephisStatus === 'blocked').length;
+  const scoutedCount = blocks.filter(b => b.scoutingStatus === 'scouted').length;
+  const onTrackCount = blocks.filter(b => b.pestManagementStatus === 'on-track').length;
+  const followUpCount = blocks.filter(b => b.pestManagementStatus === 'needs-follow-up').length;
+  const criticalCount = blocks.filter(b => b.pestManagementStatus === 'critical').length;
 
   // Calculate days until PHI expiry
   const calculateDaysUntilExpiry = (expiryDate: string): number => {
@@ -314,7 +345,7 @@ export function Exporter() {
               Exporter Consignment Hub
             </h1>
             <p className="text-sm" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              Manage export-ready avocado consignments and logistics coordination
+              Track clearance, scouting coverage, and pest-management progress across contracted blocks
             </p>
           </div>
           <button
@@ -365,7 +396,7 @@ export function Exporter() {
             </p>
           </div>
 
-          {/* Export-Ready Volume - Green */}
+          {/* Cleared - Green */}
           <div 
             className="bg-white rounded-lg p-6 shadow-sm"
             style={{ borderTop: '4px solid #2D6A4F' }}
@@ -382,158 +413,49 @@ export function Exporter() {
               </span>
             </div>
             <p className="text-sm mb-1" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              Export-Ready Volume (Est.)
+              Cleared for Export
             </p>
             <p 
               className="text-3xl font-bold mb-2"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
             >
-              {exportReadyVolume.toFixed(1)}
-              <span className="text-lg ml-1" style={{ color: '#717182' }}>tonnes</span>
+              {clearedCount}
+              <span className="text-lg ml-1" style={{ color: '#717182' }}>blocks</span>
             </p>
             <p className="text-xs" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              KEPHIS cleared & PHI compliant
+              KEPHIS cleared; PHI dates within limits
             </p>
           </div>
 
-          {/* Blocked/At-Risk Volume - Red */}
+          {/* Scouted + Actions Status - Amber */}
           <div 
             className="bg-white rounded-lg p-6 shadow-sm"
-            style={{ borderTop: '4px solid #C0392B' }}
+            style={{ borderTop: '4px solid #F39C12' }}
           >
             <div className="flex items-start justify-between mb-4">
               <div 
                 className="p-3 rounded-lg"
-                style={{ backgroundColor: 'rgba(192, 57, 43, 0.1)' }}
+                style={{ backgroundColor: 'rgba(243, 156, 18, 0.12)' }}
               >
-                <AlertTriangle className="w-6 h-6" style={{ color: '#C0392B' }} />
+                <Package className="w-6 h-6" style={{ color: '#F39C12' }} />
               </div>
-              <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: '#FADBD8', color: '#C0392B' }}>
-                {blockedCount} Blocked
+              <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'rgba(243, 156, 18, 0.14)', color: '#B9770E' }}>
+                {scoutedCount}/{blocks.length} scouted
               </span>
             </div>
             <p className="text-sm mb-1" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              Blocked/At-Risk Volume
+              Farmer Action Status
             </p>
             <p 
               className="text-3xl font-bold mb-2"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
             >
-              {blockedVolume.toFixed(1)}
-              <span className="text-lg ml-1" style={{ color: '#717182' }}>tonnes</span>
+              {onTrackCount}
+              <span className="text-lg ml-1" style={{ color: '#717182' }}>on-track</span>
             </p>
             <p className="text-xs" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-              High pest pressure or KEPHIS blocked
+              {followUpCount} need follow-up · {criticalCount} critical · {blockedCount} blocked
             </p>
-          </div>
-        </div>
-
-        {/* Batch Progress Component */}
-        <div className="mb-4 rounded-lg bg-white p-6 shadow-sm sm:mb-5">
-          <h3 
-            className="text-lg font-bold mb-6"
-            style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}
-          >
-            <Package className="w-5 h-5 inline mr-2" style={{ color: '#2D6A4F' }} />
-            Active Batch Progress - BATCH-001
-          </h3>
-          
-          {/* Progress Bar */}
-          <div className="relative">
-            {/* Background Track */}
-            <div className="absolute top-6 left-0 right-0 h-1" style={{ backgroundColor: '#E0DDD6' }} />
-            
-            {/* Progress Fill */}
-            <div 
-              className="absolute top-6 left-0 h-1"
-              style={{ 
-                backgroundColor: '#2D6A4F',
-                width: '50%', // 2 out of 4 stages complete
-              }}
-            />
-            
-            {/* Stage Markers */}
-            <div className="relative flex justify-between">
-              {/* Stage 1: Scouting */}
-              <div className="flex flex-col items-center" style={{ width: '25%' }}>
-                <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center mb-3 border-4"
-                  style={{ 
-                    backgroundColor: '#2D6A4F',
-                    borderColor: '#FFFFFF',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  <CheckCircle className="w-6 h-6" style={{ color: '#FFFFFF' }} />
-                </div>
-                <p className="text-sm font-semibold mb-1" style={{ color: '#2D6A4F', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  Scouting
-                </p>
-                <p className="text-xs text-center" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  Completed
-                </p>
-              </div>
-
-              {/* Stage 2: KEPHIS Clearance */}
-              <div className="flex flex-col items-center" style={{ width: '25%' }}>
-                <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center mb-3 border-4"
-                  style={{ 
-                    backgroundColor: '#F39C12',
-                    borderColor: '#FFFFFF',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  <Clock className="w-6 h-6" style={{ color: '#FFFFFF' }} />
-                </div>
-                <p className="text-sm font-semibold mb-1" style={{ color: '#F39C12', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  KEPHIS Clearance
-                </p>
-                <p className="text-xs text-center" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  In Progress (3 blocks)
-                </p>
-              </div>
-
-              {/* Stage 3: Packed */}
-              <div className="flex flex-col items-center" style={{ width: '25%' }}>
-                <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center mb-3 border-4"
-                  style={{ 
-                    backgroundColor: '#E0DDD6',
-                    borderColor: '#FFFFFF',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  <Package className="w-6 h-6" style={{ color: '#717182' }} />
-                </div>
-                <p className="text-sm font-semibold mb-1" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  Packed
-                </p>
-                <p className="text-xs text-center" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  Pending
-                </p>
-              </div>
-
-              {/* Stage 4: Shipped */}
-              <div className="flex flex-col items-center" style={{ width: '25%' }}>
-                <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center mb-3 border-4"
-                  style={{ 
-                    backgroundColor: '#E0DDD6',
-                    borderColor: '#FFFFFF',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  <Truck className="w-6 h-6" style={{ color: '#717182' }} />
-                </div>
-                <p className="text-sm font-semibold mb-1" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  Shipped
-                </p>
-                <p className="text-xs text-center" style={{ color: '#717182', fontFamily: 'IBM Plex Sans, sans-serif' }}>
-                  Pending
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -568,7 +490,7 @@ export function Exporter() {
                 }}
               >
                 <option value="all">All Statuses</option>
-                <option value="cleared">Export Cleared</option>
+                <option value="cleared">Cleared</option>
                 <option value="pending">KEPHIS Pending</option>
                 <option value="blocked">Blocked/At-Risk</option>
               </select>
@@ -626,7 +548,19 @@ export function Exporter() {
                     className="p-4 text-left text-xs font-semibold uppercase"
                     style={{ color: '#FFFFFF', fontFamily: 'IBM Plex Sans, sans-serif' }}
                   >
-                    KEPHIS Status
+                    Clearance
+                  </th>
+                  <th 
+                    className="p-4 text-left text-xs font-semibold uppercase"
+                    style={{ color: '#FFFFFF', fontFamily: 'IBM Plex Sans, sans-serif' }}
+                  >
+                    Scouting
+                  </th>
+                  <th 
+                    className="p-4 text-left text-xs font-semibold uppercase"
+                    style={{ color: '#FFFFFF', fontFamily: 'IBM Plex Sans, sans-serif' }}
+                  >
+                    Farmer Actions
                   </th>
                   <th 
                     className="p-4 text-left text-xs font-semibold uppercase"
@@ -742,10 +676,59 @@ export function Exporter() {
                             fontFamily: 'IBM Plex Sans, sans-serif',
                           }}
                         >
-                          {block.kephisStatus === 'cleared' ? 'Export Cleared' :
+                          {block.kephisStatus === 'cleared' ? 'Cleared' :
                            block.kephisStatus === 'pending' ? 'KEPHIS Pending' :
                            'Blocked'}
                         </span>
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-semibold"
+                          style={{
+                            backgroundColor: block.scoutingStatus === 'scouted' ? 'rgba(52, 152, 219, 0.12)' : 'rgba(224, 221, 214, 0.7)',
+                            color: block.scoutingStatus === 'scouted' ? '#1D4ED8' : '#717182',
+                            fontFamily: 'IBM Plex Sans, sans-serif',
+                          }}
+                        >
+                          {block.scoutingStatus === 'scouted' ? 'Scouted' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[11px] font-semibold w-fit"
+                              style={{
+                                backgroundColor:
+                                  block.pestManagementStatus === 'on-track'
+                                    ? 'rgba(45, 106, 79, 0.12)'
+                                    : block.pestManagementStatus === 'needs-follow-up'
+                                      ? 'rgba(243, 156, 18, 0.14)'
+                                      : 'rgba(192, 57, 43, 0.14)',
+                                color:
+                                  block.pestManagementStatus === 'on-track'
+                                    ? '#2D6A4F'
+                                    : block.pestManagementStatus === 'needs-follow-up'
+                                      ? '#B9770E'
+                                      : '#C0392B',
+                                fontFamily: 'IBM Plex Sans, sans-serif',
+                              }}
+                            >
+                              {block.pestManagementStatus === 'on-track'
+                                ? 'On track'
+                                : block.pestManagementStatus === 'needs-follow-up'
+                                  ? 'Follow up'
+                                  : 'Critical'}
+                            </span>
+                            <span style={{ color: '#717182', fontSize: '12px', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                              {block.managementActions.slice(0, 2).join(' • ')}
+                              {block.managementActions.length > 2 ? '…' : ''}
+                            </span>
+                          </div>
+                          <span style={{ color: '#717182', fontSize: '11px', fontFamily: 'IBM Plex Mono, monospace' }}>
+                            Last spray: {new Date(block.lastSprayDate).toLocaleDateString('en-GB')}
+                          </span>
+                        </div>
                       </td>
                       <td className="p-4">
                         {block.kephisStatus === 'cleared' ? (
@@ -815,7 +798,7 @@ export function Exporter() {
                     Schedule Pickup
                   </h2>
                   <p className="text-sm" style={{ color: '#717182' }}>
-                    Arrange collection for export-ready consignment
+                    Arrange collection for cleared consignments
                   </p>
                 </div>
                 <button
