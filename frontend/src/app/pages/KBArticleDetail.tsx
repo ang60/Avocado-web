@@ -1,0 +1,878 @@
+import { ArrowLeft, CheckCircle2, Lock, Unlock, AlertTriangle, Code, Leaf, Beaker, MessageSquare, Send, Copy, Globe, FileText, TrendingUp, Calendar, Eye, Image as ImageIcon, ChevronRight } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router';
+import { useEffect, useState } from 'react';
+import { UseInAdvisoryButton } from '../components/UseInAdvisoryButton';
+import { articleData } from '../data/articleData';
+import { knowledgeBaseArticles, pdfMediaByArticleId } from '../data/knowledgeBase';
+import { OptimizedImage } from '../components/OptimizedImage';
+import { getApiErrorMessage } from '../api/errors';
+import { fetchKnowledgeEntryById, type KnowledgeEntryDto } from '../api/realApi';
+
+export function KBArticleDetail() {
+  const navigate = useNavigate();
+  const { articleId } = useParams();
+  const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'sw'>('en');
+  const [showChemicalGate, setShowChemicalGate] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
+  const [liveArticle, setLiveArticle] = useState<KnowledgeEntryDto | null>(null);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  
+  const defaultId = knowledgeBaseArticles[0]?.id ?? 'KB-045';
+  const article = articleData[articleId || defaultId];
+  const pdfMedia = pdfMediaByArticleId[articleId || ''] ?? [];
+  const safeArticle = article ?? null;
+
+  useEffect(() => {
+    if (!articleId) return;
+    let cancelled = false;
+    setLiveLoading(true);
+    setLiveError(null);
+    fetchKnowledgeEntryById(articleId)
+      .then((entry) => {
+        if (!cancelled) setLiveArticle(entry);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setLiveError(getApiErrorMessage(e, 'Could not load this article.'));
+      })
+      .finally(() => {
+        if (!cancelled) setLiveLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [articleId]);
+
+  const identificationSigns =
+    selectedLanguage === 'sw' && Array.isArray(safeArticle?.identificationSignsSW)
+      ? safeArticle.identificationSignsSW
+      : Array.isArray(safeArticle?.identificationSigns)
+        ? safeArticle.identificationSigns
+        : [];
+  const lifeCycle =
+    selectedLanguage === 'sw' && typeof safeArticle?.lifeCycleSW === 'string'
+      ? safeArticle.lifeCycleSW
+      : (safeArticle?.lifeCycle ?? '');
+  const economicImpact =
+    selectedLanguage === 'sw' && typeof safeArticle?.economicImpactSW === 'string'
+      ? safeArticle.economicImpactSW
+      : (safeArticle?.economicImpact ?? '');
+  const ipmLadder =
+    selectedLanguage === 'sw' && safeArticle?.ipmLadderSW ? safeArticle.ipmLadderSW : safeArticle?.ipmLadder;
+  
+  if (!article && (liveLoading || liveArticle || liveError)) {
+    return (
+      <>
+        <button
+          onClick={() => navigate('/knowledge-base')}
+          className="mb-6 flex items-center gap-2 rounded-lg px-4 py-2 transition-colors hover:bg-gray-100"
+          style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Knowledge Base
+        </button>
+        {liveLoading ? (
+          <div className="rounded-lg border p-8 text-center" style={{ borderColor: '#E0DDD6' }}>
+            <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>Loading article...</p>
+          </div>
+        ) : null}
+        {liveError ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm" style={{ color: '#92400E', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            {liveError}
+          </div>
+        ) : null}
+        {liveArticle ? (
+          <div className="rounded-lg border bg-white p-6" style={{ borderColor: '#E0DDD6' }}>
+            <h1 className="mb-2 text-2xl sm:text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+              {liveArticle.title}
+            </h1>
+            <p className="mb-3 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              {liveArticle.category_name || 'Knowledge'} · Updated{' '}
+              {liveArticle.last_updated ? new Date(liveArticle.last_updated).toLocaleDateString() : '-'}
+            </p>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="rounded px-2 py-1 text-xs" style={{ backgroundColor: '#74C69D20', color: '#2D6A4F', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                {(liveArticle.severity || 'medium').toUpperCase()} RISK
+              </span>
+              <span className="rounded px-2 py-1 text-xs" style={{ backgroundColor: '#F7F4EF', color: '#455A64', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                {liveArticle.views ?? 0} views
+              </span>
+            </div>
+            <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
+              {liveArticle.content}
+            </p>
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
+  if (!article) {
+    return (
+      <>
+        <div className="text-center py-20">
+          <h2 style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>Article Not Found</h2>
+          <button
+            onClick={() => navigate('/knowledge-base')}
+            className="mt-4 px-4 py-2 rounded"
+            style={{ backgroundColor: '#2D6A4F', color: '#F7F4EF' }}
+          >
+            Back to Knowledge Base
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  const copyToClipboard = () => {
+    const snippet = selectedLanguage === 'en' ? (safeArticle?.advisorySnippetEN ?? '') : (safeArticle?.advisorySnippetSW ?? '');
+    navigator.clipboard.writeText(snippet);
+    setCopiedSnippet(true);
+    setTimeout(() => setCopiedSnippet(false), 2000);
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'high':
+        return { bg: '#DC262620', text: '#DC2626', border: '#DC2626' };
+      case 'medium':
+        return { bg: '#D9770620', text: '#D97706', border: '#D97706' };
+      case 'low':
+        return { bg: '#74C69D20', text: '#2D6A4F', border: '#2D6A4F' };
+      default:
+        return { bg: '#E0DDD6', text: '#717182', border: '#717182' };
+    }
+  };
+
+  const severityStyle = getSeverityColor(safeArticle?.severity ?? 'medium');
+
+  const liveSeverityStyle = getSeverityColor((liveArticle?.severity || 'medium').toLowerCase());
+  const liveTags = Array.isArray(liveArticle?.tags) ? liveArticle?.tags : [];
+  const liveSections = (liveArticle?.content || '')
+    .split(/\n{2,}/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (liveArticle) {
+    const [overview, ...restSections] = liveSections;
+    const advisorySnippet =
+      (liveArticle.content || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 160) || 'Monitor pest pressure and follow approved IPM practices.';
+
+    const copyLiveSnippet = () => {
+      navigator.clipboard.writeText(advisorySnippet);
+      setCopiedSnippet(true);
+      setTimeout(() => setCopiedSnippet(false), 2000);
+    };
+
+    return (
+      <>
+        <button
+          onClick={() => navigate('/knowledge-base')}
+          className="mb-6 flex items-center gap-2 rounded-lg px-4 py-2 transition-colors hover:bg-gray-100"
+          style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Knowledge Base
+        </button>
+
+        <div className="mb-5 rounded-lg border bg-white p-6" style={{ borderColor: '#E0DDD6' }}>
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332' }}>
+              {liveArticle.title}
+            </h1>
+            {liveArticle.approved_content ? <CheckCircle2 className="h-5 w-5" style={{ color: '#2D6A4F' }} /> : null}
+          </div>
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded px-2 py-1" style={{ backgroundColor: '#74C69D20', color: '#2D6A4F', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              {liveArticle.category_name || 'Knowledge'}
+            </span>
+            <span className="rounded border px-2 py-1" style={{ backgroundColor: liveSeverityStyle.bg, borderColor: liveSeverityStyle.border, color: liveSeverityStyle.text, fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              {(liveArticle.severity || 'medium').toUpperCase()} RISK
+            </span>
+            <span className="rounded px-2 py-1" style={{ backgroundColor: '#F7F4EF', color: '#455A64', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              {liveArticle.views ?? 0} views
+            </span>
+            <span className="rounded px-2 py-1" style={{ backgroundColor: '#F7F4EF', color: '#455A64', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              Updated {liveArticle.last_updated ? new Date(liveArticle.last_updated).toLocaleDateString() : '-'}
+            </span>
+          </div>
+          {liveTags.length ? (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {liveTags.map((tag) => (
+                <span key={tag} className="rounded border px-2 py-1 text-xs" style={{ borderColor: '#E0DDD6', color: '#1B4332', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64', lineHeight: '1.75' }}>
+            {overview || liveArticle.content}
+          </p>
+        </div>
+
+        <div className="mb-5 rounded-lg border bg-white p-6" style={{ borderColor: '#E0DDD6' }}>
+          <h2 className="mb-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+            Detailed Guidance
+          </h2>
+          <div className="space-y-3">
+            {restSections.length ? (
+              restSections.map((section, idx) => (
+                <p key={`${idx}-${section.slice(0, 16)}`} style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64', lineHeight: '1.75', whiteSpace: 'pre-wrap' }}>
+                  {section}
+                </p>
+              ))
+            ) : (
+              <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#455A64', lineHeight: '1.75', whiteSpace: 'pre-wrap' }}>
+                {liveArticle.content}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border bg-white p-6" style={{ borderColor: '#E0DDD6' }}>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+              SMS Advisory Snippet
+            </h3>
+            <button onClick={copyLiveSnippet} className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs" style={{ borderColor: '#E0DDD6', color: '#1B4332', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+              <Copy className="h-3 w-3" /> {copiedSnippet ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          <p className="rounded border p-3 text-sm" style={{ borderColor: '#E0DDD6', backgroundColor: '#F8FAFC', color: '#455A64', fontFamily: 'IBM Plex Sans, sans-serif' }}>
+            {advisorySnippet}
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* Back Button */}
+      <button
+        onClick={() => navigate('/knowledge-base')}
+        className="flex items-center gap-2 mb-6 px-4 py-2 rounded-lg transition-colors hover:bg-gray-100"
+        style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#2D6A4F' }}
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Knowledge Base
+      </button>
+
+      {/* Split Header */}
+      <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:mb-5 sm:flex-row">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
+            <h1 
+              className="text-2xl sm:text-3xl" 
+              style={{ 
+                fontFamily: 'DM Serif Display, serif',
+                color: '#1B4332'
+              }}
+            >
+              {article.title}
+            </h1>
+            {article.approvedContent && (
+              <CheckCircle2 
+                className="w-6 h-6 flex-shrink-0" 
+                style={{ color: '#2D6A4F' }}
+              />
+            )}
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+              {article.id}
+            </span>
+            <span style={{ color: '#E0DDD6' }}>•</span>
+            <span 
+              className="text-xs px-2 py-1 rounded"
+              style={{ 
+                backgroundColor: '#74C69D20',
+                color: '#2D6A4F',
+                fontFamily: 'IBM Plex Sans, sans-serif',
+              }}
+            >
+              {article.category}
+            </span>
+            <span 
+              className="text-xs px-2 py-1 rounded border flex items-center gap-1"
+              style={{ 
+                backgroundColor: severityStyle.bg,
+                color: severityStyle.text,
+                borderColor: severityStyle.border,
+                fontFamily: 'IBM Plex Sans, sans-serif',
+              }}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              {article.severity.toUpperCase()} RISK
+            </span>
+            {article.ussdCode && (
+              <span 
+                className="text-xs px-2 py-1 rounded flex items-center gap-1"
+                style={{ 
+                  backgroundColor: '#1B4332',
+                  color: '#F7F4EF',
+                  fontFamily: 'IBM Plex Mono, monospace',
+                }}
+              >
+                <Code className="w-3 h-3" />
+                USSD: {article.ussdCode}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 mt-3 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+            <span className="flex items-center gap-1">
+              <Calendar className="w-4 h-4" />
+              Updated {article.lastUpdated}
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Eye className="w-4 h-4" />
+              {article.views} views
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <TrendingUp className="w-4 h-4" />
+              Used in {article.activeUses} active cases
+            </span>
+          </div>
+        </div>
+        <UseInAdvisoryButton article={article} />
+      </div>
+
+      {/* 2-Column Layout */}
+      <div className="grid grid-cols-1 gap-6 min-w-0 md:grid-cols-3 md:gap-8">
+        {/* Left Column: Content */}
+        <div className="col-span-2 space-y-6">
+          {/* Extracted PDF Slides */}
+          {pdfMedia.length > 0 && (
+            <div
+              className="rounded-lg border p-6"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <h2
+                className="mb-4"
+                style={{
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  color: '#1B4332',
+                  fontSize: '20px',
+                  fontWeight: 600,
+                }}
+              >
+                Reference slides (PDF)
+              </h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {pdfMedia.map((m) => (
+                  <div
+                    key={m.src}
+                    className="overflow-hidden rounded-lg border"
+                    style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF' }}
+                  >
+                    <OptimizedImage
+                      src={m.src}
+                      alt={m.title}
+                      width={1200}
+                      height={800}
+                      className="w-full"
+                      style={{ borderBottom: '1px solid #E0DDD6' }}
+                    />
+                    <div className="p-3">
+                      <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                        {m.title}
+                      </p>
+                      {m.pdfPage ? (
+                        <p className="mt-1 text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                          PDF page {m.pdfPage}
+                        </p>
+                      ) : null}
+                      {m.caption ? (
+                        <p className="mt-1 text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                          {m.caption}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Identification Section */}
+          <div 
+            className="p-6 rounded-lg border"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+          >
+            <h2 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '20px', fontWeight: 600 }}>
+              Identification Signs
+            </h2>
+            <ul className="space-y-2">
+              {identificationSigns.map((sign: string, index: number) => (
+                <li 
+                  key={index}
+                  className="flex items-start gap-3"
+                  style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', lineHeight: '1.6' }}
+                >
+                  <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#2D6A4F' }} />
+                  {sign}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Life Cycle */}
+          <div 
+            className="p-6 rounded-lg border"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+          >
+            <h2 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '20px', fontWeight: 600 }}>
+              Life Cycle & Biology
+            </h2>
+            <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.8' }}>
+              {lifeCycle}
+            </p>
+          </div>
+
+          {/* Economic Impact */}
+          <div 
+            className="p-6 rounded-lg border"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+          >
+            <h2 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '20px', fontWeight: 600 }}>
+              Economic Impact
+            </h2>
+            <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.8' }}>
+              {economicImpact}
+            </p>
+          </div>
+
+          {/* IPM Escalation Ladder */}
+          <div>
+            <h2 className="mb-4" style={{ fontFamily: 'DM Serif Display, serif', color: '#1B4332', fontSize: '28px' }}>
+              IPM Escalation Ladder
+            </h2>
+            
+            {/* Level 1: Cultural */}
+            <div 
+              className="p-6 rounded-lg border mb-4"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: '#74C69D20' }}
+                >
+                  <Leaf className="w-5 h-5" style={{ color: '#2D6A4F' }} />
+                </div>
+                <div className="flex-1">
+                  <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '18px', fontWeight: 600 }}>
+                    {ipmLadder.level1.title}
+                  </h3>
+                  <span 
+                    className="text-xs px-2 py-1 rounded inline-flex items-center gap-1"
+                    style={{ 
+                      backgroundColor: '#74C69D20',
+                      color: '#2D6A4F',
+                      fontFamily: 'IBM Plex Sans, sans-serif',
+                    }}
+                  >
+                    <Unlock className="w-3 h-3" />
+                    OPEN
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {ipmLadder.level1.practices.map((practice: any, index: number) => (
+                  <div key={index} className="p-4 rounded border" style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF' }}>
+                    <h4 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600, marginBottom: '8px' }}>
+                      {practice.name}
+                    </h4>
+                    <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6', marginBottom: '12px' }}>
+                      {practice.description}
+                    </p>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                        <strong style={{ color: '#1B4332' }}>
+                          {selectedLanguage === 'sw' ? 'Mara ngapi:' : 'Frequency:'}
+                        </strong>{' '}
+                        {practice.frequency}
+                      </span>
+                      <span style={{ color: '#E0DDD6' }}>•</span>
+                      <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                        <strong style={{ color: '#1B4332' }}>
+                          {selectedLanguage === 'sw' ? 'Ufanisi:' : 'Effectiveness:'}
+                        </strong>{' '}
+                        {practice.effectiveness}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Level 2: Biological */}
+            <div 
+              className="p-6 rounded-lg border mb-4"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: '#74C69D20' }}
+                >
+                  <Beaker className="w-5 h-5" style={{ color: '#2D6A4F' }} />
+                </div>
+                <div className="flex-1">
+                  <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '18px', fontWeight: 600 }}>
+                    {ipmLadder.level2.title}
+                  </h3>
+                  <span 
+                    className="text-xs px-2 py-1 rounded inline-flex items-center gap-1"
+                    style={{ 
+                      backgroundColor: '#74C69D20',
+                      color: '#2D6A4F',
+                      fontFamily: 'IBM Plex Sans, sans-serif',
+                    }}
+                  >
+                    <Unlock className="w-3 h-3" />
+                    OPEN
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {ipmLadder.level2.practices.map((practice: any, index: number) => (
+                  <div key={index} className="p-4 rounded border" style={{ borderColor: '#E0DDD6', backgroundColor: '#F7F4EF' }}>
+                    <h4 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600, marginBottom: '8px' }}>
+                      {practice.name}
+                    </h4>
+                    <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6', marginBottom: '12px' }}>
+                      {practice.description}
+                    </p>
+                    <div className="flex items-center gap-4 text-sm flex-wrap">
+                      <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                        <strong style={{ color: '#1B4332' }}>
+                          {selectedLanguage === 'sw' ? 'Mara ngapi:' : 'Frequency:'}
+                        </strong>{' '}
+                        {practice.frequency}
+                      </span>
+                      <span style={{ color: '#E0DDD6' }}>•</span>
+                      <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                        <strong style={{ color: '#1B4332' }}>
+                          {selectedLanguage === 'sw' ? 'Ufanisi:' : 'Effectiveness:'}
+                        </strong>{' '}
+                        {practice.effectiveness}
+                      </span>
+                      {practice.supplier && (
+                        <>
+                          <span style={{ color: '#E0DDD6' }}>•</span>
+                          <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                            <strong style={{ color: '#1B4332' }}>
+                              {selectedLanguage === 'sw' ? 'Msambazaji:' : 'Supplier:'}
+                            </strong>{' '}
+                            {practice.supplier}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Level 3: Chemical (GATED) */}
+            <div 
+              className="p-6 rounded-lg border"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#DC2626', borderRadius: '8px' }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ backgroundColor: '#DC262620' }}
+                >
+                  <Lock className="w-5 h-5" style={{ color: '#DC2626' }} />
+                </div>
+                <div className="flex-1">
+                  <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontSize: '18px', fontWeight: 600 }}>
+                    {ipmLadder.level3.title}
+                  </h3>
+                  <span 
+                    className="text-xs px-2 py-1 rounded inline-flex items-center gap-1"
+                    style={{ 
+                      backgroundColor: '#DC262620',
+                      color: '#DC2626',
+                      fontFamily: 'IBM Plex Sans, sans-serif',
+                    }}
+                  >
+                    <Lock className="w-3 h-3" />
+                    GATED
+                  </span>
+                </div>
+              </div>
+              
+              {/* Warning */}
+              <div 
+                className="p-4 rounded-lg mb-4 flex items-start gap-3"
+                style={{ backgroundColor: '#DC262615', borderLeft: '4px solid #DC2626' }}
+              >
+                <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#DC2626' }} />
+                <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#DC2626', fontSize: '14px', fontWeight: 600 }}>
+                  {article.ipmLadder.level3.warning}
+                </p>
+              </div>
+
+              {/* Gate Toggle */}
+              {!showChemicalGate ? (
+                <button
+                  onClick={() => setShowChemicalGate(true)}
+                  className="w-full py-3 rounded-lg transition-colors border"
+                  style={{ 
+                    backgroundColor: '#DC262610',
+                    borderColor: '#DC2626',
+                    color: '#DC2626',
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    fontWeight: 600,
+                  }}
+                >
+                  Click to View Chemical Options & PHI Data
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  {article.ipmLadder.level3.practices.map((practice: any, index: number) => (
+                    <div key={index} className="p-4 rounded border" style={{ borderColor: '#DC2626', backgroundColor: '#FFF5F5' }}>
+                      <div className="flex items-start justify-between mb-3">
+                        <h4 style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#1B4332', fontWeight: 600, fontSize: '16px' }}>
+                          {practice.name}
+                        </h4>
+                        <span 
+                          className="text-xs px-2 py-1 rounded"
+                          style={{ 
+                            backgroundColor: practice.registrationStatus.includes('Restricted') ? '#DC2626' : '#2D6A4F',
+                            color: '#F7F4EF',
+                            fontFamily: 'IBM Plex Sans, sans-serif',
+                          }}
+                        >
+                          {practice.registrationStatus}
+                        </span>
+                      </div>
+                      <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182', lineHeight: '1.6', marginBottom: '12px' }}>
+                        {practice.description}
+                      </p>
+                      
+                      {/* PHI Warning Box */}
+                      <div 
+                        className="p-3 rounded mb-3"
+                        style={{ backgroundColor: '#DC2626', color: '#F7F4EF' }}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertTriangle className="w-4 h-4" />
+                          <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 700, fontSize: '14px' }}>
+                            PRE-HARVEST INTERVAL (PHI): {practice.phi}
+                          </span>
+                        </div>
+                        <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '12px' }}>
+                          Do not harvest within {practice.phi} of application
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                            Application Rate
+                          </p>
+                          <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#717182' }}>
+                            {practice.applicationRate}
+                          </p>
+                        </div>
+                        <div>
+                          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                            Max Applications
+                          </p>
+                          <p style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#717182' }}>
+                            {practice.maxApplications}
+                          </p>
+                        </div>
+                        <div className="col-span-2">
+                          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                            Resistance Risk
+                          </p>
+                          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                            {practice.resistance}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {practice.warning && (
+                        <div 
+                          className="mt-3 p-2 rounded flex items-start gap-2"
+                          style={{ backgroundColor: '#DC262620' }}
+                        >
+                          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#DC2626' }} />
+                          <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#DC2626', fontSize: '12px' }}>
+                            {practice.warning}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Advisory Toolbox */}
+        <div className="col-span-1">
+          <div className="sticky top-8 space-y-6">
+            {/* Advisory Snippet Panel */}
+            <div 
+              className="p-6 rounded-lg border"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#2D6A4F', borderRadius: '8px', borderWidth: '2px' }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <MessageSquare className="w-5 h-5" style={{ color: '#2D6A4F' }} />
+                <h3 style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                  Direct Advisory Snippet
+                </h3>
+              </div>
+              
+              {/* Language Toggle */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setSelectedLanguage('en')}
+                  className="flex-1 py-2 px-3 rounded transition-colors flex items-center justify-center gap-2"
+                  style={{
+                    backgroundColor: selectedLanguage === 'en' ? '#2D6A4F' : 'transparent',
+                    color: selectedLanguage === 'en' ? '#F7F4EF' : '#1B4332',
+                    border: selectedLanguage === 'en' ? 'none' : '1px solid #E0DDD6',
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    fontSize: '14px',
+                  }}
+                >
+                  <Globe className="w-4 h-4" />
+                  English
+                </button>
+                <button
+                  onClick={() => setSelectedLanguage('sw')}
+                  className="flex-1 py-2 px-3 rounded transition-colors flex items-center justify-center gap-2"
+                  style={{
+                    backgroundColor: selectedLanguage === 'sw' ? '#2D6A4F' : 'transparent',
+                    color: selectedLanguage === 'sw' ? '#F7F4EF' : '#1B4332',
+                    border: selectedLanguage === 'sw' ? 'none' : '1px solid #E0DDD6',
+                    fontFamily: 'IBM Plex Sans, sans-serif',
+                    fontSize: '14px',
+                  }}
+                >
+                  <Globe className="w-4 h-4" />
+                  Kiswahili
+                </button>
+              </div>
+
+              {/* SMS Template */}
+              <div 
+                className="p-4 rounded-lg mb-4"
+                style={{ backgroundColor: '#F7F4EF', border: '1px solid #E0DDD6' }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    SMS Template ({selectedLanguage === 'en' ? 'English' : 'Kiswahili'})
+                  </span>
+                  <span className="text-xs" style={{ fontFamily: 'IBM Plex Mono, monospace', color: '#717182' }}>
+                    {selectedLanguage === 'en' ? article.advisorySnippetEN.length : article.advisorySnippetSW.length}/160
+                  </span>
+                </div>
+                <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', lineHeight: '1.6', fontSize: '14px' }}>
+                  {selectedLanguage === 'en' ? article.advisorySnippetEN : article.advisorySnippetSW}
+                </p>
+              </div>
+
+              {/* Copy Button */}
+              <button
+                onClick={copyToClipboard}
+                className="w-full py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
+                style={{
+                  backgroundColor: copiedSnippet ? '#74C69D' : '#2D6A4F',
+                  color: '#F7F4EF',
+                  fontFamily: 'IBM Plex Sans, sans-serif',
+                  fontSize: '14px',
+                }}
+              >
+                {copiedSnippet ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy to Clipboard
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Quick Stats */}
+            <div 
+              className="p-6 rounded-lg border"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <h3 className="mb-4" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                Article Stats
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    Active Cases
+                  </span>
+                  <span className="text-sm font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                    {article.activeUses}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    Total Views
+                  </span>
+                  <span className="text-sm font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                    {article.views}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#717182' }}>
+                    Last Updated
+                  </span>
+                  <span className="text-sm font-semibold" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332' }}>
+                    {article.lastUpdated}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div 
+              className="p-6 rounded-lg border"
+              style={{ backgroundColor: '#FFFFFF', borderColor: '#E0DDD6', borderRadius: '8px' }}
+            >
+              <h3 className="mb-3" style={{ fontFamily: 'IBM Plex Sans, sans-serif', color: '#1B4332', fontWeight: 600 }}>
+                Tags
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {article.tags.map((tag: string) => (
+                  <span 
+                    key={tag}
+                    className="text-xs px-2 py-1 rounded border"
+                    style={{ 
+                      borderColor: '#E0DDD6',
+                      color: '#1B4332',
+                      fontFamily: 'IBM Plex Sans, sans-serif',
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
