@@ -1,0 +1,54 @@
+# Deploy frontend/dist to avoguard.cognitron.co.ke over SSH.
+#
+# Repository secrets (Settings → Secrets → Actions):
+#   COGNITRON_HOST     — e.g. avoguard.cognitron.co.ke or server IP
+#   COGNITRON_USER     — SSH user (e.g. deploy)
+#   COGNITRON_SSH_KEY  — private key
+#   COGNITRON_APP_PATH — repo path on server (e.g. /var/www/Avocado-web)
+#
+# Manual run: Actions → Deploy cognitron dashboard → Run workflow
+
+name: Deploy cognitron dashboard
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-cognitron.yml'
+
+jobs:
+  deploy:
+    if: ${{ secrets.COGNITRON_SSH_KEY != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build SPA for cognitron
+        working-directory: frontend
+        run: npm ci && npm run build:cognitron
+
+      - name: Rsync dist to server
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr --delete
+          path: frontend/dist/
+          remote_path: ${{ secrets.COGNITRON_APP_PATH }}/frontend/dist/
+          remote_host: ${{ secrets.COGNITRON_HOST }}
+          remote_user: ${{ secrets.COGNITRON_USER }}
+          remote_key: ${{ secrets.COGNITRON_SSH_KEY }}
+
+      - name: Reload Apache
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.COGNITRON_HOST }}
+          username: ${{ secrets.COGNITRON_USER }}
+          key: ${{ secrets.COGNITRON_SSH_KEY }}
+          script: sudo apache2ctl configtest && sudo systemctl reload apache2

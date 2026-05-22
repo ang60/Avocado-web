@@ -38,13 +38,42 @@ The legacy Django tree was merged into `avo_guard_backend/` and moved to `backen
 
 4. **Environment** — Django loads, in order: optional monorepo-root `.env` when `../frontend` exists, then `avo_guard_backend/.env` (overrides), then the process cwd. Put API secrets in `avo_guard_backend/.env` when the API runs alone.
 
+## Production dashboard (cognitron)
+
+**Canonical UI:** `https://avoguard.cognitron.co.ke` — Apache serves `frontend/dist`. The API stays on **`https://avo-guard.vercel.app`**; Apache proxies `/api` on cognitron to Vercel (see `frontend/deploy/apache-avoguard-api-proxy.conf`).
+
+**One-time on the Cognitron server:**
+
+```bash
+sudo a2enmod headers proxy proxy_http ssl
+sudo cp /var/www/Avocado-web/frontend/deploy/apache-avoguard-api-proxy.conf /etc/apache2/conf-available/avoguard-api-proxy.conf
+sudo a2enconf avoguard-api-proxy
+sudo apache2ctl configtest && sudo systemctl reload apache2
+chmod +x /var/www/Avocado-web/frontend/scripts/deploy-cognitron.sh
+```
+
+**After every frontend change:**
+
+```bash
+cd /var/www/Avocado-web
+git pull
+cd frontend
+./scripts/deploy-cognitron.sh --reload-apache
+```
+
+Or from your machine: `cd frontend && npm run build:cognitron`, then copy `dist/` to the server. Optional CI: GitHub Actions workflow `.github/workflows/deploy-cognitron.yml` (set `COGNITRON_*` secrets).
+
+If the API is called **directly** from the browser at `avo-guard.vercel.app` (no Apache proxy), build with `npm run build:vercel-api` and add `https://avoguard.cognitron.co.ke` to Django **`CORS_ALLOWED_ORIGINS`** on Vercel.
+
+`avo-guard-frontend.vercel.app` is a separate Vercel SPA deploy; pushing to Git does **not** update cognitron unless you run the steps above or enable the workflow.
+
 ## Deploy separately
 
-- **API**: WSGI/ASGI app `avo_guard.wsgi:application`, `collectstatic`, database URL, `SECRET_KEY`, `DEBUG=0`, `ALLOWED_HOSTS`, and **`CORS_ALLOWED_ORIGINS`** listing every browser origin that will call the API (comma-separated). With `DEBUG` off, CORS is locked down; missing origins cause blocked browser requests.
-- **Frontend**: Build static assets (`npm run build`) and serve from any static host or CDN. Set **`VITE_API_BASE_URL=https://avo-guard.vercel.app`** at build time (Vercel env var or `frontend/env.production.example`). No trailing slash.
-- **Mobile**: Set `Constants.BASE_URL` to that same public API URL (not the SPA host unless the API is served there).
+- **API**: WSGI on Vercel (`https://avo-guard.vercel.app`) or self-hosted. Set `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` (include cognitron if not using `/api` proxy).
+- **Frontend (cognitron)**: `npm run build:cognitron` → `frontend/dist` + Apache proxy for `/api`.
+- **Mobile**: `Constants.BASE_URL` = `https://avo-guard.vercel.app` (API host, not the SPA URL).
 
-No build-time coupling between clients: they only need the API URL and valid auth.
+No build-time coupling between clients beyond the API base URL and auth.
 
 ## Split into two Git repositories (optional)
 
