@@ -1,0 +1,28 @@
+Why localhost has updates but avoguard.cognitron.co.ke does not
+================================================================
+
+localhost:5173 runs "npm run dev" — always uses latest source in frontend/src/.
+
+cognitron.co.ke serves static files from frontend/dist on the SERVER.
+Git push / Vercel do NOT update that folder automatically.
+
+Deploy (run on the Cognitron server after git pull)
+----------------------------------------------------
+  cd /var/www/Avocado-web
+  git pull
+  cd frontend
+  ./scripts/deploy-cognitron.sh --reload-apache
+
+Then open https://avoguard.cognitron.co.ke and hard-refresh (Ctrl+Shift+R).
+
+Success check
+-------------
+  Sidebar footer shows:  Version 2.1.5 · <short-git-sha>
+  NOT:                   Version 2.1.4
+
+One-time: enable API proxy (if login/API 405 on cognitron)
+----------------------------------------------------------
+  sudo a2enmod proxy proxy_http ssl
+  sudo cp frontend/deploy/apache-avoguard-api-proxy.conf /etc/apache2/conf-available/avoguard-api-proxy.conf
+  sudo a2enconf avoguard-api-proxy
+  sudo systemctl reload apache2

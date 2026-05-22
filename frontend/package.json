@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "build:cognitron": "VITE_API_BASE_URL=https://avoguard.cognitron.co.ke vite build",
+    "build:cognitron": "VITE_API_BASE_URL=https://avoguard.cognitron.co.ke vite build --mode production",
     "build:vercel-api": "VITE_API_BASE_URL=https://avo-guard.vercel.app vite build",
     "deploy:cognitron": "bash scripts/deploy-cognitron.sh",
     "dev": "vite",

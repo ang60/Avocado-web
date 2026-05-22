@@ -2,11 +2,10 @@
 # Build the AvoGuard SPA for https://avoguard.cognitron.co.ke and optionally reload Apache.
 #
 # On the Cognitron server (DocumentRoot = frontend/dist):
-#   cd /var/www/Avocado-web/frontend
-#   ./scripts/deploy-cognitron.sh --reload-apache
+#   cd /var/www/Avocado-web && git pull
+#   cd frontend && ./scripts/deploy-cognitron.sh --reload-apache
 #
-# From your laptop (build only; copy dist to the server yourself):
-#   ./scripts/deploy-cognitron.sh
+# After deploy, sidebar should show "Version 2.1.5 · <git-sha>" (not "2.1.4").
 
 set -euo pipefail
 
@@ -19,8 +18,6 @@ for arg in "$@"; do
     --reload-apache) RELOAD_APACHE=true ;;
     -h|--help)
       echo "Usage: $0 [--reload-apache]"
-      echo "  Builds frontend/dist with VITE_API_BASE_URL=https://avoguard.cognitron.co.ke"
-      echo "  Ensure Apache ProxyPass /api is enabled (deploy/apache-avoguard-api-proxy.conf)."
       exit 0
       ;;
     *)
@@ -30,12 +27,28 @@ for arg in "$@"; do
   esac
 done
 
+RESTORE_ENV_LOCAL=""
 if [[ -f .env.local ]]; then
-  echo "Warning: .env.local is present; it can affect vite build. Remove or rename it for production builds." >&2
+  RESTORE_ENV_LOCAL=1
+  mv .env.local .env.local.off-deploy
+  echo "Renamed .env.local → .env.local.off-deploy for this build (dev proxy must not affect production bundle)."
+fi
+cleanup() {
+  if [[ -n "$RESTORE_ENV_LOCAL" && -f .env.local.off-deploy ]]; then
+    mv .env.local.off-deploy .env.local
+  fi
+}
+trap cleanup EXIT
+
+REPO_ROOT="$(cd "$ROOT/.." && pwd)"
+if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  export VITE_BUILD_LABEL="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+else
+  export VITE_BUILD_LABEL="$(date -u +%Y%m%d)"
 fi
 
 export VITE_API_BASE_URL="${VITE_API_BASE_URL:-https://avoguard.cognitron.co.ke}"
-echo "Building for ${VITE_API_BASE_URL} → ${ROOT}/dist"
+echo "Building cognitron bundle: API=${VITE_API_BASE_URL} label=${VITE_BUILD_LABEL}"
 
 if [[ -f package-lock.json ]]; then
   npm ci
@@ -43,10 +56,17 @@ else
   npm install
 fi
 
-npm run build
+npm run build:cognitron
 
-echo "Done. Static files: ${ROOT}/dist"
-echo "Apache DocumentRoot should point here (see deploy/apache-avoguard.cognitron.conf)."
+if ! grep -rq 'isReviewStatusNew' dist/assets/*.js 2>/dev/null; then
+  echo "ERROR: dist does not contain scouting review fix (isReviewStatusNew). Build failed validation." >&2
+  exit 1
+fi
+
+echo "OK: dist validated (scouting review fix present)."
+echo "Files: ${ROOT}/dist"
+echo "On cognitron, sidebar must show: Version 2.1.5 · ${VITE_BUILD_LABEL}"
+echo "If the site still shows 2.1.4, Apache is serving an old dist or DocumentRoot is wrong."
 
 if [[ "$RELOAD_APACHE" == true ]]; then
   if command -v apache2ctl >/dev/null 2>&1; then

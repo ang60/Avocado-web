@@ -25,6 +25,7 @@ import { AppLink } from './AppLink';
 import avocadoLogo from '../../imports/avocado_logo.svg';
 import { useSidebar } from '../context/SidebarContext';
 import { OptimizedImage } from './OptimizedImage';
+import { BUILD_LABEL } from '../buildInfo';
 import { getAuthUser, subscribeAuth } from '../auth';
 import { hasAppAccess } from '../rbac';
 
@@ -279,7 +280,7 @@ export function Sidebar() {
               className="text-xs text-white/50"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
             >
-              Version 2.1.4
+              Version 2.1.5 · {BUILD_LABEL}
             </p>
           </div>
         </aside>
@@ -342,7 +343,7 @@ export function Sidebar() {
               className="whitespace-nowrap text-xs text-white/50"
               style={{ fontFamily: 'IBM Plex Sans, sans-serif' }}
             >
-              Version 2.1.4
+              Version 2.1.5 · {BUILD_LABEL}
             </p>
           </div>
         )}
