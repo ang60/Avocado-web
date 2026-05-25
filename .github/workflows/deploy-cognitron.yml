@@ -33,7 +33,12 @@ jobs:
 
       - name: Build SPA for cognitron
         working-directory: frontend
-        run: npm ci && npm run build:cognitron
+        env:
+          VITE_BUILD_LABEL: ${{ github.sha }}
+        run: |
+          npm ci
+          npm run build:cognitron
+          grep -rq 'isReviewStatusNew' dist/assets/*.js
 
       - name: Rsync dist to server
         uses: burnett01/rsync-deployments@7.0.1
